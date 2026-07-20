@@ -28,7 +28,7 @@ const features = [
 
 const containerVariants = {
   hidden: { opacity: 0, y: -20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: 'easeOut' as const } },
 };
 
 const itemVariants = {
@@ -36,7 +36,7 @@ const itemVariants = {
   visible: (i: number) => ({
     opacity: 1,
     y: 0,
-    transition: { delay: i * 0.08, duration: 0.4, ease: 'easeOut' },
+    transition: { delay: i * 0.08, duration: 0.4, ease: 'easeOut' as const },
   }),
 };
 
@@ -102,7 +102,7 @@ const MTNAFABanner: React.FC<MTNAFABannerProps> = ({
             className="mtn-phone-wrapper"
             initial={{ opacity: 0, x: 60 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.7, delay: 0.2, ease: 'easeOut' }}
+            transition={{ duration: 0.7, delay: 0.2, ease: 'easeOut' as const }}
           >
             <div className="mtn-phone-mockup">
               <div className="mtn-phone-notch" />
