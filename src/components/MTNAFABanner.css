@@ -1,0 +1,542 @@
+:root {
+  --mtn-dark: #080b12;
+  --mtn-yellow: #ffcc00;
+  --mtn-yellow-light: rgba(255, 204, 0, 0.15);
+  --mtn-yellow-glow: rgba(255, 204, 0, 0.35);
+  --mtn-text: #ffffff;
+  --mtn-text-muted: rgba(255, 255, 255, 0.6);
+  --mtn-card-bg: rgba(255, 255, 255, 0.04);
+}
+
+.mtn-banner {
+  position: relative;
+  background: linear-gradient(145deg, #080b12 0%, #0f1420 40%, #0a0e1a 70%, #080b12 100%);
+  border-radius: 30px;
+  overflow: hidden;
+  padding: 36px 40px;
+  margin-bottom: 28px;
+  box-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.mtn-banner::before {
+  content: '';
+  position: absolute;
+  top: -200px;
+  right: -100px;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(255, 204, 0, 0.06) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.mtn-banner::after {
+  content: '';
+  position: absolute;
+  bottom: -150px;
+  left: -80px;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(255, 204, 0, 0.04) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.mtn-banner-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 40px;
+  align-items: center;
+  position: relative;
+  z-index: 1;
+}
+
+.mtn-banner-left {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.mtn-greeting-text {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--mtn-text);
+  margin: 0;
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+}
+
+.mtn-wave {
+  display: inline-block;
+  animation: mtnWave 2s infinite;
+  transform-origin: 70% 70%;
+}
+
+@keyframes mtnWave {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(15deg); }
+  50% { transform: rotate(-5deg); }
+  75% { transform: rotate(10deg); }
+}
+
+.mtn-greeting-sub {
+  font-size: 1rem;
+  color: var(--mtn-text-muted);
+  margin: 4px 0 0;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+/* FEATURES */
+
+.mtn-features {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--mtn-card-bg);
+  border-radius: 16px;
+  padding: 16px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+}
+
+.mtn-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  padding: 0 12px;
+  min-width: 0;
+}
+
+.mtn-feature-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 204, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(255, 204, 0, 0.3);
+  box-shadow: 0 0 12px rgba(255, 204, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.mtn-feature-item:hover .mtn-feature-icon-wrap {
+  background: rgba(255, 204, 0, 0.18);
+  border-color: rgba(255, 204, 0, 0.6);
+  box-shadow: 0 0 20px rgba(255, 204, 0, 0.3);
+  transform: scale(1.08);
+}
+
+.mtn-feature-icon {
+  font-size: 18px;
+  color: var(--mtn-yellow);
+}
+
+.mtn-feature-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.mtn-feature-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--mtn-text);
+  letter-spacing: 0.2px;
+}
+
+.mtn-feature-sub {
+  font-size: 0.7rem;
+  color: var(--mtn-text-muted);
+  font-weight: 400;
+}
+
+.mtn-feature-divider {
+  width: 1px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+/* ACTIONS */
+
+.mtn-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mtn-btn-primary,
+.mtn-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.mtn-btn-primary {
+  background: var(--mtn-yellow);
+  color: #000000;
+  box-shadow: 0 4px 20px rgba(255, 204, 0, 0.35);
+}
+
+.mtn-btn-primary:hover {
+  background: #f0c000;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(255, 204, 0, 0.5);
+}
+
+.mtn-btn-primary:active {
+  transform: translateY(0);
+}
+
+.mtn-btn-secondary {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--mtn-text);
+  border: 1.5px solid rgba(255, 204, 0, 0.3);
+  backdrop-filter: blur(4px);
+}
+
+.mtn-btn-secondary:hover {
+  background: rgba(255, 204, 0, 0.1);
+  border-color: var(--mtn-yellow);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(255, 204, 0, 0.15);
+}
+
+.mtn-btn-primary ion-icon,
+.mtn-btn-secondary ion-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+/* RIGHT SIDE - PHONE ILLUSTRATION */
+
+.mtn-banner-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mtn-phone-wrapper {
+  position: relative;
+  width: 220px;
+  height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mtn-phone-mockup {
+  width: 150px;
+  height: 220px;
+  background: linear-gradient(180deg, #1a1a2e 0%, #12121f 100%);
+  border-radius: 24px;
+  position: relative;
+  transform: rotate(8deg);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.5),
+    0 0 60px rgba(255, 204, 0, 0.05);
+  border: 1.5px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  z-index: 2;
+}
+
+.mtn-phone-notch {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 50px;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 10px;
+  z-index: 3;
+}
+
+.mtn-phone-screen {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 20px 16px;
+}
+
+.mtn-phone-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mtn-logo-circle {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: var(--mtn-yellow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 24px rgba(255, 204, 0, 0.4);
+}
+
+.mtn-logo-text {
+  font-size: 14px;
+  font-weight: 900;
+  color: #000000;
+  letter-spacing: 1px;
+}
+
+.mtn-phone-balance {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.mtn-balance-label {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.mtn-balance-value {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--mtn-text);
+}
+
+.mtn-phone-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.mtn-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.mtn-dot:nth-child(2) {
+  background: var(--mtn-yellow);
+  box-shadow: 0 0 8px rgba(255, 204, 0, 0.5);
+}
+
+/* FLOATING ELEMENTS */
+
+.mtn-float-icon {
+  position: absolute;
+  z-index: 3;
+  animation: mtnFloat 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.mtn-float-sim {
+  top: 20px;
+  right: 10px;
+  animation-delay: 0s;
+  filter: drop-shadow(0 4px 8px rgba(255, 204, 0, 0.3));
+}
+
+.mtn-float-coin {
+  bottom: 30px;
+  left: 10px;
+  animation-delay: 0.6s;
+  filter: drop-shadow(0 4px 12px rgba(255, 204, 0, 0.4));
+}
+
+.mtn-float-coin2 {
+  top: 50px;
+  left: 0px;
+  animation-delay: 1.2s;
+  filter: drop-shadow(0 4px 8px rgba(255, 204, 0, 0.2));
+}
+
+@keyframes mtnFloat {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-8px) rotate(3deg); }
+}
+
+/* WAVE EFFECTS */
+
+.mtn-wave-1 {
+  position: absolute;
+  bottom: 40px;
+  right: -10px;
+  width: 100px;
+  height: 40px;
+  background: radial-gradient(ellipse at center, rgba(255, 204, 0, 0.08) 0%, transparent 70%);
+  border-radius: 50%;
+  z-index: 0;
+  animation: mtnPulse 3s ease-in-out infinite;
+}
+
+.mtn-wave-2 {
+  position: absolute;
+  bottom: 20px;
+  right: 10px;
+  width: 80px;
+  height: 30px;
+  background: radial-gradient(ellipse at center, rgba(255, 204, 0, 0.05) 0%, transparent 70%);
+  border-radius: 50%;
+  z-index: 0;
+  animation: mtnPulse 3s ease-in-out infinite 0.8s;
+}
+
+@keyframes mtnPulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+.mtn-glow-1 {
+  position: absolute;
+  top: 5px;
+  right: 30px;
+  width: 60px;
+  height: 60px;
+  background: radial-gradient(circle, rgba(255, 204, 0, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+  z-index: 1;
+  animation: mtnPulse 4s ease-in-out infinite 0.3s;
+}
+
+.mtn-glow-2 {
+  position: absolute;
+  bottom: 50px;
+  right: 20px;
+  width: 40px;
+  height: 40px;
+  background: radial-gradient(circle, rgba(255, 204, 0, 0.08) 0%, transparent 70%);
+  border-radius: 50%;
+  z-index: 1;
+  animation: mtnPulse 4s ease-in-out infinite 1s;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 1024px) {
+  .mtn-banner-grid {
+    grid-template-columns: 1fr 280px;
+    gap: 30px;
+  }
+
+  .mtn-banner {
+    padding: 30px;
+  }
+
+  .mtn-features {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 12px 4px;
+  }
+}
+
+@media (max-width: 768px) {
+  .mtn-banner {
+    padding: 24px 20px;
+    border-radius: 24px;
+  }
+
+  .mtn-banner-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .mtn-greeting-text {
+    font-size: 1.5rem;
+  }
+
+  .mtn-features {
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 12px;
+  }
+
+  .mtn-feature-item {
+    flex: 1 1 calc(50% - 8px);
+    padding: 6px 8px;
+    min-width: 0;
+  }
+
+  .mtn-feature-divider {
+    display: none;
+  }
+
+  .mtn-actions {
+    flex-direction: column;
+  }
+
+  .mtn-btn-primary,
+  .mtn-btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .mtn-banner-right {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .mtn-banner {
+    padding: 20px 16px;
+    border-radius: 20px;
+  }
+
+  .mtn-greeting-text {
+    font-size: 1.25rem;
+  }
+
+  .mtn-greeting-sub {
+    font-size: 0.85rem;
+  }
+
+  .mtn-features {
+    padding: 10px 8px;
+  }
+
+  .mtn-feature-item {
+    flex: 1 1 calc(50% - 8px);
+    padding: 4px 6px;
+  }
+
+  .mtn-feature-icon-wrap {
+    width: 32px;
+    height: 32px;
+  }
+
+  .mtn-feature-icon {
+    font-size: 15px;
+  }
+
+  .mtn-feature-title {
+    font-size: 0.7rem;
+  }
+
+  .mtn-feature-sub {
+    font-size: 0.65rem;
+  }
+
+  .mtn-btn-primary,
+  .mtn-btn-secondary {
+    padding: 10px 20px;
+    font-size: 0.82rem;
+  }
+}

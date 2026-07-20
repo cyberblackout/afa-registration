@@ -1,0 +1,232 @@
+.register-content {
+  --background: #0f0f1a;
+}
+
+.register-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 50%, #0f0f1a 100%);
+}
+
+.register-brand {
+  text-align: center;
+  padding: 2.5rem 1.5rem 1.5rem;
+  position: relative;
+}
+
+.register-brand::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #ffc409, transparent);
+  border-radius: 2px;
+}
+
+.register-card-wrapper {
+  flex: 1;
+  padding: 1.5rem;
+}
+
+.register-card-inner {
+  background: #1a1a2e;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 24px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 440px;
+  margin: 0 auto;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+}
+
+.register-card-header {
+  margin-bottom: 2rem;
+}
+
+.register-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 0.5rem;
+}
+
+.register-subtitle {
+  font-size: 0.85rem;
+  color: #8888aa;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.register-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 360px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.input-label {
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  color: #aaaacc !important;
+  padding-left: 0.25rem;
+}
+
+.input-hint {
+  font-size: 0.7rem !important;
+  color: #666688 !important;
+  padding-left: 0.25rem;
+}
+
+.input-item {
+  --background: #ffffff;
+  --border-radius: 14px;
+  --padding-start: 16px;
+  --padding-end: 8px;
+  --min-height: 52px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-item:focus-within {
+  border-color: #ffc409;
+  box-shadow: 0 0 0 3px rgba(255, 196, 9, 0.1);
+}
+
+.input-item ion-input {
+  --color: #000000 !important;
+  --placeholder-color: #999999;
+  --placeholder-opacity: 1;
+  font-size: 0.95rem;
+  color: #000000 !important;
+}
+
+.input-item ion-input input {
+  color: #000000 !important;
+}
+
+.input-item ion-input input::placeholder {
+  color: #999999 !important;
+  opacity: 1 !important;
+}
+
+.password-toggle {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  cursor: pointer;
+  color: #8888aa;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.password-toggle:hover {
+  color: #ffc409;
+}
+
+.password-toggle ion-icon {
+  font-size: 1.2rem;
+}
+
+.password-hints {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding-left: 0.25rem;
+}
+
+.hint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #555577;
+  transition: color 0.3s;
+}
+
+.hint.met {
+  color: #4caf50;
+}
+
+.hint ion-icon {
+  font-size: 0.85rem;
+}
+
+.hint.met ion-icon {
+  color: #4caf50;
+}
+
+.register-button {
+  --background: linear-gradient(135deg, #ffc409, #ff9800);
+  --background-activated: #e6b008;
+  --border-radius: 14px;
+  --box-shadow: 0 4px 20px rgba(255, 196, 9, 0.3);
+  height: 52px;
+  font-size: 1rem;
+  font-weight: 700;
+  margin-top: 0.5rem;
+  --color: #0f0f1a;
+  letter-spacing: 0.5px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.register-button:active {
+  transform: scale(0.98);
+}
+
+.register-button.button-disabled {
+  --background: #333355;
+  --color: #8888aa;
+  --box-shadow: none;
+}
+
+.register-footer {
+  text-align: center;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.register-footer p {
+  font-size: 0.85rem;
+  color: #8888aa;
+  margin: 0;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #ffc409;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  transition: color 0.2s;
+}
+
+.link-btn:hover {
+  color: #ffd54f;
+}

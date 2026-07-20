@@ -1,0 +1,340 @@
+import React from 'react';
+import { IonIcon } from '@ionic/react';
+import {
+  peopleOutline,
+  documentTextOutline,
+  walletOutline,
+  cashOutline,
+  timeOutline,
+  trendingUpOutline,
+  arrowForward,
+  checkmarkCircle,
+  closeCircle,
+  hourglassOutline,
+} from 'ionicons/icons';
+import { motion } from 'framer-motion';
+import {
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '../../services/supabase';
+import AdminLayout from '../../layouts/AdminLayout';
+import './DashboardPage.css';
+
+const statusConfig = {
+  approved: { label: 'Approved', icon: checkmarkCircle, className: 'status-approved' },
+  pending: { label: 'Pending', icon: hourglassOutline, className: 'status-pending' },
+  rejected: { label: 'Rejected', icon: closeCircle, className: 'status-rejected' },
+} as const;
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (i: number) => ({
+    opacity: 1, y: 0, transition: { duration: 0.4, delay: i * 0.08 },
+  }),
+};
+
+const formatCurrency = (value: number) =>
+  `GH₵ ${value.toLocaleString()}`;
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="chart-tooltip">
+      <p className="chart-tooltip-label">{label}</p>
+      {payload.map((entry: any, idx: number) => (
+        <p key={idx} className="chart-tooltip-value" style={{ color: entry.color }}>
+          {entry.name === 'revenue' ? formatCurrency(entry.value) : entry.value}
+        </p>
+      ))}
+    </div>
+  );
+};
+
+const Skeleton = ({ width, height }: { width?: string; height?: string }) => (
+  <div className="skeleton-box" style={{ width: width || '100%', height: height || '60px', background: '#2a2a2a', borderRadius: '8px', animation: 'pulse 1.5s infinite' }} />
+);
+
+const DashboardPage: React.FC = () => {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+
+  const { data: totalUsers, isLoading: loadingUsers } = useQuery({
+    queryKey: ['admin_total_users'],
+    queryFn: async () => {
+      const r = await supabase.from('profiles').select('id', { count: 'exact', head: true });
+      return r.count ?? 0;
+    },
+  });
+
+  const { data: totalRegistrations, isLoading: loadingRegs } = useQuery({
+    queryKey: ['admin_total_registrations'],
+    queryFn: async () => {
+      const r = await supabase.from('registrations').select('id', { count: 'exact', head: true });
+      return r.count ?? 0;
+    },
+  });
+
+  const { data: todayRegistrations } = useQuery({
+    queryKey: ['admin_today_registrations'],
+    queryFn: async () => {
+      const r = await supabase.from('registrations').select('id', { count: 'exact', head: true }).gte('created_at', todayStart.toISOString());
+      return r.count ?? 0;
+    },
+  });
+
+  const { data: pendingRegistrations } = useQuery({
+    queryKey: ['admin_pending_registrations'],
+    queryFn: async () => {
+      const r = await supabase.from('registrations').select('id', { count: 'exact', head: true }).eq('status', 'pending');
+      return r.count ?? 0;
+    },
+  });
+
+  const { data: revenue } = useQuery({
+    queryKey: ['admin_revenue'],
+    queryFn: async () => {
+      const r = await supabase.from('wallet_transactions').select('amount').eq('type', 'credit');
+      return (r.data || []).reduce((sum: number, t: any) => sum + (t.amount || 0), 0);
+    },
+  });
+
+  const { data: walletBalance } = useQuery({
+    queryKey: ['admin_wallet_balance'],
+    queryFn: async () => {
+      const r = await supabase.from('profiles').select('wallet_balance');
+      return (r.data || []).reduce((sum: number, p: any) => sum + (p.wallet_balance || 0), 0);
+    },
+  });
+
+  const { data: recentRegistrations } = useQuery({
+    queryKey: ['admin_recent_registrations'],
+    queryFn: async () => {
+      const r = await supabase.from('registrations').select('*, profiles(full_name, phone)').order('created_at', { ascending: false }).limit(5);
+      return r.data || [];
+    },
+  });
+
+  const { data: weeklyData } = useQuery({
+    queryKey: ['admin_weekly_data'],
+    queryFn: async () => {
+      const now = new Date();
+      const days = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(d.getDate() - i);
+        const dayStart = new Date(d);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(d);
+        dayEnd.setHours(23, 59, 59, 999);
+        const dayLabel = d.toLocaleDateString('en-US', { weekday: 'short' });
+        const rev = await supabase.from('wallet_transactions').select('amount').eq('type', 'credit').gte('created_at', dayStart.toISOString()).lte('created_at', dayEnd.toISOString());
+        const regs = await supabase.from('registrations').select('id', { count: 'exact', head: true }).gte('created_at', dayStart.toISOString()).lte('created_at', dayEnd.toISOString());
+        days.push({
+          day: dayLabel,
+          revenue: (rev.data || []).reduce((s: number, t: any) => s + (t.amount || 0), 0),
+          registrations: regs.count ?? 0,
+        });
+      }
+      return days;
+    },
+  });
+
+  const { data: statusCounts } = useQuery({
+    queryKey: ['admin_status_counts'],
+    queryFn: async () => {
+      const approved = await supabase.from('registrations').select('id', { count: 'exact', head: true }).eq('status', 'approved');
+      const rejected = await supabase.from('registrations').select('id', { count: 'exact', head: true }).eq('status', 'rejected');
+      const completed = await supabase.from('registrations').select('id', { count: 'exact', head: true }).eq('status', 'completed');
+      const processing = await supabase.from('registrations').select('id', { count: 'exact', head: true }).eq('status', 'processing');
+      return {
+        approved: approved.count ?? 0,
+        rejected: rejected.count ?? 0,
+        completed: completed.count ?? 0,
+        processing: processing.count ?? 0,
+      };
+    },
+  });
+
+  const statCards = [
+    { label: 'Total Users', value: loadingUsers ? '...' : (totalUsers ?? 0).toLocaleString(), icon: peopleOutline, color: '#3b82f6' },
+    { label: 'Total Registrations', value: loadingRegs ? '...' : (totalRegistrations ?? 0).toLocaleString(), icon: documentTextOutline, color: '#10b981' },
+    { label: 'Wallet Balance', value: walletBalance !== undefined ? formatCurrency(walletBalance) : '...', icon: walletOutline, color: '#f59e0b' },
+    { label: 'Revenue', value: revenue !== undefined ? formatCurrency(revenue) : '...', icon: cashOutline, color: '#8b5cf6' },
+    { label: 'Pending Approvals', value: (pendingRegistrations ?? 0).toLocaleString(), icon: timeOutline, color: '#ef4444' },
+  ];
+
+  const quickStats = [
+    { label: "Today's Registrations", value: todayRegistrations ?? 0, color: '#3b82f6' },
+    { label: 'Processing', value: statusCounts?.processing ?? 0, color: '#f59e0b' },
+    { label: 'Approved', value: statusCounts?.approved ?? 0, color: '#10b981' },
+    { label: 'Rejected', value: statusCounts?.rejected ?? 0, color: '#ef4444' },
+    { label: 'Completed', value: statusCounts?.completed ?? 0, color: '#8b5cf6' },
+  ];
+
+  return (
+    <AdminLayout>
+      <div className="admin-dashboard">
+        <motion.div
+          className="dashboard-header"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div>
+            <h1>Dashboard</h1>
+            <p className="dashboard-subtitle">Real-time overview of your platform</p>
+          </div>
+          <div className="dashboard-header-badge">
+            <IonIcon icon={trendingUpOutline} />
+            <span>Live data</span>
+          </div>
+        </motion.div>
+
+        <div className="stat-cards-row">
+          {statCards.map((card, i) => (
+            <motion.div
+              key={card.label}
+              className="stat-card"
+              custom={i}
+              variants={cardVariants}
+              initial="hidden"
+              animate="visible"
+              style={{ borderLeftColor: card.color }}
+            >
+              <div className="stat-card-top">
+                <div className="stat-card-info">
+                  <p className="stat-card-label">{card.label}</p>
+                  <p className="stat-card-value">{card.value}</p>
+                </div>
+                <div className="stat-card-icon" style={{ background: `${card.color}15`, color: card.color }}>
+                  <IonIcon icon={card.icon} />
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+
+        <div className="charts-grid">
+          <motion.div
+            className="chart-card"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.3 }}
+          >
+            <div className="chart-card-header">
+              <h3>Revenue Trend</h3>
+              <span className="chart-period">Last 7 days</span>
+            </div>
+            {!weeklyData ? (
+              <Skeleton height="280px" />
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <LineChart data={weeklyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="day" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} tickFormatter={formatCurrency} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Line type="monotone" dataKey="revenue" stroke="#FFCB05" strokeWidth={3} dot={{ fill: '#FFCB05', strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </motion.div>
+
+          <motion.div
+            className="chart-card"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.4 }}
+          >
+            <div className="chart-card-header">
+              <h3>Registrations Trend</h3>
+              <span className="chart-period">Last 7 days</span>
+            </div>
+            {!weeklyData ? (
+              <Skeleton height="280px" />
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={weeklyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="day" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="registrations" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={32} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </motion.div>
+        </div>
+
+        <div className="dashboard-bottom-grid">
+          <motion.div
+            className="recent-registrations-card"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.5 }}
+          >
+            <div className="card-header-row">
+              <h3>Recent Registrations</h3>
+              <a href="/cyberin/registrations" className="view-all-link">
+                View All <IonIcon icon={arrowForward} />
+              </a>
+            </div>
+            <div className="recent-list">
+              {!recentRegistrations ? (
+                Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} height="48px" />)
+              ) : recentRegistrations.length === 0 ? (
+                <p className="no-data-text">No recent registrations</p>
+              ) : (
+                recentRegistrations.map((reg: any, i: number) => {
+                  const status = statusConfig[reg.status as keyof typeof statusConfig] || statusConfig.pending;
+                  return (
+                    <div key={reg.id || i} className="recent-row">
+                      <div className="recent-row-left">
+                        <div className="recent-avatar">{(reg.profiles?.full_name || 'U').charAt(0)}</div>
+                        <div className="recent-info">
+                          <p className="recent-name">{reg.profiles?.full_name || 'Unknown'}</p>
+                          <p className="recent-phone">{reg.profiles?.phone || ''}</p>
+                        </div>
+                      </div>
+                      <div className="recent-row-mid">
+                        <span className="recent-date">{new Date(reg.created_at).toLocaleDateString()}</span>
+                        <span className={`recent-status ${status.className}`}>
+                          <IonIcon icon={status.icon} />
+                          {status.label}
+                        </span>
+                      </div>
+                      <a href={`/cyberin/registrations`} className="recent-action-btn">View</a>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </motion.div>
+
+          <motion.div
+            className="quick-stats-card"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.6 }}
+          >
+            <h3>Quick Stats</h3>
+            <div className="quick-stats-grid">
+              {quickStats.map((stat) => (
+                <div key={stat.label} className="quick-stat-item">
+                  <div className="quick-stat-bar" style={{ background: stat.color }} />
+                  <div className="quick-stat-content">
+                    <p className="quick-stat-value" style={{ color: stat.color }}>{stat.value}</p>
+                    <p className="quick-stat-label">{stat.label}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </AdminLayout>
+  );
+};
+
+export default DashboardPage;

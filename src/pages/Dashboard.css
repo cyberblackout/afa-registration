@@ -1,0 +1,99 @@
+.dashboard-grid {
+  padding: 1rem;
+}
+
+.welcome-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, #fff8e1 0%, #ffffff 100%);
+  border-radius: 16px;
+}
+
+.profile-avatar {
+  width: 56px;
+  height: 56px;
+  background: var(--ion-color-warning);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-avatar ion-icon {
+  font-size: 1.8rem;
+  color: white;
+}
+
+.welcome-section h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.username-tag {
+  margin: 0;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.stat-card {
+  border-radius: 16px;
+  margin: 0;
+}
+
+.stat-card .stat-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.stat-card .stat-header ion-icon {
+  font-size: 1.5rem;
+}
+
+.stat-card .stat-header ion-text {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+}
+
+.stat-action {
+  --padding-start: 0;
+  font-size: 0.8rem;
+}
+
+.wallet-card {
+  border-left: 4px solid var(--ion-color-warning);
+}
+
+.orders-card {
+  border-left: 4px solid var(--ion-color-primary);
+}
+
+.security-card {
+  border-left: 4px solid var(--ion-color-success);
+}
+
+.no-orders {
+  text-align: center;
+  padding: 2rem;
+  margin: 0;
+}
+
+.quick-action-btn {
+  margin-bottom: 0.75rem;
+  --border-radius: 12px;
+  font-weight: 500;
+}
+
+.quick-action-btn:last-child {
+  margin-bottom: 0;
+}

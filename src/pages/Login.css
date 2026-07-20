@@ -1,0 +1,319 @@
+.login-content {
+  --background: #0f0f1a;
+}
+
+.login-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  background: linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 50%, #0f0f1a 100%);
+}
+
+.login-brand {
+  text-align: center;
+  padding: 1.5rem 1.5rem 1rem;
+  position: relative;
+}
+
+.login-brand::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #ffc409, transparent);
+  border-radius: 2px;
+}
+
+.brand-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 0.75rem;
+  background: linear-gradient(135deg, #ffc409, #ff9800);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px rgba(255, 196, 9, 0.3);
+}
+
+.brand-icon ion-icon {
+  font-size: 2rem;
+  color: #0f0f1a;
+}
+
+.brand-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.brand-subtitle {
+  font-size: 0.8rem;
+  color: #8888aa;
+  margin: 0.25rem 0 0;
+  letter-spacing: 0.5px;
+}
+
+.login-card-wrapper {
+  flex: 1;
+  padding: 0.75rem 1.5rem 1.5rem;
+  display: flex;
+  align-items: flex-start;
+}
+
+.login-card-inner {
+  background: #1a1a2e;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 24px;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
+}
+
+.login-card-header {
+  margin-bottom: 2rem;
+}
+
+.welcome-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 0.5rem;
+}
+
+.welcome-subtitle {
+  font-size: 0.85rem;
+  color: #8888aa;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.feature-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: rgba(255, 196, 9, 0.05);
+  border: 1px solid rgba(255, 196, 9, 0.1);
+  border-radius: 16px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  justify-content: center;
+}
+
+.feature-item ion-icon {
+  font-size: 1.3rem;
+  color: #ffc409;
+}
+
+.feature-item div {
+  display: flex;
+  flex-direction: column;
+}
+
+.feature-item span {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.feature-item small {
+  font-size: 0.6rem;
+  color: #8888aa;
+}
+
+.feature-divider {
+  width: 1px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.input-label {
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  color: #aaaacc !important;
+  padding-left: 0.25rem;
+}
+
+.input-item {
+  --background: #ffffff;
+  --border-radius: 14px;
+  --padding-start: 16px;
+  --padding-end: 8px;
+  --min-height: 52px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.input-item:focus-within {
+  border-color: #ffc409;
+  box-shadow: 0 0 0 3px rgba(255, 196, 9, 0.1);
+}
+
+.input-item ion-input {
+  --color: #000000 !important;
+  --placeholder-color: #999999;
+  --placeholder-opacity: 1;
+  font-size: 0.95rem;
+  color: #000000 !important;
+}
+
+.input-item ion-input input {
+  color: #000000 !important;
+}
+
+.input-item ion-input input::placeholder {
+  color: #999999 !important;
+  opacity: 1 !important;
+}
+
+.password-toggle {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  cursor: pointer;
+  color: #8888aa;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.password-toggle:hover {
+  color: #ffc409;
+}
+
+.password-toggle ion-icon {
+  font-size: 1.2rem;
+}
+
+.login-button {
+  --background: linear-gradient(135deg, #ffc409, #ff9800);
+  --background-activated: #e6b008;
+  --border-radius: 14px;
+  --box-shadow: 0 4px 20px rgba(255, 196, 9, 0.3);
+  height: 52px;
+  font-size: 1rem;
+  font-weight: 700;
+  margin-top: 0.5rem;
+  --color: #0f0f1a;
+  letter-spacing: 0.5px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.login-button:active {
+  transform: scale(0.98);
+}
+
+.login-button.button-disabled {
+  --background: #333355;
+  --color: #8888aa;
+  --box-shadow: none;
+}
+
+.forgot-modal {
+  background: #1a1a2e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.forgot-modal .input-item ion-input {
+  --color: #000000 !important;
+  color: #000000 !important;
+}
+
+.forgot-modal .input-item ion-input input {
+  color: #000000 !important;
+}
+
+.forgot-modal .input-item ion-input input::placeholder {
+  color: #999999 !important;
+  opacity: 1 !important;
+}
+
+.forgot-modal h3 {
+  color: #ffffff;
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem;
+}
+
+.forgot-modal p {
+  color: #aaaacc;
+  font-size: 0.85rem;
+  margin: 0 0 1.5rem;
+  line-height: 1.5;
+}
+
+.forgot-modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.forgot-modal-actions ion-button {
+  flex: 1;
+}
+
+.forgot-modal-actions ion-button:first-child {
+  --color: #ffc409;
+}
+
+.login-footer {
+  text-align: center;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.login-footer p {
+  font-size: 0.85rem;
+  color: #8888aa;
+  margin: 0;
+}
+
+.link-btn {
+  background: none;
+  border: none;
+  color: #ffc409;
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  transition: color 0.2s;
+}
+
+.link-btn:hover {
+  color: #ffd54f;
+}

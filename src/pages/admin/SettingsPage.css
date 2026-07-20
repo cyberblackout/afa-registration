@@ -1,0 +1,132 @@
+.admin-settings-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.page-header {
+  margin-bottom: 1.5rem;
+}
+
+.page-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.page-icon {
+  font-size: 1.75rem;
+  color: #FFCB05;
+}
+
+.page-title-row h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1a1a2e;
+}
+
+.settings-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.settings-card {
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  margin: 0;
+}
+
+.settings-card ion-card-content {
+  padding: 1.5rem;
+}
+
+.settings-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.section-icon {
+  font-size: 1.3rem;
+  color: #FFCB05;
+}
+
+.settings-card-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1a1a2e;
+}
+
+.settings-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.settings-fields ion-item {
+  --background: #fafafa;
+  --border-radius: 10px;
+  --padding-start: 1rem;
+  --padding-end: 1rem;
+  --inner-padding-end: 0;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+.settings-fields ion-item ion-label {
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #666;
+  margin-bottom: 0.25rem;
+}
+
+.settings-fields ion-item ion-input,
+.settings-fields ion-item ion-textarea,
+.settings-fields ion-item ion-select {
+  font-size: 0.9rem;
+  --color: #000000;
+  --padding-top: 0.5rem;
+  --padding-bottom: 0.5rem;
+}
+
+.env-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0;
+}
+
+.env-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #999;
+  transition: color 0.2s;
+}
+
+.env-active {
+  color: #1a1a2e;
+}
+
+.env-toggle ion-toggle {
+  --background: #ddd;
+  --background-checked: #FFCB05;
+  --handle-background: white;
+  --handle-background-checked: white;
+}
+
+.section-save-btn {
+  --background: #FFCB05;
+  --color: #000;
+  --border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  height: 44px;
+  --box-shadow: 0 4px 12px rgba(255, 203, 5, 0.3);
+}

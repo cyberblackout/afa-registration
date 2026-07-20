@@ -1,0 +1,147 @@
+.admin-login-content {
+  --background: #0f0f1a;
+}
+
+.admin-login-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #0f0f1a 100%);
+  padding: 1.5rem;
+}
+
+.admin-login-card {
+  background: #1a1a2e;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 24px;
+  padding: 2rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.admin-login-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.admin-login-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1rem;
+  background: linear-gradient(135deg, #FFCB05, #FF9800);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px rgba(255, 203, 5, 0.3);
+}
+
+.admin-login-icon ion-icon {
+  font-size: 2rem;
+  color: #0f0f1a;
+}
+
+.admin-login-header h1 {
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.admin-login-header p {
+  color: #8888aa;
+  font-size: 0.85rem;
+  margin: 0.25rem 0 0;
+}
+
+.admin-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.admin-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-input-label {
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  color: #aaaacc !important;
+}
+
+.admin-input-item {
+  --background: #ffffff;
+  --border-radius: 12px;
+  --padding-start: 16px;
+  --padding-end: 8px;
+  --min-height: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+}
+
+.admin-input-item:focus-within {
+  border-color: #FFCB05;
+  box-shadow: 0 0 0 3px rgba(255, 203, 5, 0.1);
+}
+
+.admin-input-item ion-input {
+  --color: #000000 !important;
+  --placeholder-color: #999999;
+  --placeholder-opacity: 1;
+  font-size: 0.95rem;
+  color: #000000 !important;
+}
+
+.admin-input-item ion-input input {
+  color: #000000 !important;
+}
+
+.admin-input-item ion-input input::placeholder {
+  color: #999999 !important;
+  opacity: 1 !important;
+}
+
+.admin-password-toggle {
+  background: none;
+  border: none;
+  color: #8888aa;
+  cursor: pointer;
+  padding: 0.5rem;
+  display: flex;
+}
+
+.admin-password-toggle ion-icon {
+  font-size: 1.2rem;
+}
+
+.admin-login-btn {
+  --background: linear-gradient(135deg, #FFCB05, #FF9800);
+  --border-radius: 12px;
+  --box-shadow: 0 4px 20px rgba(255, 203, 5, 0.3);
+  height: 50px;
+  font-size: 1rem;
+  font-weight: 700;
+  --color: #0f0f1a;
+  margin-top: 0.5rem;
+}
+
+.admin-login-footer {
+  text-align: center;
+  margin-top: 1.5rem;
+}
+
+.admin-back-link {
+  color: #8888aa;
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition: color 0.2s;
+}
+
+.admin-back-link:hover {
+  color: #FFCB05;
+}

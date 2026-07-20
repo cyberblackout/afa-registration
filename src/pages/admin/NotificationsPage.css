@@ -1,0 +1,348 @@
+.admin-notifications-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.page-header {
+  margin-bottom: 1.5rem;
+}
+
+.page-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.page-icon {
+  font-size: 1.75rem;
+  color: #FFCB05;
+}
+
+.page-title-row h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #1a1a2e;
+}
+
+.notif-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.form-card {
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  margin: 0;
+}
+
+.form-card ion-card-content {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.form-section-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-section-title ion-icon {
+  color: #FFCB05;
+  font-size: 1rem;
+}
+
+.recipient-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.recipient-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 10px;
+  border: 2px solid #eee;
+  background: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.recipient-btn:hover {
+  border-color: #FFCB05;
+  color: #000;
+}
+
+.recipient-btn.recipient-active {
+  border-color: #FFCB05;
+  background: #fff8e1;
+  color: #000;
+}
+
+.recipient-btn ion-icon {
+  font-size: 1rem;
+}
+
+.specific-email-item {
+  --background: #fafafa;
+  --color: #000000;
+  --border-radius: 10px;
+  --padding-start: 1rem;
+  --padding-end: 1rem;
+  border-radius: 10px;
+}
+
+.specific-email-item ion-label {
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.notif-type-options {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.type-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.65rem 0;
+  border-radius: 12px;
+  border: 2px solid #eee;
+  background: white;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.type-btn:hover {
+  border-color: #FFCB05;
+  color: #000;
+}
+
+.type-btn.type-active {
+  border-color: #FFCB05;
+  background: #fff8e1;
+  color: #000;
+}
+
+.type-btn ion-icon {
+  font-size: 1.1rem;
+}
+
+.form-section ion-item {
+  --background: #fafafa;
+  --border-radius: 10px;
+  --padding-start: 1rem;
+  --padding-end: 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: 10px;
+}
+
+.form-section ion-item ion-label {
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #666;
+  margin-bottom: 0.25rem;
+}
+
+.form-section ion-item ion-input,
+.form-section ion-item ion-textarea {
+  font-size: 0.9rem;
+  --color: #000000;
+  --padding-top: 0.5rem;
+  --padding-bottom: 0.5rem;
+}
+
+.attach-section {
+  display: flex;
+  align-items: center;
+}
+
+.attach-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  border: 2px dashed #ddd;
+  background: #fafafa;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  width: 100%;
+  justify-content: center;
+}
+
+.attach-btn:hover {
+  border-color: #FFCB05;
+  color: #000;
+  background: #fff8e1;
+}
+
+.attach-btn ion-icon {
+  font-size: 1.2rem;
+}
+
+.send-btn {
+  --background: #FFCB05;
+  --color: #000;
+  --border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  height: 48px;
+  --box-shadow: 0 4px 12px rgba(255, 203, 5, 0.3);
+}
+
+.send-btn:hover {
+  --background: #e6b700;
+}
+
+.history-title {
+  margin-bottom: 0.5rem;
+}
+
+.sent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sent-item {
+  background: #fafafa;
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  border: 1px solid #f0f0f0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sent-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.sent-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sent-status {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.sent-status.sent {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.sent-status.failed {
+  background: #fce4ec;
+  color: #c62828;
+}
+
+.sent-status.partial {
+  background: #fff8e1;
+  color: #f57f17;
+}
+
+.sent-item-bottom {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  font-size: 0.7rem;
+  color: #999;
+}
+
+.sent-recipient {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-weight: 600;
+  color: #666;
+}
+
+.sent-recipient ion-icon {
+  font-size: 0.85rem;
+  color: #FFCB05;
+}
+
+.sent-type-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 600;
+  color: #555;
+  background: #f0f0f0;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+}
+
+.sent-type-badge ion-icon {
+  font-size: 0.8rem;
+}
+
+.sent-date {
+  color: #bbb;
+  margin-left: auto;
+}
+
+.empty-history {
+  margin: 0;
+  text-align: center;
+  color: #bbb;
+  font-size: 0.85rem;
+  padding: 1.5rem 0;
+}
+
+@media (max-width: 768px) {
+  .notif-content {
+    grid-template-columns: 1fr;
+  }
+}

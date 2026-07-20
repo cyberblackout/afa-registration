@@ -1,0 +1,194 @@
+.become-agent-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px;
+  background: #f5f5f7;
+  min-height: calc(100vh - 64px);
+}
+
+.dark .become-agent-page {
+  background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #0f0f1a 100%);
+}
+
+.agent-hero {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.agent-hero-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36px;
+  background: linear-gradient(135deg, #ff8c00, #ffaa33);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(255, 140, 0, 0.3);
+}
+
+.agent-hero h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  color: var(--text-primary);
+}
+
+.agent-hero-sub {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.agent-benefits-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.benefit-card {
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.benefit-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.benefit-icon {
+  font-size: 28px;
+  color: #ff8c00;
+  margin-bottom: 12px;
+}
+
+.benefit-card h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  color: var(--text-primary);
+}
+
+.benefit-card p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.agent-cta-section {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.agent-cta-card {
+  border-radius: 16px;
+  border: 2px solid #ff8c00;
+  box-shadow: 0 8px 32px rgba(255, 140, 0, 0.15);
+}
+
+.cta-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.cta-icon {
+  font-size: 40px;
+  color: #ff8c00;
+  margin-bottom: 8px;
+}
+
+.cta-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--text-primary);
+}
+
+.cta-price {
+  text-align: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #fff8f0, #fff3e0);
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.cta-price .price-label {
+  display: block;
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.cta-price .price-amount {
+  display: block;
+  font-size: 36px;
+  font-weight: 800;
+  color: #e65100;
+}
+
+.cta-price .price-note {
+  display: block;
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
+}
+
+.cta-includes {
+  margin-bottom: 24px;
+}
+
+.includes-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 12px;
+}
+
+.includes-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.includes-item ion-icon {
+  color: #2e7d32;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.apply-btn {
+  --background: linear-gradient(135deg, #ff8c00, #ffaa33) !important;
+  --border-radius: 12px !important;
+  font-weight: 600 !important;
+  font-size: 16px !important;
+  height: 48px !important;
+  margin-bottom: 12px !important;
+}
+
+.cta-disclaimer {
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.dark .cta-price {
+  background: linear-gradient(135deg, #2a1a00, #332200);
+}
+
+.dark .cta-price .price-amount {
+  color: #ffaa33;
+}
