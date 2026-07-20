@@ -39,9 +39,11 @@
   box-shadow: 0 8px 32px rgba(255, 196, 9, 0.3);
 }
 
-.brand-icon ion-icon {
-  font-size: 2rem;
-  color: #0f0f1a;
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: contain;
 }
 
 .brand-title {

@@ -131,7 +131,7 @@ const Login: React.FC = () => {
         <div className="login-container">
           <div className="login-brand">
             <div className="brand-icon">
-              <IonIcon icon={personCircleOutline} />
+              <img src="/favicon.png" alt="MTN" className="brand-logo" />
             </div>
             <IonText>
               <h1 className="brand-title">MTN AFA</h1>
