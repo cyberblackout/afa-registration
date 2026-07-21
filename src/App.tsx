@@ -16,7 +16,6 @@ import NotificationsPage from './pages/NotificationsPage';
 import ReferralPage from './pages/ReferralPage';
 import BecomeAgentPage from './pages/BecomeAgentPage';
 import AgentDashboardPage from './pages/AgentDashboardPage';
-import AgentPricingPage from './pages/AgentPricingPage';
 import AdminAgentManagement from './pages/admin/AgentManagementPage';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/DashboardPage';
@@ -60,16 +59,11 @@ const queryClient = new QueryClient({
 
 setupIonicReact();
 
-const ProtectedRoute: React.FC<{ component: React.FC<any>; path: string; exact?: boolean; requireAdmin?: boolean }> = ({ component: Component, requireAdmin, ...rest }) => {
+const ProtectedRoute: React.FC<{ component: React.FC<any>; path: string; exact?: boolean; requireAdmin?: boolean; requireRole?: 'user' | 'agent' }> = ({ component: Component, requireAdmin, requireRole, ...rest }) => {
   const { isAuthenticated, isLoading, role } = useAuthStore();
-  const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
-
-  // Use persisted role for instant check, fall back to query
-  const isAdminUser = role === 'admin' || isAdmin;
 
   return (
     <Route {...rest} render={(props) => {
-      // Show loading only on initial app load (not after login navigation)
       if (isLoading && !isAuthenticated) {
         return (
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -82,27 +76,37 @@ const ProtectedRoute: React.FC<{ component: React.FC<any>; path: string; exact?:
         return <Redirect to="/login" />;
       }
 
-      // For admin routes: use persisted role first (instant), query as backup
       if (requireAdmin) {
-        if (role === 'admin') {
-          // Persisted role says admin — render immediately
-          return <Component {...props} />;
-        }
-        if (adminLoading) {
-          return (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-              <IonLoading isOpen />
-            </div>
-          );
-        }
-        if (!isAdmin) {
-          return <Redirect to="/dashboard" />;
-        }
+        return (
+          <AdminQueryGate component={Component} {...props} />
+        );
+      }
+
+      if (requireRole && role !== requireRole) {
+        if (role === 'agent') return <Redirect to="/agent/dashboard" />;
+        if (role === 'user') return <Redirect to="/dashboard" />;
+        return <Redirect to="/dashboard" />;
       }
 
       return <Component {...props} />;
     }} />
   );
+};
+
+const AdminQueryGate: React.FC<{ component: React.FC<any> } & any> = ({ component: Component, ...props }) => {
+  const { role } = useAuthStore();
+  const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
+
+  if (role === 'admin') return <Component {...props} />;
+  if (adminLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+        <IonLoading isOpen />
+      </div>
+    );
+  }
+  if (!isAdmin) return <Redirect to="/dashboard" />;
+  return <Component {...props} />;
 };
 
 
@@ -115,16 +119,15 @@ const App: React.FC = () => (
           <Route exact path="/login" component={Login} />
           <Route exact path="/register" component={Register} />
           <Route exact path="/cyberin" component={AdminLogin} />
-          <ProtectedRoute exact path="/dashboard" component={DashboardPage} />
+          <ProtectedRoute exact path="/dashboard" component={DashboardPage} requireRole="user" />
           <ProtectedRoute exact path="/wallet" component={WalletPage} />
           <ProtectedRoute exact path="/register-afa" component={RegisterAFAPage} />
           <ProtectedRoute exact path="/orders" component={OrdersPage} />
           <ProtectedRoute exact path="/profile" component={ProfilePage} />
           <ProtectedRoute exact path="/notifications" component={NotificationsPage} />
           <ProtectedRoute exact path="/referrals" component={ReferralPage} />
-          <ProtectedRoute exact path="/become-agent" component={BecomeAgentPage} />
-          <ProtectedRoute exact path="/agent/dashboard" component={AgentDashboardPage} />
-          <ProtectedRoute exact path="/agent/pricing" component={AgentPricingPage} />
+          <ProtectedRoute exact path="/become-agent" component={BecomeAgentPage} requireRole="user" />
+          <ProtectedRoute exact path="/agent/dashboard" component={AgentDashboardPage} requireRole="agent" />
           <ProtectedRoute exact path="/cyberin/dashboard" component={AdminDashboard} requireAdmin />
           <ProtectedRoute exact path="/cyberin/registrations" component={AdminRegistrations} requireAdmin />
           <ProtectedRoute exact path="/cyberin/customers" component={AdminCustomers} requireAdmin />

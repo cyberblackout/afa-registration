@@ -16,7 +16,7 @@ interface MTNAFABannerProps {
   userName: string;
   role: 'user' | 'agent';
   newRegistrationHref: string;
-  secondaryActionHref: string;
+  secondaryActionHref?: string;
 }
 
 const features = [

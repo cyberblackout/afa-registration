@@ -15,7 +15,6 @@ import {
 import {
   eyeOutline,
   eyeOffOutline,
-  personCircleOutline,
   arrowForward,
   checkmarkCircle,
 } from 'ionicons/icons';
@@ -141,7 +140,7 @@ const Register: React.FC = () => {
         <div className="register-container">
           <div className="register-brand">
             <div className="brand-icon">
-              <IonIcon icon={personCircleOutline} />
+              <img src="/favicon.png" alt="MTN" className="brand-logo" />
             </div>
             <IonText>
               <h1 className="brand-title">MTN AFA</h1>

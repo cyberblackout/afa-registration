@@ -36,7 +36,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data: profileRows } = await supabase.rpc('get_my_profile');
         const profile = profileRows?.[0] ?? null;
         if (profile) {
-          setUser(profile as any, (profile.role ?? 'user') as 'user' | 'admin');
+          setUser(profile as any, (profile.role ?? 'user') as 'user' | 'agent' | 'admin');
         } else {
           setUser(null);
         }
@@ -62,7 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const { data: profileRows } = await supabase.rpc('get_my_profile');
           const profile = profileRows?.[0] ?? null;
           if (profile) {
-            setUser(profile as any, (profile.role ?? 'user') as 'user' | 'admin');
+            setUser(profile as any, (profile.role ?? 'user') as 'user' | 'agent' | 'admin');
           }
         }
       }

@@ -17,7 +17,6 @@ import {
   logOutOutline,
   menuOutline,
   closeOutline,
-  shieldCheckmarkOutline,
   giftOutline,
   ribbonOutline,
   logoWhatsapp,
@@ -94,7 +93,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
             <IonIcon icon={isOpen ? closeOutline : menuOutline} />
           </button>
           <div className="admin-brand">
-            <IonIcon icon={shieldCheckmarkOutline} className="admin-brand-icon" />
+            <img src="/favicon.png" alt="MTN" className="admin-brand-logo" />
             <span>MTN AFA Admin</span>
           </div>
         </div>
@@ -106,7 +105,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
 
       <aside className="admin-sidebar">
         <div className="admin-sidebar-header">
-          <IonIcon icon={shieldCheckmarkOutline} className="admin-brand-icon" />
+          <img src="/favicon.png" alt="MTN" className="admin-brand-logo" />
           <span>MTN AFA Admin</span>
         </div>
         <div className="admin-sidebar-menu">

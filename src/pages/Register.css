@@ -27,6 +27,25 @@
   border-radius: 2px;
 }
 
+.register-brand .brand-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 0.75rem;
+  background: linear-gradient(135deg, #ffc409, #ff9800);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px rgba(255, 196, 9, 0.3);
+}
+
+.register-brand .brand-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: contain;
+}
+
 .register-card-wrapper {
   flex: 1;
   padding: 1.5rem;

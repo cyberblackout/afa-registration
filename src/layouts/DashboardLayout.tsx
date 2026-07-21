@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { IonIcon } from '@ionic/react';
 import {
@@ -10,12 +10,12 @@ import {
   notificationsOutline,
   giftOutline,
   ribbonOutline,
-  flashOutline,
   logOutOutline,
   menuOutline,
   closeOutline,
   logoWhatsapp,
-  personAddOutline,
+  shieldCheckmarkOutline,
+  chevronForward,
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSidebarStore } from '../store/sidebarStore';
@@ -32,6 +32,8 @@ interface MenuItem {
   label: string;
   icon: string;
   path: string;
+  card?: boolean;
+  desc?: string;
 }
 
 interface WhatsAppConfig {
@@ -42,8 +44,7 @@ interface WhatsAppConfig {
   agentMessage: string;
 }
 
-const baseMenuItems: MenuItem[] = [
-  { label: 'Dashboard', icon: gridOutline, path: '/dashboard' },
+const sharedMenuItems: MenuItem[] = [
   { label: 'Wallet', icon: walletOutline, path: '/wallet' },
   { label: 'Register AFA', icon: addCircleOutline, path: '/register-afa' },
   { label: 'Orders', icon: cartOutline, path: '/orders' },
@@ -52,9 +53,15 @@ const baseMenuItems: MenuItem[] = [
   { label: 'Notifications', icon: notificationsOutline, path: '/notifications' },
 ];
 
+const userMenuItems: MenuItem[] = [
+  { label: 'Dashboard', icon: gridOutline, path: '/dashboard' },
+  ...sharedMenuItems,
+  { label: 'Become an Agent', icon: shieldCheckmarkOutline, path: '/become-agent', card: true, desc: 'Start earning with MTN AFA' },
+];
+
 const agentMenuItems: MenuItem[] = [
   { label: 'Agent Dashboard', icon: ribbonOutline, path: '/agent/dashboard' },
-  { label: 'Agent Pricing', icon: flashOutline, path: '/agent/pricing' },
+  ...sharedMenuItems,
 ];
 
 const sidebarVariants = {
@@ -82,12 +89,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { unreadCount } = useNotificationStore();
   const activePath = location.pathname;
 
-  const isAgent = user?.role === 'agent';
   const role = user?.role ?? 'user';
-  const becomeAgentItem: MenuItem = { label: 'Become an Agent', icon: personAddOutline, path: '/become-agent' };
-  const menuItems = isAgent
-    ? [...baseMenuItems, ...agentMenuItems]
-    : [...baseMenuItems.slice(0, 5), becomeAgentItem, ...baseMenuItems.slice(5)];
+  const mainMenuItems = role === 'agent' ? agentMenuItems : userMenuItems;
 
   const [wa, setWa] = useState<WhatsAppConfig>(defaultConfig);
 
@@ -116,81 +119,97 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     ? `https://wa.me/${wa.agentNumber}?text=${encodeURIComponent(wa.agentMessage)}`
     : '#';
 
-  const handleLogout = async () => {
+  const handleLogout = useCallback(async () => {
     await supabase.auth.signOut();
     logout();
     window.location.replace('/login');
-  };
-
-  const renderMenuItems = () =>
-    menuItems.map((item) => {
-      const isActive = activePath === item.path;
-      return (
-        <Link
-          key={item.path}
-          to={item.path}
-          className={`menu-item ${isActive ? 'active' : ''}`}
-          onClick={close}
-        >
-          <IonIcon icon={item.icon} className="menu-icon" />
-          <span>{item.label}</span>
-        </Link>
-      );
-    });
-
-  const renderWhatsAppItem = () => {
-    if (!wa.enabled) return null;
-    if (role === 'agent') {
-      return (
-        <a
-          key="agent-whatsapp"
-          href={agentWaLink}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="menu-item agent-whatsapp-link"
-          onClick={close}
-          title="Contact Agent Support via WhatsApp"
-        >
-          <IonIcon icon={logoWhatsapp} className="menu-icon" />
-          <span>Agent WhatsApp Support</span>
-        </a>
-      );
-    }
-    return (
-      <a
-        key="user-whatsapp"
-        href={userWaLink}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="menu-item whatsapp-link"
-        onClick={close}
-        title="Contact Support via WhatsApp"
-      >
-        <IonIcon icon={logoWhatsapp} className="menu-icon" />
-        <span>WhatsApp Support</span>
-      </a>
-    );
-  };
-
-  const renderLogoutButton = () => (
-    <button className="menu-item logout-btn" onClick={handleLogout}>
-      <IonIcon icon={logOutOutline} className="menu-icon" />
-      <span>Logout</span>
-    </button>
-  );
+  }, [logout]);
 
   const waLinkForFloat = role === 'agent' ? agentWaLink : userWaLink;
   const waNumberForFloat = role === 'agent' ? wa.agentNumber : wa.userNumber;
 
+  const isAgent = role === 'agent';
+
   const sidebarContent = (
     <>
-      <div className="sidebar-header">
-        <span className="sidebar-brand">MTN AFA Portal</span>
+      <div className="sb-header">
+        <div className="sb-brand">
+          <div className="sb-logo-circle">
+            <img src="/favicon.png" alt="MTN" className="sb-logo-img" />
+          </div>
+          <div className="sb-brand-text">
+            <span className="sb-brand-name">{isAgent ? 'MTN AFA Agent' : 'MTN AFA Portal'}</span>
+            <span className="sb-brand-role">{isAgent ? 'Agent Account' : 'User Account'}</span>
+          </div>
+        </div>
       </div>
-      <div className="sidebar-menu">
-        {renderMenuItems()}
-        {renderWhatsAppItem()}
-        {renderLogoutButton()}
+
+      <nav className="sb-nav">
+        {mainMenuItems.map((item) => {
+          const isActive = activePath === item.path;
+          if (item.card) {
+            return (
+              <Link
+                key={item.path}
+                to={item.path}
+                className="sb-nav-card"
+                onClick={close}
+              >
+                <div className="sb-nav-card-icon">
+                  <IonIcon icon={item.icon} />
+                </div>
+                <div className="sb-nav-card-text">
+                  <span className="sb-nav-card-title">{item.label}</span>
+                  <span className="sb-nav-card-desc">{item.desc}</span>
+                </div>
+                <div className="sb-nav-card-btn">
+                  <IonIcon icon={chevronForward} />
+                </div>
+              </Link>
+            );
+          }
+          return (
+            <Link
+              key={item.path}
+              to={item.path}
+              className={`sb-nav-item ${isActive ? 'active' : ''}`}
+              onClick={close}
+            >
+              <span className="sb-nav-icon">
+                <IonIcon icon={item.icon} />
+              </span>
+              <span className="sb-nav-label">{item.label}</span>
+              {isActive && <span className="sb-nav-indicator" />}
+            </Link>
+          );
+        })}
+      </nav>
+
+      {wa.enabled && (
+        <div className="sb-support">
+          <a
+            href={isAgent ? agentWaLink : userWaLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="sb-support-card"
+            onClick={close}
+          >
+            <div className="sb-support-icon">
+              <IonIcon icon={logoWhatsapp} />
+            </div>
+            <div className="sb-support-text">
+              <span className="sb-support-title">WhatsApp Support</span>
+              <span className="sb-support-desc">Chat with support</span>
+            </div>
+          </a>
+        </div>
+      )}
+
+      <div className="sb-footer">
+        <button className="sb-logout-btn" onClick={handleLogout}>
+          <IonIcon icon={logOutOutline} />
+          <span>Logout</span>
+        </button>
       </div>
     </>
   );
@@ -204,7 +223,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
           </Link>
         </div>
-        <span className="navbar-brand">MTN AFA PORTAL</span>
+        <div className="navbar-brand">
+          <img src="/favicon.png" alt="MTN" className="navbar-logo" />
+          <span>{isAgent ? 'MTN AFA AGENT' : 'MTN AFA PORTAL'}</span>
+        </div>
         <div className="navbar-right">
           <button className="hamburger-btn" onClick={toggle} aria-label="Toggle menu">
             <IonIcon icon={isOpen ? closeOutline : menuOutline} />

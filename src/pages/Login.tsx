@@ -71,7 +71,7 @@ const Login: React.FC = () => {
         // Fetch profile via SECURITY DEFINER RPC (bypasses RLS)
         const { data: profileRows } = await supabase.rpc('get_my_profile');
         const profile = profileRows?.[0] ?? null;
-        const role = (profile?.role ?? 'user') as 'user' | 'admin';
+        const role = (profile?.role ?? 'user') as 'user' | 'agent' | 'admin';
 
         // Block admin users from the customer portal
         if (role === 'admin') {
@@ -92,7 +92,7 @@ const Login: React.FC = () => {
           wallet_balance: profile?.wallet_balance ?? 0,
           created_at: profile?.created_at ?? new Date().toISOString(),
         }, role);
-        history.push('/dashboard');
+        history.push(role === 'agent' ? '/agent/dashboard' : '/dashboard');
       }
     } catch (error: any) {
       console.error('Login error:', error);
