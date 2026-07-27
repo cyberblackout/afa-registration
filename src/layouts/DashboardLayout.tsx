@@ -145,29 +145,8 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
       </div>
 
       <nav className="sb-nav">
-        {mainMenuItems.map((item) => {
+        {mainMenuItems.filter(item => !item.card).map((item) => {
           const isActive = activePath === item.path;
-          if (item.card) {
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className="sb-nav-card"
-                onClick={close}
-              >
-                <div className="sb-nav-card-icon">
-                  <IonIcon icon={item.icon} />
-                </div>
-                <div className="sb-nav-card-text">
-                  <span className="sb-nav-card-title">{item.label}</span>
-                  <span className="sb-nav-card-desc">{item.desc}</span>
-                </div>
-                <div className="sb-nav-card-btn">
-                  <IonIcon icon={chevronForward} />
-                </div>
-              </Link>
-            );
-          }
           return (
             <Link
               key={item.path}
@@ -185,31 +164,53 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         })}
       </nav>
 
-      {wa.enabled && (
-        <div className="sb-support">
-          <a
-            href={isAgent ? agentWaLink : userWaLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="sb-support-card"
+      <div className="sidebar-footer">
+        {mainMenuItems.filter(item => item.card).map((item) => (
+          <Link
+            key={item.path}
+            to={item.path}
+            className="sb-nav-card"
             onClick={close}
           >
-            <div className="sb-support-icon">
-              <IonIcon icon={logoWhatsapp} />
+            <div className="sb-nav-card-icon">
+              <IonIcon icon={item.icon} />
             </div>
-            <div className="sb-support-text">
-              <span className="sb-support-title">WhatsApp Support</span>
-              <span className="sb-support-desc">Chat with support</span>
+            <div className="sb-nav-card-text">
+              <span className="sb-nav-card-title">{item.label}</span>
+              <span className="sb-nav-card-desc">{item.desc}</span>
             </div>
-          </a>
-        </div>
-      )}
+            <div className="sb-nav-card-btn">
+              <IonIcon icon={chevronForward} />
+            </div>
+          </Link>
+        ))}
 
-      <div className="sb-footer">
-        <button className="sb-logout-btn" onClick={handleLogout}>
-          <IonIcon icon={logOutOutline} />
-          <span>Logout</span>
-        </button>
+        {wa.enabled && (
+          <div className="sb-support">
+            <a
+              href={isAgent ? agentWaLink : userWaLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="sb-support-card"
+              onClick={close}
+            >
+              <div className="sb-support-icon">
+                <IonIcon icon={logoWhatsapp} />
+              </div>
+              <div className="sb-support-text">
+                <span className="sb-support-title">WhatsApp Support</span>
+                <span className="sb-support-desc">Chat with support</span>
+              </div>
+            </a>
+          </div>
+        )}
+
+        <div className="sb-footer">
+          <button className="sb-logout-btn" onClick={handleLogout}>
+            <IonIcon icon={logOutOutline} />
+            <span>Logout</span>
+          </button>
+        </div>
       </div>
     </>
   );

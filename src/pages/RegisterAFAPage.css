@@ -1,624 +1,393 @@
-.register-afa-page {
-  max-width: 720px;
+/* ═══════════════════════════════════════════════
+   RegisterAFAPage — clean single-card form
+   Matches afaregistration.com/user/register_afa.php
+   ═══════════════════════════════════════════════ */
+
+.afa-page {
+  max-width: 640px;
   margin: 0 auto;
-  padding: 24px 16px 40px;
-  background: #f8f9fa;
+  padding: 32px 16px 48px;
   min-height: calc(100vh - 64px);
 }
 
-.dark .register-afa-page {
-  background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #0f0f1a 100%);
-}
+/* ── Card ── */
 
-.progress-indicator {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 8px;
-}
-
-.progress-circle {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #e0e0e0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 0.85rem;
-  color: #999;
-  flex-shrink: 0;
-  transition: all 0.3s ease;
-  position: relative;
-  z-index: 1;
-}
-
-.dark .progress-circle {
-  background: rgba(255, 255, 255, 0.12);
-  color: #aeaeb2;
-}
-
-.progress-circle.active {
-  background: #FFCB05;
-  color: #000000;
-  box-shadow: 0 0 0 4px rgba(255, 203, 5, 0.25);
-}
-
-.progress-circle ion-icon {
-  font-size: 1.3rem;
-  color: #000000;
-}
-
-.progress-line {
-  height: 3px;
-  flex: 1;
-  max-width: 80px;
-  background: #e0e0e0;
-  margin: 0 4px;
-  border-radius: 2px;
-  transition: background 0.3s ease;
-}
-
-.dark .progress-line {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.progress-line.filled {
-  background: #FFCB05;
-}
-
-.step-labels {
-  display: flex;
-  justify-content: space-between;
-  padding: 0 4px;
-  margin-bottom: 32px;
-  max-width: 460px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.step-label {
-  font-size: 0.65rem;
-  color: #999;
-  text-align: center;
-  flex: 1;
-  font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-  transition: color 0.3s ease;
-}
-
-.dark .step-label {
-  color: #8e8e93;
-}
-
-.step-label.current {
-  color: #000000;
-  font-weight: 700;
-}
-
-.dark .step-label.current {
-  color: #ffffff;
-}
-
-.step-label.done {
-  color: #FFCB05;
-}
-
-.step-header {
-  text-align: center;
-  margin-bottom: 28px;
-}
-
-.step-header-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
-  background: #fff8e1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto 16px;
-}
-
-.step-header-icon ion-icon {
-  font-size: 1.6rem;
-  color: #FFCB05;
-}
-
-.step-title {
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #000000;
-  margin: 0 0 6px;
-}
-
-.dark .step-title {
-  color: #ffffff;
-}
-
-.step-subtitle {
-  font-size: 0.9rem;
-  color: #666;
-  margin: 0;
-}
-
-.dark .step-subtitle {
-  color: #aeaeb2;
-}
-
-.step-content {
+.afa-card {
   background: #ffffff;
-  border-radius: 20px;
-  padding: 24px;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
-  margin-bottom: 24px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 1.25rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  padding: 28px 28px 32px;
 }
 
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
+.dark .afa-card {
+  background: rgba(30, 30, 50, 0.95);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
-.input-group {
-  margin-bottom: 18px;
-}
+/* ── Header ── */
 
-.input-group:last-child {
-  margin-bottom: 0;
-}
-
-.input-label {
-  display: block;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #444;
-  margin-bottom: 6px;
-  letter-spacing: 0.2px;
-  text-transform: uppercase;
-  font-family: inherit;
-}
-
-.input-item {
-  --background: #f5f5f5;
-  --color: #000000;
-  --border-radius: 12px;
-  --padding-start: 16px;
-  --padding-end: 16px;
-  --inner-padding-end: 0;
-  --min-height: 48px;
-  border: 2px solid transparent;
-  border-radius: 12px;
-  transition: border-color 0.2s ease;
-}
-
-.input-item.input-error {
-  border-color: #e74c3c;
-}
-
-.input-item:focus-within {
-  border-color: #FFCB05;
-}
-
-.field-error {
-  display: block;
-  font-size: 0.75rem;
-  color: #e74c3c;
-  margin-top: 4px;
-  padding-left: 4px;
-}
-
-.image-upload-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-top: 16px;
-}
-
-.image-upload-group .input-label {
-  margin-bottom: 10px;
-}
-
-.hidden-input {
-  display: none;
-}
-
-.image-upload-box {
-  width: 100%;
-  aspect-ratio: 1.6 / 1;
-  border: 2px dashed #ddd;
-  border-radius: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  overflow: hidden;
-  position: relative;
-  transition: border-color 0.2s ease, background 0.2s ease;
-  background: #fafafa;
-}
-
-.image-upload-box:hover {
-  border-color: #FFCB05;
-  background: #fffef5;
-}
-
-.image-upload-box.has-image {
-  border-color: #FFCB05;
-  border-style: solid;
-  background: #fffef5;
-}
-
-.upload-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  color: #666;
-}
-
-.upload-placeholder ion-icon {
-  font-size: 2rem;
-}
-
-.upload-placeholder span {
-  font-size: 0.8rem;
-  font-weight: 600;
-}
-
-.image-preview-wrapper {
-  width: 100%;
-  height: 100%;
-  position: relative;
-}
-
-.image-preview {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.image-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  color: #ffffff;
-}
-
-.image-overlay ion-icon {
-  font-size: 1.6rem;
-}
-
-.image-overlay span {
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.image-preview-wrapper:hover .image-overlay {
-  opacity: 1;
-}
-
-.nav-buttons {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.nav-spacer {
-  flex: 1;
-}
-
-.back-btn {
-  --border-color: #000000;
-  --color: #000000;
-  --border-radius: 12px;
-  --border-width: 2px;
-  font-weight: 600;
-  height: 48px;
-}
-
-.next-btn {
-  --background: #FFCB05;
-  --color: #000000;
-  --border-radius: 12px;
-  font-weight: 700;
-  font-size: 1rem;
-  --box-shadow: 0 4px 16px rgba(255, 203, 5, 0.35);
-  height: 48px;
-  min-width: 140px;
-}
-
-.submit-btn {
-  --background: #FFCB05;
-  --color: #000000;
-  --border-radius: 12px;
-  font-weight: 700;
-  font-size: 1rem;
-  --box-shadow: 0 4px 16px rgba(255, 203, 5, 0.35);
-  height: 48px;
-  width: 100%;
-}
-
-.submit-btn.ion-disabled {
-  opacity: 0.5;
-}
-
-.review-section {
-  margin-bottom: 24px;
+.afa-card-header {
+  margin-bottom: 28px;
   padding-bottom: 20px;
   border-bottom: 1px solid #f0f0f0;
 }
 
-.review-section:last-child {
-  margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.review-section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 1rem;
-  font-weight: 700;
-  color: #000000;
-  margin: 0 0 16px;
-}
-
-.review-section-title ion-icon {
-  font-size: 1.2rem;
-  color: #FFCB05;
-}
-
-.review-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 10px 0;
-  border-bottom: 1px solid #f5f5f5;
-  gap: 12px;
-}
-
-.review-item:last-child {
-  border-bottom: none;
-}
-
-.review-label {
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: #888;
-  flex-shrink: 0;
-  min-width: 120px;
-}
-
-.review-value {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #000000;
-  text-align: right;
-  word-break: break-word;
-}
-
-.confirmation-group {
-  margin-top: 12px;
-  padding-top: 16px;
-  border-top: 2px solid #f0f0f0;
-}
-
-.confirmation-checkbox {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  cursor: pointer;
-  position: relative;
-  padding-left: 36px;
-}
-
-.confirmation-checkbox input {
-  position: absolute;
-  opacity: 0;
-  cursor: pointer;
-  height: 0;
-  width: 0;
-}
-
-.checkmark {
-  position: absolute;
-  left: 0;
-  top: 2px;
-  height: 22px;
-  width: 22px;
-  background: #f5f5f5;
-  border: 2px solid #ddd;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-}
-
-.confirmation-checkbox:hover input ~ .checkmark {
-  border-color: #FFCB05;
-}
-
-.confirmation-checkbox input:checked ~ .checkmark {
-  background: #FFCB05;
-  border-color: #FFCB05;
-}
-
-.checkmark:after {
-  content: '';
-  position: absolute;
-  display: none;
-}
-
-.confirmation-checkbox input:checked ~ .checkmark:after {
-  display: block;
-}
-
-.confirmation-checkbox .checkmark:after {
-  left: 6px;
-  top: 2px;
-  width: 6px;
-  height: 11px;
-  border: solid #000000;
-  border-width: 0 2.5px 2.5px 0;
-  transform: rotate(45deg);
-}
-
-.confirmation-text {
-  font-size: 0.85rem;
-  color: #444;
-  line-height: 1.5;
-}
-
-/* ── Dark Mode ── */
-
-.dark .step-content {
-  background: rgba(30, 30, 50, 0.95);
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
-}
-
-.dark .input-item {
-  --background: rgba(255, 255, 255, 0.06);
-  --color: #ffffff;
-}
-
-.dark .input-label {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.dark .image-upload-box {
-  border-color: rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.dark .image-upload-box:hover {
-  border-color: #FFCB05;
-  background: rgba(255, 203, 5, 0.06);
-}
-
-.dark .upload-placeholder {
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.dark .review-section {
+.dark .afa-card-header {
   border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
-.dark .review-section-title {
+.afa-card-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 6px;
+  letter-spacing: -0.02em;
+}
+
+.dark .afa-card-title {
   color: #ffffff;
 }
 
-.dark .review-item {
-  border-bottom-color: rgba(255, 255, 255, 0.06);
+.afa-card-subtitle {
+  font-size: 0.88rem;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.5;
 }
 
-.dark .review-label {
-  color: rgba(255, 255, 255, 0.4);
+.dark .afa-card-subtitle {
+  color: #9ca3af;
 }
 
-.dark .review-value {
-  color: #ffffff;
+/* ── Form ── */
+
+.afa-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.dark .confirmation-text {
+.afa-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.afa-field {
+  display: flex;
+  flex-direction: column;
+}
+
+.afa-field.full {
+  width: 100%;
+}
+
+/* ── Label ── */
+
+.afa-label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 8px;
+  letter-spacing: 0.01em;
+}
+
+.dark .afa-label {
   color: rgba(255, 255, 255, 0.7);
 }
 
-.dark .confirmation-group {
-  border-top-color: rgba(255, 255, 255, 0.08);
+/* ── Input ── */
+
+.afa-input {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.9rem;
+  background: #ffffff;
+  padding: 0.85rem 1rem;
+  font-size: 0.95rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
-.dark .checkmark {
+.afa-input::placeholder {
+  color: #9ca3af;
+}
+
+.afa-input:focus {
+  border-color: #111827;
+  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.06);
+}
+
+.afa-input.error {
+  border-color: #ef4444;
+}
+
+.afa-input.error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+/* Date input specific */
+.afa-input[type='date'] {
+  color: #111827;
+}
+
+.afa-input[type='date']:invalid,
+.afa-input[type='date'][value=''] {
+  color: #9ca3af;
+}
+
+.dark .afa-input {
   background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
 }
 
-.dark .field-error {
-  color: #ef9a9a;
+.dark .afa-input::placeholder {
+  color: rgba(255, 255, 255, 0.35);
 }
+
+.dark .afa-input:focus {
+  border-color: #FCD116;
+  box-shadow: 0 0 0 3px rgba(252, 209, 22, 0.1);
+}
+
+/* ── Field Error ── */
+
+.afa-field-error {
+  display: block;
+  font-size: 0.75rem;
+  color: #ef4444;
+  margin-top: 5px;
+  padding-left: 4px;
+}
+
+.dark .afa-field-error {
+  color: #fca5a5;
+}
+
+/* ── Pricing Banner ── */
+
+.afa-pricing-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #FFF8D9;
+  border: 1px solid #FCD116;
+  border-radius: 1rem;
+  padding: 16px 20px;
+  margin-top: 4px;
+}
+
+.dark .afa-pricing-banner {
+  background: rgba(252, 209, 22, 0.08);
+  border-color: rgba(252, 209, 22, 0.3);
+}
+
+.afa-pricing-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.afa-pricing-text strong {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+.dark .afa-pricing-text strong {
+  color: #ffffff;
+}
+
+.afa-pricing-text span {
+  font-size: 0.78rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.dark .afa-pricing-text span {
+  color: #9ca3af;
+}
+
+.afa-pricing-total {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  padding: 10px 18px;
+}
+
+.dark .afa-pricing-total {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.afa-pricing-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #92400e;
+}
+
+.dark .afa-pricing-badge {
+  color: #FCD116;
+}
+
+.afa-pricing-amount {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #111827;
+  white-space: nowrap;
+}
+
+.dark .afa-pricing-amount {
+  color: #ffffff;
+}
+
+/* ── Submit Button ── */
+
+.afa-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  width: 100%;
+  border: none;
+  border-radius: 0.9rem;
+  padding: 0.95rem 1rem;
+  background: #000000;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.afa-submit-btn:hover {
+  background: #111827;
+}
+
+.afa-submit-btn:active {
+  transform: scale(0.985);
+}
+
+.afa-submit-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dark .afa-submit-btn {
+  background: #FCD116;
+  color: #000000;
+}
+
+.dark .afa-submit-btn:hover {
+  filter: brightness(0.95);
+}
+
+/* ── Spinner ── */
+
+.afa-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: afa-spin 0.65s linear infinite;
+}
+
+.dark .afa-spinner {
+  border-color: rgba(0, 0, 0, 0.2);
+  border-top-color: #000000;
+}
+
+@keyframes afa-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Success State ── */
+
+.afa-success {
+  text-align: center;
+  padding: 80px 24px;
+  max-width: 420px;
+  margin: 0 auto;
+}
+
+.afa-success-icon {
+  font-size: 4rem;
+  color: #22c55e;
+  margin-bottom: 20px;
+}
+
+.afa-success h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0 0 10px;
+}
+
+.dark .afa-success h2 {
+  color: #ffffff;
+}
+
+.afa-success p {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.dark .afa-success p {
+  color: #9ca3af;
+}
+
+/* ── Responsive ── */
 
 @media (max-width: 600px) {
-  .register-afa-page {
+  .afa-page {
     padding: 16px 12px 32px;
   }
 
-  .step-content {
-    padding: 18px 16px;
+  .afa-card {
+    padding: 20px 18px 24px;
+    border-radius: 1rem;
   }
 
-  .form-row {
+  .afa-row {
     grid-template-columns: 1fr;
-    gap: 0;
+    gap: 20px;
   }
 
-  .image-upload-row {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .progress-line {
-    max-width: 40px;
-  }
-
-  .progress-circle {
-    width: 34px;
-    height: 34px;
-    font-size: 0.75rem;
-  }
-
-  .step-title {
+  .afa-card-title {
     font-size: 1.2rem;
   }
 
-  .step-header-icon {
-    width: 48px;
-    height: 48px;
-  }
-
-  .step-header-icon ion-icon {
-    font-size: 1.3rem;
-  }
-
-  .nav-buttons {
+  .afa-pricing-banner {
     flex-direction: column;
+    text-align: center;
+    gap: 12px;
+    padding: 16px;
   }
 
-  .nav-buttons .back-btn,
-  .nav-buttons .next-btn,
-  .nav-buttons .submit-btn {
-    width: 100%;
-  }
-
-  .nav-spacer {
-    display: none;
-  }
-
-  .review-item {
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .review-label {
-    min-width: auto;
-  }
-
-  .review-value {
-    text-align: left;
-  }
-
-  .step-labels {
-    display: none;
+  .afa-pricing-text {
+    align-items: center;
   }
 }
