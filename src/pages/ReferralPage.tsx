@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import {
+  IonPage,
   IonToast,
 } from '@ionic/react';
 import {
@@ -147,6 +148,7 @@ const ReferralPage: React.FC = () => {
   ];
 
   return (
+    <IonPage>
     <DashboardLayout>
       <div className="rr-page">
 
@@ -391,6 +393,7 @@ const ReferralPage: React.FC = () => {
         <IonToast isOpen={toast.show} onDidDismiss={() => setToast({ show: false, msg: '' })} message={toast.msg} duration={2000} position="bottom" />
       </div>
     </DashboardLayout>
+    </IonPage>
   );
 };
 

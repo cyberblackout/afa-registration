@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import {
+  IonPage,
   IonButton, IonToast, IonLoading,
 } from '@ionic/react';
 import {
@@ -70,6 +71,7 @@ const BecomeAgentPage: React.FC = () => {
   };
 
   return (
+    <IonPage>
     <DashboardLayout>
       <div className="ba-page">
         {/* ===== HERO ===== */}
@@ -330,6 +332,7 @@ const BecomeAgentPage: React.FC = () => {
         />
       </div>
     </DashboardLayout>
+    </IonPage>
   );
 };
 
