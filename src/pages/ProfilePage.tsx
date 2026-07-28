@@ -477,10 +477,6 @@ const ProfilePage: React.FC = () => {
                     ) : (
                       <div className="agent-profile-cta">
                         <p>Become an agent and unlock discounted pricing, earn commissions, and grow your business.</p>
-                        <Link to="/become-agent" className="become-agent-link">
-                          <IonIcon icon={shieldCheckmarkOutline} />
-                          Become an Agent
-                        </Link>
                       </div>
                     )}
                   </div>
