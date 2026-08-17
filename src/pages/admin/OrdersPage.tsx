@@ -34,6 +34,22 @@ const statusBgColors: Record<string, string> = {
   cancelled: '#f5f5f5',
 };
 
+// Ghana is UTC+0, so all timestamps from Supabase are already correct
+// but toLocaleString() uses the DEVICE timezone — force Africa/Accra
+const formatGhanaDate = (dateStr: string) =>
+  new Date(dateStr).toLocaleDateString('en-GB', { timeZone: 'Africa/Accra' });
+
+const formatGhanaDateTime = (dateStr: string) =>
+  new Date(dateStr).toLocaleString('en-GB', {
+    timeZone: 'Africa/Accra',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+
 const OrdersPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -137,7 +153,7 @@ const OrdersPage: React.FC = () => {
                     </div>
                     <div className="order-card-row">
                       <span className="order-items">{order.description || 'N/A'}</span>
-                      <span className="order-date">{new Date(order.created_at).toLocaleDateString()}</span>
+                      <span className="order-date">{formatGhanaDate(order.created_at)}</span>
                     </div>
                     <div className="order-card-row">
                       <button className="view-order-btn" onClick={() => openDetail(order)}>
@@ -151,7 +167,7 @@ const OrdersPage: React.FC = () => {
                       <span className="otd otd-customer">{order.profiles?.full_name || 'Unknown'}</span>
                       <span className="otd otd-items">{order.description || 'N/A'}</span>
                       <span className="otd otd-total">{formatAmount(order.amount || 0)}</span>
-                      <span className="otd otd-date">{new Date(order.created_at).toLocaleDateString()}</span>
+                      <span className="otd otd-date">{formatGhanaDate(order.created_at)}</span>
                       <span className="otd otd-status">
                         <span className="order-status-badge" style={{ background: statusBgColors[order.status] || '#f5f5f5', color: statusColors[order.status] || '#333' }}>
                           {order.status || 'pending'}
@@ -200,7 +216,7 @@ const OrdersPage: React.FC = () => {
                   </div>
                   <div className="detail-item">
                     <span className="detail-label">Date</span>
-                    <span className="detail-value">{new Date(selectedOrder.created_at).toLocaleString()}</span>
+                    <span className="detail-value">{formatGhanaDateTime(selectedOrder.created_at)}</span>
                   </div>
                 </div>
               </div>
