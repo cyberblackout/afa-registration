@@ -7,7 +7,7 @@ import {
 } from 'ionicons/icons';
 import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../services/supabase';
+import { referralApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import './ReferralManagementPage.css';
 
@@ -17,26 +17,16 @@ const ReferralManagementPage: React.FC = () => {
 
   const { data: analytics } = useQuery({
     queryKey: ['admin_referral_analytics'],
-    queryFn: async () => {
-      const { data } = await supabase.rpc('admin_get_referral_analytics');
-      return data as any;
-    },
+    queryFn: () => referralApi.adminAnalytics() as any,
   });
 
   const { data: referrals = [] } = useQuery({
     queryKey: ['admin_all_referrals'],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('referrals')
-        .select('*, referrer:profiles!referrer_id(full_name, email, phone), referred:profiles!referred_id(full_name, email, phone)')
-        .order('created_at', { ascending: false })
-        .limit(100);
-      return data || [];
-    },
+    queryFn: () => referralApi.adminList() as any,
   });
 
   const updateStatus = async (id: string, status: string) => {
-    await supabase.from('referrals').update({ status }).eq('id', id);
+    await referralApi.adminUpdateStatus(id, status);
     queryClient.invalidateQueries({ queryKey: ['admin_all_referrals'] });
     queryClient.invalidateQueries({ queryKey: ['admin_referral_analytics'] });
     setToast({ show: true, msg: `Referral ${status}` });

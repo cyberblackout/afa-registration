@@ -9,7 +9,7 @@ import {
 } from 'ionicons/icons';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { supabase } from '../services/supabase';
+import { agentApi, profileApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import DashboardLayout from '../layouts/DashboardLayout';
 import MTNAFABanner from '../components/MTNAFABanner';
@@ -20,16 +20,13 @@ const AgentDashboardPage: React.FC = () => {
 
   const { data: dashboard, isLoading } = useQuery({
     queryKey: ['agent_dashboard', user?.id],
-    queryFn: async () => {
-      const { data } = await supabase.rpc('get_agent_dashboard');
-      return data as any || {};
-    },
+    queryFn: () => agentApi.getDashboard() as any,
     enabled: !!user?.id,
   });
 
   const { data: profile } = useQuery({
     queryKey: ['agent_profile', user?.id],
-    queryFn: () => supabase.from('profiles').select('*').eq('id', user?.id).single().then(r => r.data),
+    queryFn: () => profileApi.get(user!.id),
     enabled: !!user?.id,
   });
 

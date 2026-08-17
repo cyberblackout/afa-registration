@@ -20,6 +20,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../services/supabase';
+import { registrationApi, notificationApi, adminCustomerApi } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import AdminLayout from '../../layouts/AdminLayout';
 import './RegistrationsPage.css';
@@ -70,10 +71,7 @@ const RegistrationsPage: React.FC = () => {
 
   const { data: registrations = [], isLoading } = useQuery({
     queryKey: ['admin_registrations'],
-    queryFn: async () => {
-      const r = await supabase.from('registrations').select('*, profiles(full_name, email, phone), registration_documents(*), registration_timeline(*)').order('created_at', { ascending: false });
-      return r.data || [];
-    },
+    queryFn: () => registrationApi.adminList() as any,
   });
 
   useEffect(() => {
@@ -86,8 +84,8 @@ const RegistrationsPage: React.FC = () => {
   }, []);
 
   const filteredRegs = registrations.filter((reg: any) => {
-    const name = reg.profiles?.full_name || '';
-    const phone = reg.profiles?.phone || '';
+    const name = reg.full_name || '';
+    const phone = reg.phone || '';
     const id = reg.id || '';
     const matchesSearch =
       id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -120,34 +118,24 @@ const RegistrationsPage: React.FC = () => {
   const updateStatus = async (id: string, status: string) => {
     setStatusLoading(true);
     try {
-      await supabase.from('registrations').update({ status, admin_notes: adminNotes || null }).eq('id', id);
-      await supabase.from('registration_timeline').insert({
-        registration_id: id,
-        status,
-        note: `Status changed to ${status} by admin`,
-        created_by: user?.id,
-      });
+      await registrationApi.adminUpdateStatus(id, status, adminNotes);
       const reg = registrations.find((r: any) => r.id === id);
       if (reg?.user_id) {
-        await supabase.from('notifications').insert({
-          user_id: reg.user_id,
-          title: 'Registration Status Update',
-          message: `Your registration (${id}) has been ${status}.`,
-          type: status === 'approved' ? 'success' : status === 'rejected' ? 'error' : 'info',
-        });
+        await notificationApi.adminInsertNotification(
+          reg.user_id,
+          'Registration Status Update',
+          `Your registration (${reg?.reg_number || id?.slice(0, 6)}) has been ${status}.`,
+          status === 'approved' ? 'success' : status === 'rejected' ? 'error' : 'info'
+        );
 
           try {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('full_name, email, phone')
-              .eq('id', reg.user_id)
-              .single();
+            const profile = await adminCustomerApi.getUser(reg.user_id);
             if (profile?.email) {
               const { sendEmail, registrationStatusHtml } = await import('../../services/email');
               sendEmail(
                 profile.email,
                 `Registration ${status} - MTN AFA Portal`,
-                registrationStatusHtml(profile.full_name || 'User', id, status, adminNotes || undefined),
+                registrationStatusHtml(profile.full_name || 'User', reg?.reg_number || id?.slice(0, 6), status, adminNotes || undefined),
                 'transactional'
               );
             }
@@ -182,14 +170,14 @@ const RegistrationsPage: React.FC = () => {
 
             if (status === 'completed') {
               try {
-                const { data: reward } = await supabase.rpc('process_referral_reward', { registration_id: id });
+                const reward = await registrationApi.adminProcessReferralReward(id);
                 if (reward?.success) {
-                  await supabase.from('notifications').insert({
-                    user_id: reward.referrer_id,
-                    title: 'Referral Reward Earned!',
-                    message: `You earned GH₵ ${reward.amount} from a successful registration referral.`,
-                    type: 'success',
-                  });
+                  await notificationApi.adminInsertNotification(
+                    reward.referrer_id,
+                    'Referral Reward Earned!',
+                    `You earned GH₵ ${reward.amount} from a successful registration referral.`,
+                    'success'
+                  );
                 }
               } catch {
                 // reward processing is non-critical
@@ -200,6 +188,7 @@ const RegistrationsPage: React.FC = () => {
           }
       }
       queryClient.invalidateQueries({ queryKey: ['admin_registrations'] });
+      queryClient.invalidateQueries({ queryKey: ['admin_orders'] });
       setSelectedReg(null);
     } catch (err: any) {
       console.error('Status update error:', err);
@@ -239,13 +228,18 @@ const RegistrationsPage: React.FC = () => {
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
+  const formatDateTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) + ' UTC';
+  };
+
   const bulkUpdateMutation = useMutation({
     mutationFn: async ({ ids, status }: { ids: string[]; status: string }) => {
-      const { error } = await supabase.rpc('bulk_update_registration_status', { p_ids: ids, p_status: status });
-      if (error) throw error;
+      await registrationApi.adminBulkUpdate(ids, status);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin_registrations'] });
+      queryClient.invalidateQueries({ queryKey: ['admin_orders'] });
       setBulkSelected(new Set());
       setToastMessage('Selected registrations updated');
       setShowToast(true);
@@ -285,9 +279,9 @@ const RegistrationsPage: React.FC = () => {
               />
             </div>
             <button className="export-btn" onClick={() => {
-              const headers = 'ID,Customer Name,Phone,Email,Network,SIM Number,Status,Date\n';
+              const headers = 'Reg Number,Customer Name,Phone,Email,Network,SIM Number,Status,Date\n';
               const rows = filteredRegs.map((r: any) =>
-                `${r.id},"${r.profiles?.full_name || ''}","${r.profiles?.phone || ''}","${r.email || ''}",${r.network || ''},${r.sim_number || ''},${r.status || ''},${new Date(r.created_at).toLocaleDateString()}`
+                `${r.reg_number || r.id?.slice(0, 6)},"${r.full_name || ''}","${r.phone || ''}","${r.email || ''}",${r.network || ''},${r.sim_number || ''},${r.status || ''},${new Date(r.created_at).toLocaleDateString()}`
               ).join('\n');
               const blob = new Blob([headers + rows], { type: 'text/csv' });
               const url = URL.createObjectURL(blob);
@@ -390,7 +384,7 @@ const RegistrationsPage: React.FC = () => {
                     </div>
                     <div className="reg-card-field id-field">
                       <span className="field-label">Reg ID</span>
-                      <span className="field-value id-value">{reg.id?.slice(0, 8)}</span>
+                      <span className="field-value id-value">{reg.reg_number || reg.id?.slice(0, 6)}</span>
                     </div>
                     <div className="reg-card-field status-field">
                       <span className="status-badge" style={{ background: statusBgColors[reg.status], color: statusColors[reg.status] }}>
@@ -401,11 +395,11 @@ const RegistrationsPage: React.FC = () => {
                   <div className="reg-card-row">
                     <div className="reg-card-field">
                       <span className="field-label">Customer</span>
-                      <span className="field-value">{reg.profiles?.full_name || 'Unknown'}</span>
+                      <span className="field-value">{reg.full_name || 'Unknown'}</span>
                     </div>
                     <div className="reg-card-field">
                       <span className="field-label">Phone</span>
-                      <span className="field-value">{reg.profiles?.phone || ''}</span>
+                      <span className="field-value">{reg.phone || ''}</span>
                     </div>
                   </div>
                   <div className="reg-card-row">
@@ -433,9 +427,9 @@ const RegistrationsPage: React.FC = () => {
                     <span className="td td-check" onClick={(e) => e.stopPropagation()}>
                       <input type="checkbox" checked={bulkSelected.has(reg.id)} onChange={() => toggleBulk(reg.id)} className="bulk-check" />
                     </span>
-                    <span className="td td-id">{reg.id?.slice(0, 8)}</span>
-                    <span className="td td-customer">{reg.profiles?.full_name || 'Unknown'}</span>
-                    <span className="td td-phone">{reg.profiles?.phone || ''}</span>
+                    <span className="td td-id">{reg.reg_number || reg.id?.slice(0, 6)}</span>
+                    <span className="td td-customer">{reg.full_name || 'Unknown'}</span>
+                    <span className="td td-phone">{reg.phone || ''}</span>
                     <span className="td td-network">
                       <span className="network-badge" style={{ background: networkBgColors[reg.network] || '#f5f5f5', color: networkColors[reg.network] || '#333' }}>
                         {reg.network || 'N/A'}
@@ -547,11 +541,7 @@ const RegistrationsPage: React.FC = () => {
                   <div className="detail-grid">
                     <div className="detail-item">
                       <span className="detail-label">Registration ID</span>
-                      <span className="detail-value mono">{selectedReg.id}</span>
-                    </div>
-                    <div className="detail-item">
-                      <span className="detail-label">Date Submitted</span>
-                      <span className="detail-value">{formatDate(selectedReg.created_at)}</span>
+                      <span className="detail-value mono">{selectedReg.reg_number || selectedReg.id?.slice(0, 6)}</span>
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Status</span>
@@ -560,10 +550,33 @@ const RegistrationsPage: React.FC = () => {
                       </span>
                     </div>
                     <div className="detail-item">
-                      <span className="detail-label">Network</span>
-                      <span className="network-badge" style={{ background: networkBgColors[selectedReg.network] || '#f5f5f5', color: networkColors[selectedReg.network] || '#333' }}>
-                        {selectedReg.network || 'N/A'}
-                      </span>
+                      <span className="detail-label">Time</span>
+                      <span className="detail-value">{formatDateTime(selectedReg.created_at)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="detail-section">
+                  <div className="detail-section-title">
+                    <IonIcon icon={checkmarkCircle} />
+                    <span>User Profile Info</span>
+                  </div>
+                  <div className="detail-grid">
+                    <div className="detail-item">
+                      <span className="detail-label">Full Name</span>
+                      <span className="detail-value">{selectedReg.profiles?.full_name || 'Not provided'}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">Email</span>
+                      <span className="detail-value">{selectedReg.profiles?.email || 'Not provided'}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">Phone</span>
+                      <span className="detail-value">{selectedReg.profiles?.phone || 'Not provided'}</span>
+                    </div>
+                    <div className="detail-item">
+                      <span className="detail-label">Role</span>
+                      <span className="detail-value">{selectedReg.profiles?.role || 'Not provided'}</span>
                     </div>
                   </div>
                 </div>
@@ -576,16 +589,30 @@ const RegistrationsPage: React.FC = () => {
                   <div className="detail-grid">
                     <div className="detail-item">
                       <span className="detail-label">Full Name</span>
-                      <span className="detail-value">{selectedReg.profiles?.full_name || 'Unknown'}</span>
+                      <span className="detail-value">{selectedReg.full_name || 'Unknown'}</span>
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Phone</span>
-                      <span className="detail-value">{selectedReg.profiles?.phone || ''}</span>
+                      <span className="detail-value">{selectedReg.phone || ''}</span>
                     </div>
-                    <div className="detail-item">
-                      <span className="detail-label">Email</span>
-                      <span className="detail-value">{selectedReg.profiles?.email || ''}</span>
-                    </div>
+                    {selectedReg.occupation && (
+                      <div className="detail-item">
+                        <span className="detail-label">Occupation</span>
+                        <span className="detail-value">{selectedReg.occupation}</span>
+                      </div>
+                    )}
+                    {selectedReg.date_of_birth && (
+                      <div className="detail-item">
+                        <span className="detail-label">Date of Birth</span>
+                        <span className="detail-value">{selectedReg.date_of_birth}</span>
+                      </div>
+                    )}
+                    {selectedReg.ghana_card_id && (
+                      <div className="detail-item">
+                        <span className="detail-label">Ghana Card ID</span>
+                        <span className="detail-value mono">{selectedReg.ghana_card_id}</span>
+                      </div>
+                    )}
                     {selectedReg.address && (
                       <div className="detail-item">
                         <span className="detail-label">Address</span>
@@ -608,10 +635,10 @@ const RegistrationsPage: React.FC = () => {
                         <div className="doc-item" key={i}>
                           <div className="doc-info">
                             <IonIcon icon={documentTextOutline} className="doc-icon" />
-                            <span className="doc-name">{doc.name || doc.document_type || `Document ${i + 1}`}</span>
+                            <span className="doc-name">{doc.type?.replace(/_/g, ' ') || `Document ${i + 1}`}</span>
                           </div>
                           <div className="doc-actions">
-                            {doc.verified ? (
+                            {doc.status === 'approved' ? (
                               <span className="doc-verified">
                                 <IonIcon icon={checkmarkCircle} />
                                 Verified
@@ -619,7 +646,7 @@ const RegistrationsPage: React.FC = () => {
                             ) : (
                               <span className="doc-unverified">
                                 <IonIcon icon={timeOutline} />
-                                Pending
+                                {doc.status === 'rejected' ? 'Rejected' : 'Pending'}
                               </span>
                             )}
                           </div>
@@ -682,7 +709,7 @@ const RegistrationsPage: React.FC = () => {
                   <IonIcon icon={timeOutline} />
                   <span>Processing</span>
                 </button>
-                <button className="action-btn request-btn" disabled={statusLoading} onClick={() => updateStatus(selectedReg.id, 'documents_requested')}>
+                <button className="action-btn request-btn" disabled={statusLoading} onClick={() => updateStatus(selectedReg.id, 'document_verification')}>
                   <IonIcon icon={cameraOutline} />
                   <span>Request Docs</span>
                 </button>
@@ -693,10 +720,10 @@ const RegistrationsPage: React.FC = () => {
                               const content = [
                                 'Registration Details',
                                 '------------------',
-                                `Registration ID: ${selectedReg.id}`,
-                                `Customer: ${selectedReg.profiles?.full_name || 'Unknown'}`,
-                                `Phone: ${selectedReg.profiles?.phone || ''}`,
-                                `Email: ${selectedReg.profiles?.email || ''}`,
+                                `Registration ID: ${selectedReg.reg_number || selectedReg.id?.slice(0, 6)}`,
+                                `Customer: ${selectedReg.full_name || 'Unknown'}`,
+                                `Phone: ${selectedReg.phone || ''}`,
+                                `Email: ${selectedReg.email || ''}`,
                                 `Network: ${selectedReg.network || 'N/A'}`,
                                 `Status: ${selectedReg.status}`,
                                 `Date: ${formatDate(selectedReg.created_at)}`,
@@ -705,7 +732,7 @@ const RegistrationsPage: React.FC = () => {
                               const url = URL.createObjectURL(blob);
                               const a = document.createElement('a');
                               a.href = url;
-                              a.download = `registration-${selectedReg.id}.txt`;
+                              a.download = `registration-${selectedReg.reg_number || selectedReg.id?.slice(0, 6)}.txt`;
                               document.body.appendChild(a);
                               a.click();
                               document.body.removeChild(a);

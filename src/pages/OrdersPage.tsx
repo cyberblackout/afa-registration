@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   IonIcon,
   IonToast,
@@ -18,9 +18,10 @@ import {
   alertCircle,
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
 import { useAuthStore } from '../store/authStore';
+import { orderApi } from '../services/api';
 import { Order } from '../types';
 import DashboardLayout from '../layouts/DashboardLayout';
 import './OrdersPage.css';
@@ -35,6 +36,7 @@ const statusColors: Record<string, string> = {
   failed: '#c62828',
   approved: '#2e7d32',
   rejected: '#c62828',
+  document_verification: '#7b1fa2',
 };
 
 const statusBgColors: Record<string, string> = {
@@ -45,10 +47,12 @@ const statusBgColors: Record<string, string> = {
   failed: '#fce4ec',
   approved: '#e8f5e9',
   rejected: '#fce4ec',
+  document_verification: '#f3e5f5',
 };
 
 const OrdersPage: React.FC = () => {
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [dateFilter, setDateFilter] = useState<string>('All');
@@ -58,26 +62,28 @@ const OrdersPage: React.FC = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
-  const { data: orders = [], isLoading, isError, refetch } = useQuery({
+  const { data: orders = [] as Order[], isLoading, isError, refetch } = useQuery({
     queryKey: ['orders', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('user_id', user!.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data || []) as Order[];
-    },
+    queryFn: () => orderApi.list(user!.id) as Promise<Order[]>,
     enabled: !!user?.id,
   });
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase.channel('user-orders')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `user_id=eq.${user.id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ['orders', user.id] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id]);
 
   const filteredOrders = orders.filter((order) => {
     const query = searchTerm.toLowerCase();
     const matchesSearch =
       order.id.toLowerCase().includes(query) ||
-      (order.customer_name || '').toLowerCase().includes(query) ||
-      (order.customer_phone || '').includes(query) ||
+      (order.profiles?.full_name || '').toLowerCase().includes(query) ||
+      (order.profiles?.phone || '').includes(query) ||
       (order.description || '').toLowerCase().includes(query);
     const matchesStatus = statusFilter === 'All' || order.status === statusFilter.toLowerCase();
 
@@ -272,11 +278,11 @@ const OrdersPage: React.FC = () => {
                     <div className="order-card-row">
                       <div className="order-card-field">
                         <span className="field-label">Customer</span>
-                        <span className="field-value">{order.customer_name || '—'}</span>
+                        <span className="field-value">{order.profiles?.full_name || '—'}</span>
                       </div>
                       <div className="order-card-field">
                         <span className="field-label">Phone</span>
-                        <span className="field-value">{order.customer_phone || '—'}</span>
+                        <span className="field-value">{order.profiles?.phone || '—'}</span>
                       </div>
                     </div>
                     <div className="order-card-row">
@@ -312,8 +318,8 @@ const OrdersPage: React.FC = () => {
 
                     <div className="order-table-row" onClick={() => openDetail(order)}>
                       <span className="td td-id">{order.id}</span>
-                      <span className="td td-customer">{order.customer_name || '—'}</span>
-                      <span className="td td-phone">{order.customer_phone || '—'}</span>
+                      <span className="td td-customer">{order.profiles?.full_name || '—'}</span>
+                      <span className="td td-phone">{order.profiles?.phone || '—'}</span>
                       <span className="td td-date">{new Date(order.created_at).toLocaleDateString()}</span>
                       <span className="td td-status">
                         <span
@@ -449,11 +455,11 @@ const OrdersPage: React.FC = () => {
                   <div className="detail-grid">
                     <div className="detail-item">
                       <span className="detail-label">Name</span>
-                      <span className="detail-value">{selectedOrder.customer_name || '—'}</span>
+                      <span className="detail-value">{selectedOrder.profiles?.full_name || '—'}</span>
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Phone</span>
-                      <span className="detail-value">{selectedOrder.customer_phone || '—'}</span>
+                      <span className="detail-value">{selectedOrder.profiles?.phone || '—'}</span>
                     </div>
                   </div>
                 </div>
@@ -519,7 +525,7 @@ const OrdersPage: React.FC = () => {
                             'Order Details',
                             '-----------',
                             `Order ID: ${selectedOrder.id}`,
-                            `Customer: ${selectedOrder.customer_name || 'N/A'}`,
+                            `Customer: ${selectedOrder.profiles?.full_name || 'N/A'}`,
                             `Amount: GH₵ ${selectedOrder.amount.toFixed(2)}`,
                             `Status: ${selectedOrder.status}`,
                             `Date: ${new Date(selectedOrder.created_at).toLocaleString()}`,

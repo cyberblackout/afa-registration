@@ -1,18 +1,13 @@
 import { useEffect, useCallback, useRef } from 'react';
-import { supabase } from '../services/supabase';
 import { useAuthStore } from '../store/authStore';
+import { pushApi } from '../services/api';
 
 export function usePushNotifications(enabled: boolean) {
   const { user } = useAuthStore();
   const swRef = useRef<ServiceWorkerRegistration | null>(null);
 
   const getVapidKey = useCallback(async (): Promise<string | null> => {
-    const { data } = await supabase
-      .from('app_settings')
-      .select('value')
-      .eq('key', 'vapid_public_key')
-      .single();
-    return data?.value || null;
+    return await pushApi.getVapidKey();
   }, []);
 
   const registerSw = useCallback(async (): Promise<ServiceWorkerRegistration | null> => {
@@ -41,18 +36,10 @@ export function usePushNotifications(enabled: boolean) {
 
     const existingSub = await reg.pushManager.getSubscription();
     if (existingSub) {
-      const { data: existing } = await supabase
-        .from('push_subscriptions')
-        .select('id')
-        .eq('endpoint', existingSub.endpoint)
-        .single();
+      const existing = await pushApi.checkSubscription(existingSub.endpoint);
       if (!existing) {
-        await supabase.from('push_subscriptions').insert({
-          user_id: user.id,
-          endpoint: existingSub.endpoint,
-          p256dh_key: existingSub.toJSON().keys!.p256dh,
-          auth_key: existingSub.toJSON().keys!.auth,
-        });
+        const keys = existingSub.toJSON().keys!;
+        await pushApi.subscribe(existingSub.endpoint, keys.p256dh, keys.auth);
       }
       return;
     }
@@ -63,12 +50,7 @@ export function usePushNotifications(enabled: boolean) {
     });
 
     const subJSON = sub.toJSON();
-    await supabase.from('push_subscriptions').insert({
-      user_id: user.id,
-      endpoint: sub.endpoint,
-      p256dh_key: subJSON.keys!.p256dh,
-      auth_key: subJSON.keys!.auth,
-    });
+    await pushApi.subscribe(sub.endpoint, subJSON.keys!.p256dh, subJSON.keys!.auth);
   }, [user, registerSw, getVapidKey]);
 
   const unsubscribe = useCallback(async () => {
@@ -79,14 +61,7 @@ export function usePushNotifications(enabled: boolean) {
       }
     }
 
-    const { data: subs } = await supabase
-      .from('push_subscriptions')
-      .select('endpoint')
-      .eq('user_id', user?.id);
-    const endpoints = (subs || []).map(s => s.endpoint);
-    if (endpoints.length > 0) {
-      await supabase.from('push_subscriptions').delete().in('endpoint', endpoints);
-    }
+    await pushApi.unsubscribe();
     swRef.current = null;
   }, [user]);
 

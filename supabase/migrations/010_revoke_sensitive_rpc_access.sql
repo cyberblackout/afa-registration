@@ -1,0 +1,65 @@
+-- Revoke EXECUTE from anon on ALL SECURITY DEFINER functions
+REVOKE EXECUTE ON FUNCTION public.admin_get_agent_applications() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.admin_get_agents() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.admin_get_referral_analytics() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.admin_toggle_agent_status(uuid, text) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.apply_for_agent() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.approve_agent_application(uuid, text, text) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.bulk_update_registration_status(uuid[], text, text) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.check_permission(text) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.credit_wallet(uuid, numeric, text, text) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.debit_wallet(uuid, numeric, text) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.generate_agent_id() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.generate_referral_code() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.get_agent_dashboard() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.get_agent_pricing() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.get_my_profile() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.get_paystack_config() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.get_referral_stats() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.get_registration_stats() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.get_total_revenue(timestamptz, timestamptz) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.get_user_role(uuid) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.is_admin() FROM anon;
+REVOKE EXECUTE ON FUNCTION public.process_referral_reward(uuid) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.update_wallet_status(uuid, text) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.validate_referral_code(text, text, text) FROM anon;
+
+-- Revoke EXECUTE from authenticated on ADMIN-ONLY and FINANCIAL functions
+REVOKE EXECUTE ON FUNCTION public.admin_get_agent_applications() FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.admin_get_agents() FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.admin_get_referral_analytics() FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.admin_toggle_agent_status(uuid, text) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.approve_agent_application(uuid, text, text) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.bulk_update_registration_status(uuid[], text, text) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.generate_agent_id() FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.get_total_revenue(timestamptz, timestamptz) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.credit_wallet(uuid, numeric, text, text) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.debit_wallet(uuid, numeric, text) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.process_referral_reward(uuid) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.update_wallet_status(uuid, text) FROM authenticated;
+
+-- Grant EXECUTE to service_role on ALL functions (Edge Functions use service role)
+GRANT EXECUTE ON FUNCTION public.admin_get_agent_applications() TO service_role;
+GRANT EXECUTE ON FUNCTION public.admin_get_agents() TO service_role;
+GRANT EXECUTE ON FUNCTION public.admin_get_referral_analytics() TO service_role;
+GRANT EXECUTE ON FUNCTION public.admin_toggle_agent_status(uuid, text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.apply_for_agent() TO service_role;
+GRANT EXECUTE ON FUNCTION public.approve_agent_application(uuid, text, text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.bulk_update_registration_status(uuid[], text, text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.check_permission(text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.credit_wallet(uuid, numeric, text, text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.debit_wallet(uuid, numeric, text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.generate_agent_id() TO service_role;
+GRANT EXECUTE ON FUNCTION public.generate_referral_code() TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_agent_dashboard() TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_agent_pricing() TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_my_profile() TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_paystack_config() TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_referral_stats() TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_registration_stats() TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_total_revenue(timestamptz, timestamptz) TO service_role;
+GRANT EXECUTE ON FUNCTION public.get_user_role(uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.is_admin() TO service_role;
+GRANT EXECUTE ON FUNCTION public.process_referral_reward(uuid) TO service_role;
+GRANT EXECUTE ON FUNCTION public.update_wallet_status(uuid, text) TO service_role;
+GRANT EXECUTE ON FUNCTION public.validate_referral_code(text, text, text) TO service_role;

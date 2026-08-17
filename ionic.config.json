@@ -1,5 +1,7 @@
 {
-  "name": "ionic-app-base",
-  "integrations": {},
+  "name": "MTN AFA Portal",
+  "integrations": {
+    "capacitor": {}
+  },
   "type": "react-vite"
 }

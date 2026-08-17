@@ -28,6 +28,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '../services/database';
 import { supabase } from '../services/supabase';
+import { profileApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { usePushNotifications } from '../hooks/usePushNotifications';
@@ -85,13 +86,7 @@ const ProfilePage: React.FC = () => {
   const { data: profile, isLoading } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user!.id)
-        .single();
-      if (error) throw error;
-      return data;
+      return await profileApi.get(user!.id);
     },
     enabled: !!user?.id,
   });
@@ -126,6 +121,11 @@ const ProfilePage: React.FC = () => {
       if (profile.avatar_url) {
         setAvatarPreview(profile.avatar_url);
       }
+      const prefs = profile.notification_preferences || {};
+      setEmailNotifications(prefs.email ?? true);
+      setSmsNotifications(prefs.sms ?? true);
+      setPushNotifications(prefs.push ?? false);
+      setMarketingEmails(prefs.marketing ?? false);
     }
   }, [profile, reset]);
 
@@ -148,8 +148,7 @@ const ProfilePage: React.FC = () => {
         push: pushNotifications,
         marketing: marketingEmails,
       };
-      const { error: notifError } = await supabase.from('profiles').update({ notification_preferences: notifPrefs }).eq('id', user!.id);
-      if (notifError) throw notifError;
+      await profileApi.update({ user_id: user!.id, notification_preferences: notifPrefs });
 
       if (data.newPassword) {
         const { error: pwError } = await supabase.auth.updateUser({

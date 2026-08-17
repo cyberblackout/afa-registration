@@ -8,10 +8,8 @@ import {
   walletOutline,
   cardOutline,
   cartOutline,
-  pricetagOutline,
   chatbubblesOutline,
   notificationsOutline,
-  helpBuoyOutline,
   barChartOutline,
   settingsOutline,
   logOutOutline,
@@ -38,7 +36,6 @@ const menuItems = [
   { label: 'Wallet', icon: walletOutline, path: '/cyberin/wallet' },
   { label: 'Payments', icon: cardOutline, path: '/cyberin/payments' },
   { label: 'Orders', icon: cartOutline, path: '/cyberin/orders' },
-  { label: 'Pricing', icon: pricetagOutline, path: '/cyberin/pricing' },
   { label: 'Notifications', icon: notificationsOutline, path: '/cyberin/notifications' },
   { label: 'Referrals', icon: giftOutline, path: '/cyberin/referrals' },
   { label: 'Agents', icon: ribbonOutline, path: '/cyberin/agents' },
@@ -63,16 +60,21 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
 
   useEffect(() => {
     const fetchConfig = async () => {
-      const { data } = await supabase.from('system_settings').select('setting_name, setting_value');
-      if (!data) return;
-      const map: Record<string, string> = {};
-      data.forEach((s: any) => { map[s.setting_name] = s.setting_value; });
-      const enabled = map['whatsapp_enabled'] !== 'false';
-      const number = (map['whatsapp_user_number'] || '').replace(/[^0-9]/g, '');
-      const message = map['whatsapp_user_message'] || 'Hello, I need help with my account.';
-      setWhatsappEnabled(enabled);
-      setWhatsappNumber(number);
-      setWhatsappMessage(message);
+      try {
+        const { adminConfigApi } = await import('../services/api');
+        const data = await adminConfigApi.getSystemSettings();
+        if (!data) return;
+        const map: Record<string, string> = {};
+        data.forEach((s: any) => { map[s.setting_name] = s.setting_value; });
+        const enabled = map['whatsapp_enabled'] !== 'false';
+        const number = (map['whatsapp_user_number'] || '').replace(/[^0-9]/g, '');
+        const message = map['whatsapp_user_message'] || 'Hello, I need help with my account.';
+        setWhatsappEnabled(enabled);
+        setWhatsappNumber(number);
+        setWhatsappMessage(message);
+      } catch (e) {
+        // Non-critical
+      }
     };
     fetchConfig();
   }, []);

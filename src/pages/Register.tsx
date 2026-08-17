@@ -19,6 +19,7 @@ import {
   checkmarkCircle,
 } from 'ionicons/icons';
 import { supabase } from '../services/supabase';
+import { profileApi, referralApi } from '../services/api';
 import './Register.css';
 
 function getDeviceFingerprint(): string {
@@ -91,14 +92,15 @@ const Register: React.FC = () => {
       if (data.user) {
         const deviceFingerprint = getDeviceFingerprint();
 
-        await supabase.from('profiles').update({
+        await profileApi.update({
+          user_id: data.user.id,
           full_name: fullName,
           username,
           phone,
-        }).eq('id', data.user.id);
+        });
 
         if (refCode) {
-          const { data: refData } = await supabase.rpc('validate_referral_code', { code: refCode, signup_email: email, signup_phone: phone });
+          const refData = await referralApi.validateCode(refCode) as any;
           if (refData?.valid) {
             await supabase.from('referrals').insert({
               referrer_id: refData.referrer_id,

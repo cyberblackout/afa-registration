@@ -39,15 +39,19 @@ export interface AuthState {
 export interface Order {
   id: string;
   user_id: string;
-  customer_name: string;
-  customer_phone: string;
   amount: number;
   description: string;
-  status: 'pending' | 'processing' | 'approved' | 'rejected' | 'completed' | 'cancelled' | 'failed';
+  status: 'pending' | 'processing' | 'document_verification' | 'approved' | 'rejected' | 'completed' | 'cancelled' | 'failed';
   payment_method?: string;
   payment_status?: string;
+  payment_reference?: string;
+  payment_date?: string;
+  source_type?: string;
+  source_id?: string;
+  admin_id?: string;
   created_at: string;
   updated_at: string;
+  profiles?: { full_name: string; email: string; phone: string };
 }
 
 export interface Transaction {

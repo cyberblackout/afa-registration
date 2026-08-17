@@ -31,7 +31,7 @@ import {
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../services/supabase';
+import { adminPaymentApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import './PaymentsPage.css';
 
@@ -48,10 +48,7 @@ const PaymentsPage: React.FC = () => {
 
   const { data: payments = [], isLoading } = useQuery({
     queryKey: ['admin_payments'],
-    queryFn: async () => {
-      const r = await supabase.from('wallet_transactions').select('*, profiles(full_name, email)').order('created_at', { ascending: false });
-      return r.data || [];
-    },
+    queryFn: () => adminPaymentApi.list() as any,
   });
 
   const totalCollected = payments.filter((p: any) => p.status === 'completed').reduce((s: number, p: any) => s + (p.amount || 0), 0);
@@ -77,12 +74,12 @@ const PaymentsPage: React.FC = () => {
     if (!selectedPayment) return;
     setRefunding(true);
     try {
-      await supabase.rpc('credit_wallet', {
-        p_user_id: selectedPayment.user_id,
-        p_amount: selectedPayment.amount,
-        p_description: `Refund: ${selectedPayment.description || 'Payment refund'}`,
-      });
-      await supabase.from('wallet_transactions').update({ status: 'refunded' }).eq('id', selectedPayment.id);
+      await adminPaymentApi.refund(
+        selectedPayment.id,
+        selectedPayment.amount,
+        `Refund for ${selectedPayment.description}`,
+        selectedPayment.user_id
+      );
       queryClient.invalidateQueries({ queryKey: ['admin_payments'] });
       setShowModal(false);
       setToastMessage(`Refund processed for ${selectedPayment.reference || selectedPayment.id}`);

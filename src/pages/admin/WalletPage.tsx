@@ -30,7 +30,7 @@ import {
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../services/supabase';
+import { walletApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import './WalletPage.css';
 
@@ -52,19 +52,12 @@ const WalletPage: React.FC = () => {
 
   const { data: profiles = [], isLoading } = useQuery({
     queryKey: ['admin_wallets'],
-    queryFn: async () => {
-      const r = await supabase.from('profiles').select('id, full_name, email, wallet_balance').order('created_at', { ascending: false });
-      return r.data || [];
-    },
+    queryFn: () => walletApi.adminListUsers() as any,
   });
 
   const { data: txHistory } = useQuery({
     queryKey: ['admin_wallet_tx', expandedId],
-    queryFn: async () => {
-      if (!expandedId) return [];
-      const r = await supabase.from('wallet_transactions').select('*').eq('user_id', expandedId).order('created_at', { ascending: false }).limit(20);
-      return r.data || [];
-    },
+    queryFn: () => walletApi.adminListTransactions(expandedId!) as any,
     enabled: !!expandedId,
   });
 
@@ -93,17 +86,9 @@ const WalletPage: React.FC = () => {
     try {
       const amount = parseFloat(txAmount);
       if (txType === 'credit') {
-        await supabase.rpc('credit_wallet', {
-          p_user_id: selectedWallet.id,
-          p_amount: amount,
-          p_description: txDescription || 'Manual credit by admin',
-        });
+        await walletApi.adminCredit(selectedWallet.id, amount, txDescription || 'Manual credit by admin');
       } else {
-        await supabase.rpc('debit_wallet', {
-          p_user_id: selectedWallet.id,
-          p_amount: amount,
-          p_description: txDescription || 'Manual debit by admin',
-        });
+        await walletApi.adminDebit(selectedWallet.id, amount, txDescription || 'Manual debit by admin');
       }
       queryClient.invalidateQueries({ queryKey: ['admin_wallets'] });
       queryClient.invalidateQueries({ queryKey: ['admin_wallet_tx'] });
@@ -122,7 +107,7 @@ const WalletPage: React.FC = () => {
     setConfirmMsg(`Are you sure you want to ${profile.wallet_status === 'frozen' ? 'unfreeze' : 'freeze'} ${profile.full_name}'s wallet?`);
     setConfirmAction(async () => {
       const frozen = profile.wallet_status === 'frozen';
-      await supabase.rpc('update_wallet_status', { p_user_id: profile.id, p_status: frozen ? 'active' : 'frozen' });
+      await walletApi.adminUpdateStatus(profile.id, frozen ? 'active' : 'frozen');
       queryClient.invalidateQueries({ queryKey: ['admin_wallets'] });
       setToastMessage(`${profile.full_name}'s wallet has been ${frozen ? 'unfrozen' : 'frozen'}`);
       setShowToast(true);

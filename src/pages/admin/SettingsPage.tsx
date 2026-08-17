@@ -26,32 +26,33 @@ import {
   giftOutline,
   ribbonOutline,
   saveOutline,
-  checkmarkCircle,
   logoWhatsapp,
 } from 'ionicons/icons';
 import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../services/supabase';
+import { adminSettingsApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import './SettingsPage.css';
 
 const SettingsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [settings, setSettings] = useState<Record<string, string>>({});
+  const [feeValues, setFeeValues] = useState<Record<string, string>>({});
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [saving, setSaving] = useState<string | null>(null);
 
+  const FEE_PRICING_KEYS = ['afa_registration', 'wallet_max_topup', 'wallet_min_topup', 'referral_bonus'];
+
+  const setFeeValue = (key: string, value: string) => setFeeValues(prev => ({ ...prev, [key]: value }));
+
   const { data: settingsData, isLoading } = useQuery({
     queryKey: ['admin_settings'],
     queryFn: async () => {
-      const [appRes, sysRes] = await Promise.all([
-        supabase.from('app_settings').select('*'),
-        supabase.from('system_settings').select('*'),
-      ]);
-      const appVals = (appRes.data || []).map((s: any) => ({ key: s.key, value: s.value }));
-      const sysVals = (sysRes.data || []).map((s: any) => ({ key: s.setting_name, value: s.setting_value }));
-      return [...appVals, ...sysVals];
+      const result = await adminSettingsApi.getAll() as any;
+      const appVals = (result.app_settings || []).map((s: any) => ({ key: s.key, value: s.value }));
+      const sysVals = (result.system_settings || []).map((s: any) => ({ key: s.setting_name, value: s.setting_value }));
+      return [...appVals, ...sysVals] as any;
     },
   });
 
@@ -63,6 +64,24 @@ const SettingsPage: React.FC = () => {
     }
   }, [settingsData]);
 
+  const { data: feePricing } = useQuery({
+    queryKey: ['admin_settings_fees'],
+    queryFn: async () => {
+      const result = await adminSettingsApi.getAll() as any;
+      return (result.pricing || []).filter((p: any) => FEE_PRICING_KEYS.includes(p.key)) as any;
+    },
+  });
+
+  useEffect(() => {
+    if (feePricing && feePricing.length > 0) {
+      setFeeValues(prev => {
+        const next = { ...prev };
+        feePricing.forEach((p: any) => { next[p.key] = p.amount?.toString() ?? ''; });
+        return next;
+      });
+    }
+  }, [feePricing]);
+
   const get = (key: string, fallback: string = '') => settings[key] ?? fallback;
   const set = (key: string, value: string) => setSettings(prev => ({ ...prev, [key]: value }));
 
@@ -72,12 +91,12 @@ const SettingsPage: React.FC = () => {
     setSaving(section);
     try {
       const isSystemSection = keys.every(k => systemSettingKeys.includes(k));
-      for (const key of keys) {
-        if (isSystemSection) {
-          await supabase.from('system_settings').upsert({ setting_name: key, setting_value: settings[key] }, { onConflict: 'setting_name' });
-        } else {
-          await supabase.from('app_settings').upsert({ key, value: settings[key] }, { onConflict: 'key' });
-        }
+      const sectionSettings: Record<string, string> = {};
+      keys.forEach(k => { sectionSettings[k] = settings[k]; });
+      if (isSystemSection) {
+        await adminSettingsApi.saveSystemSettings(sectionSettings);
+      } else {
+        await adminSettingsApi.saveAppSettings(sectionSettings);
       }
       queryClient.invalidateQueries({ queryKey: ['admin_settings'] });
       setToastMessage(`${section} settings saved successfully`);
@@ -93,6 +112,55 @@ const SettingsPage: React.FC = () => {
   const sectionVariants = {
     hidden: { opacity: 0, y: 20 },
     visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.1, duration: 0.4 } }),
+  };
+
+  const saveFees = async () => {
+    const parse = (key: string): number => parseFloat(feeValues[key] ?? '');
+    const fields: { key: string; label: string }[] = [
+      { key: 'agent_fee', label: 'Agent Registration Fee' },
+      { key: 'afa_registration', label: 'AFA Registration Fee' },
+      { key: 'wallet_max_topup', label: 'Wallet Max Top-up' },
+      { key: 'wallet_min_topup', label: 'Wallet Min Top-up' },
+      { key: 'referral_bonus', label: 'Referral Bonus' },
+    ];
+
+    const values: Record<string, number> = {};
+    for (const f of fields) {
+      const v = parse(f.key);
+      if (isNaN(v) || v < 0) {
+        setToastMessage(`Invalid value for ${f.label}`);
+        setShowToast(true);
+        return;
+      }
+      values[f.key] = v;
+    }
+
+    if (values['wallet_min_topup'] >= values['wallet_max_topup']) {
+      setToastMessage('Wallet Min Top-up must be less than Wallet Max Top-up');
+      setShowToast(true);
+      return;
+    }
+
+    setSaving('Fees');
+    try {
+      await adminSettingsApi.saveFees({
+        agent_fee: values['agent_fee'],
+        afa_registration: values['afa_registration'],
+        wallet_max_topup: values['wallet_max_topup'],
+        wallet_min_topup: values['wallet_min_topup'],
+        referral_bonus: values['referral_bonus'],
+      });
+      queryClient.invalidateQueries({ queryKey: ['admin_settings'] });
+      queryClient.invalidateQueries({ queryKey: ['admin_settings_fees'] });
+      queryClient.invalidateQueries({ queryKey: ['pricing'] });
+      setToastMessage('Fees saved successfully');
+      setShowToast(true);
+    } catch (err: any) {
+      setToastMessage(err.message || 'Save failed');
+      setShowToast(true);
+    } finally {
+      setSaving(null);
+    }
   };
 
   return (
@@ -147,29 +215,33 @@ const SettingsPage: React.FC = () => {
                 <IonCardContent>
                   <div className="settings-card-header">
                     <IonIcon icon={pricetagOutline} className="section-icon" />
-                    <h2>Pricing</h2>
+                    <h2>Fees</h2>
                   </div>
                   <div className="settings-fields">
                     <IonItem>
-                      <IonLabel position="stacked">AFA Registration Price (GH₵)</IonLabel>
-                      <IonInput type="number" value={get('afa_price', '150')} onIonChange={(e) => set('afa_price', e.detail.value || '')} />
+                      <IonLabel position="stacked">Agent Registration Fee (GH₵)</IonLabel>
+                      <IonInput type="number" min={0} step="0.1" value={feeValues['agent_fee'] ?? get('agent_fee', '100')} onIonChange={(e) => setFeeValue('agent_fee', e.detail.value || '')} />
                     </IonItem>
                     <IonItem>
-                      <IonLabel position="stacked">Express Price (GH₵)</IonLabel>
-                      <IonInput type="number" value={get('express_price', '250')} onIonChange={(e) => set('express_price', e.detail.value || '')} />
+                      <IonLabel position="stacked">AFA Registration Fee (GH₵)</IonLabel>
+                      <IonInput type="number" min={0} step="0.1" value={feeValues['afa_registration'] ?? ''} onIonChange={(e) => setFeeValue('afa_registration', e.detail.value || '')} />
                     </IonItem>
                     <IonItem>
-                      <IonLabel position="stacked">VIP Price (GH₵)</IonLabel>
-                      <IonInput type="number" value={get('vip_price', '500')} onIonChange={(e) => set('vip_price', e.detail.value || '')} />
+                      <IonLabel position="stacked">Wallet Max Top-up (GH₵)</IonLabel>
+                      <IonInput type="number" min={0} step="0.1" value={feeValues['wallet_max_topup'] ?? ''} onIonChange={(e) => setFeeValue('wallet_max_topup', e.detail.value || '')} />
                     </IonItem>
                     <IonItem>
-                      <IonLabel position="stacked">Delivery Fee (GH₵)</IonLabel>
-                      <IonInput type="number" value={get('delivery_fee', '30')} onIonChange={(e) => set('delivery_fee', e.detail.value || '')} />
+                      <IonLabel position="stacked">Wallet Min Top-up (GH₵)</IonLabel>
+                      <IonInput type="number" min={0} step="0.1" value={feeValues['wallet_min_topup'] ?? ''} onIonChange={(e) => setFeeValue('wallet_min_topup', e.detail.value || '')} />
+                    </IonItem>
+                    <IonItem>
+                      <IonLabel position="stacked">Referral Bonus (GH₵)</IonLabel>
+                      <IonInput type="number" min={0} step="0.1" value={feeValues['referral_bonus'] ?? ''} onIonChange={(e) => setFeeValue('referral_bonus', e.detail.value || '')} />
                     </IonItem>
                   </div>
-                  <IonButton expand="block" className="section-save-btn" onClick={() => saveSection('Pricing', ['afa_price', 'express_price', 'vip_price', 'delivery_fee'])} disabled={saving === 'Pricing'}>
+                  <IonButton expand="block" className="section-save-btn" onClick={saveFees} disabled={saving === 'Fees'}>
                     <IonIcon icon={saveOutline} slot="start" />
-                    {saving === 'Pricing' ? 'Saving...' : 'Save Pricing'}
+                    {saving === 'Fees' ? 'Saving...' : 'Save Fees'}
                   </IonButton>
                 </IonCardContent>
               </IonCard>
@@ -355,10 +427,6 @@ const SettingsPage: React.FC = () => {
                       <IonToggle checked={get('agent_system_enabled', 'true') === 'true'} onIonChange={(e) => set('agent_system_enabled', e.detail.checked ? 'true' : 'false')} />
                     </IonItem>
                     <IonItem>
-                      <IonLabel position="stacked">Agent Registration Fee (GHC)</IonLabel>
-                      <IonInput type="number" value={get('agent_fee', '100')} onIonChange={(e) => set('agent_fee', e.detail.value || '100')} />
-                    </IonItem>
-                    <IonItem>
                       <IonLabel position="stacked">Auto-Approve Agents</IonLabel>
                       <IonToggle checked={get('agent_auto_approve', 'false') === 'true'} onIonChange={(e) => set('agent_auto_approve', e.detail.checked ? 'true' : 'false')} />
                     </IonItem>
@@ -367,7 +435,7 @@ const SettingsPage: React.FC = () => {
                       <IonInput type="number" value={get('agent_min_commission', '10')} onIonChange={(e) => set('agent_min_commission', e.detail.value || '10')} />
                     </IonItem>
                   </div>
-                  <IonButton expand="block" className="section-save-btn" onClick={() => saveSection('Agent', ['agent_system_enabled', 'agent_fee', 'agent_auto_approve', 'agent_min_commission'])} disabled={saving === 'Agent'}>
+                  <IonButton expand="block" className="section-save-btn" onClick={() => saveSection('Agent', ['agent_system_enabled', 'agent_auto_approve', 'agent_min_commission'])} disabled={saving === 'Agent'}>
                     <IonIcon icon={saveOutline} slot="start" />
                     {saving === 'Agent' ? 'Saving...' : 'Save Agent Settings'}
                   </IonButton>

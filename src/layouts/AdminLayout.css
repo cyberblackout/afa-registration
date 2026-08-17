@@ -18,7 +18,8 @@
 
 .admin-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: var(--admin-bg);
 }
 
@@ -184,7 +185,8 @@
   margin-left: var(--admin-sidebar-width);
   margin-top: var(--admin-navbar-height);
   padding: 1.5rem;
-  min-height: calc(100vh - var(--admin-navbar-height));
+  height: calc(100vh - var(--admin-navbar-height));
+  overflow-y: auto;
   width: calc(100% - var(--admin-sidebar-width));
 }
 

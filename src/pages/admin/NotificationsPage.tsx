@@ -28,6 +28,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../services/supabase';
+import { notificationApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import './NotificationsPage.css';
 
@@ -50,10 +51,7 @@ const NotificationsPage: React.FC = () => {
 
   const { data: recentNotifications = [] } = useQuery({
     queryKey: ['admin_recent_notifications'],
-    queryFn: async () => {
-      const r = await supabase.from('notifications').select('*, profiles(full_name, email)').order('created_at', { ascending: false }).limit(20);
-      return r.data || [];
-    },
+    queryFn: () => notificationApi.adminList() as any,
   });
 
   const handleSend = async () => {
@@ -72,57 +70,51 @@ const NotificationsPage: React.FC = () => {
       let userIds: string[] = [];
 
       if (recipientType === 'everyone') {
-        const { data: profiles } = await supabase.from('profiles').select('id');
-        userIds = (profiles || []).map((p: any) => p.id);
+        const allIds = await notificationApi.adminGetAllUserIds();
+        userIds = allIds;
       } else if (recipientType === 'specific') {
-        const { data: profile } = await supabase.from('profiles').select('id').eq('email', specificEmail).single();
-        if (!profile) {
+        try {
+          const resolvedId = await notificationApi.adminResolveEmail(specificEmail);
+          userIds = [resolvedId];
+        } catch {
           setToastMessage('User with that email not found');
           setShowToast(true);
           setSending(false);
           return;
         }
-        userIds = [profile.id];
       }
 
       let imageUrl = '';
       const file = fileInputRef.current?.files?.[0];
       if (file) {
-        const filePath = `notifications/${Date.now()}-${file.name}`;
-        const { error: uploadError } = await supabase.storage.from('documents').upload(filePath, file);
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage.from('documents').getPublicUrl(filePath);
-          imageUrl = urlData?.publicUrl || '';
-        }
+        const reader = new FileReader();
+        const base64 = await new Promise<string>((resolve) => {
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(',')[1]); // Remove data:image/...;base64, prefix
+          };
+          reader.readAsDataURL(file);
+        });
+        const uploadResult = await notificationApi.adminUploadImage(file.name, base64) as any;
+        imageUrl = uploadResult.url;
       }
 
-      const notifications = userIds.map((userId: string) => ({
-        user_id: userId,
-        title: title.trim(),
-        message: message.trim(),
-        type: notifType,
-        read: false,
-        image_url: imageUrl || undefined,
-      }));
+      await notificationApi.adminSend(title.trim(), message.trim(), notifType, userIds, recipientType === 'everyone');
 
-      if (notifications.length > 0) {
-        await supabase.from('notifications').insert(notifications);
-
-        if (sendPush) {
-          for (const uid of userIds) {
-            try {
-              await supabase.functions.invoke('send-push', {
-                body: {
-                  user_id: uid,
-                  title: title.trim(),
-                  body: message.trim(),
-                  url: '/notifications',
-                  type: 'marketing',
-                },
-              });
-            } catch {
-              // push is non-critical
-            }
+      if (sendPush) {
+        for (const uid of userIds) {
+          try {
+            await supabase.functions.invoke('send-push', {
+              body: {
+                user_id: uid,
+                title: title.trim(),
+                body: message.trim(),
+                url: '/notifications',
+                type: 'marketing',
+              },
+            });
+          } catch {
+            // push is non-critical
           }
         }
       }

@@ -3,6 +3,7 @@ import { IonPage, IonIcon, IonToast } from '@ionic/react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
+import { profileApi, orderApi, referralApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import DashboardLayout from '../layouts/DashboardLayout';
 import MTNAFABanner from '../components/MTNAFABanner';
@@ -30,28 +31,15 @@ const DashboardPage: React.FC = () => {
 
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user!.id)
-        .single();
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => profileApi.get(user!.id),
     enabled: !!user?.id,
   });
 
   const { data: walletData } = useQuery({
     queryKey: ['wallet', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('wallet_balance')
-        .eq('id', user!.id)
-        .single();
-      if (error) throw error;
-      return data;
+      const data = await profileApi.get(user!.id);
+      return (data as any)?.wallet_balance ?? 0;
     },
     enabled: !!user?.id,
   });
@@ -59,14 +47,8 @@ const DashboardPage: React.FC = () => {
   const { data: ordersData } = useQuery({
     queryKey: ['orders-count', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('user_id', user!.id)
-        .order('created_at', { ascending: false })
-        .limit(5);
-      if (error) throw error;
-      return data;
+      const data = await orderApi.list(user!.id);
+      return (Array.isArray(data) ? data : []).slice(0, 5);
     },
     enabled: !!user?.id,
   });
@@ -84,16 +66,13 @@ const DashboardPage: React.FC = () => {
     enabled: !!user?.id,
   });
 
-  const balance = walletData?.wallet_balance ?? 0;
+  const balance = walletData ?? 0;
   const orders = ordersData ?? [];
   const recentOrdersCount = orders.length;
 
   const { data: referralStats } = useQuery({
     queryKey: ['referral_stats_dash', user?.id],
-    queryFn: async () => {
-      const { data } = await supabase.rpc('get_referral_stats');
-      return data as any || { total_invited: 0, successful: 0, pending: 0, total_earned: 0 };
-    },
+    queryFn: () => referralApi.getStats(),
     enabled: !!user?.id,
   });
 
@@ -161,9 +140,9 @@ const DashboardPage: React.FC = () => {
                 <IonIcon icon={giftOutline} className="stat-icon" style={{ color: '#8b5cf6' }} />
                 <span className="stat-label">Referral Earnings</span>
               </div>
-              <p className="stat-value" style={{ fontSize: 22 }}>GH₵ {Number(referralStats?.total_earned || 0).toFixed(2)}</p>
+              <p className="stat-value" style={{ fontSize: 22 }}>GH₵ {Number((referralStats as any)?.total_earned || 0).toFixed(2)}</p>
               <p className="stat-sub" style={{ fontSize: 12, color: '#6b7280', margin: '0 0 10px' }}>
-                {referralStats?.successful || 0} successful · {referralStats?.pending || 0} pending
+                {(referralStats as any)?.successful || 0} successful · {(referralStats as any)?.pending || 0} pending
               </p>
               <Link to="/referrals" className="stat-btn" style={{ background: '#f3e8ff', color: '#7c3aed' }}>
                 Refer & Earn

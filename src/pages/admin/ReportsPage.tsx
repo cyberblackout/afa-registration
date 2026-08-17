@@ -22,7 +22,7 @@ import {
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '../../services/supabase';
+import { adminReportsApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import './ReportsPage.css';
 
@@ -39,58 +39,11 @@ const ReportsPage: React.FC = () => {
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
 
-  const { data: revenueData } = useQuery({
-    queryKey: ['report_revenue', dateRange],
+  const { data: report, isLoading } = useQuery({
+    queryKey: ['reports', dateRange],
     queryFn: async () => {
       const { start, end } = getDateRange(dateRange);
-      const { data } = await supabase
-        .from('wallet_transactions')
-        .select('amount, type, created_at')
-        .gte('created_at', start)
-        .lte('created_at', end);
-      const credits = (data || []).filter((t: any) => t.type === 'credit').reduce((s: number, t: any) => s + (t.amount || 0), 0);
-      const total = (data || []).reduce((s: number, t: any) => s + (t.amount || 0), 0);
-      return { credits, total, count: data?.length || 0 };
-    },
-  });
-
-  const { data: registrationStats } = useQuery({
-    queryKey: ['report_registrations', dateRange],
-    queryFn: async () => {
-      const { start, end } = getDateRange(dateRange);
-      const all = await supabase.from('registrations').select('status').gte('created_at', start).lte('created_at', end);
-      const total = all.data?.length || 0;
-      const pending = (all.data || []).filter((r: any) => r.status === 'pending').length;
-      const approved = (all.data || []).filter((r: any) => r.status === 'approved').length;
-      const rejected = (all.data || []).filter((r: any) => r.status === 'rejected').length;
-      return { total, pending, approved, rejected };
-    },
-  });
-
-  const { data: paymentStats } = useQuery({
-    queryKey: ['report_payments', dateRange],
-    queryFn: async () => {
-      const { start, end } = getDateRange(dateRange);
-      const { data } = await supabase
-        .from('wallet_transactions')
-        .select('amount, payment_method, status, created_at')
-        .gte('created_at', start)
-        .lte('created_at', end);
-      const total = (data || []).reduce((s: number, t: any) => s + (t.amount || 0), 0);
-      const momo = (data || []).filter((t: any) => t.payment_method === 'mobile_money').reduce((s: number, t: any) => s + (t.amount || 0), 0);
-      const card = (data || []).filter((t: any) => t.payment_method === 'card').reduce((s: number, t: any) => s + (t.amount || 0), 0);
-      const bank = (data || []).filter((t: any) => t.payment_method === 'bank').reduce((s: number, t: any) => s + (t.amount || 0), 0);
-      return { total, momo, card, bank, count: data?.length || 0 };
-    },
-  });
-
-  const { data: userStats } = useQuery({
-    queryKey: ['report_users', dateRange],
-    queryFn: async () => {
-      const { start, end } = getDateRange(dateRange);
-      const newUsers = await supabase.from('profiles').select('id', { count: 'exact', head: true }).gte('created_at', start).lte('created_at', end);
-      const totalUsers = await supabase.from('profiles').select('id', { count: 'exact', head: true });
-      return { newUsers: newUsers.count ?? 0, totalUsers: totalUsers.count ?? 0 };
+      return adminReportsApi.get(start, end) as any;
     },
   });
 
@@ -125,22 +78,22 @@ const ReportsPage: React.FC = () => {
   const handleDownload = (format: string) => {
     let csvContent = 'Metric,Value\n';
     if (activeReport === 'Revenue') {
-      csvContent += `Total Revenue,GH₵ ${(revenueData?.credits || 0).toLocaleString()}\n`;
-      csvContent += `Total Transactions,${(revenueData?.count || 0).toLocaleString()}\n`;
+      csvContent += `Total Revenue,GH₵ ${(report?.revenue?.credits || 0).toLocaleString()}\n`;
+      csvContent += `Total Transactions,${(report?.revenue?.count || 0).toLocaleString()}\n`;
     } else if (activeReport === 'Registration') {
-      csvContent += `Total Registrations,${(registrationStats?.total || 0).toLocaleString()}\n`;
-      csvContent += `Pending,${(registrationStats?.pending || 0).toLocaleString()}\n`;
-      csvContent += `Approved,${(registrationStats?.approved || 0).toLocaleString()}\n`;
-      csvContent += `Rejected,${(registrationStats?.rejected || 0).toLocaleString()}\n`;
+      csvContent += `Total Registrations,${(report?.registration_stats?.total || 0).toLocaleString()}\n`;
+      csvContent += `Pending,${(report?.registration_stats?.pending || 0).toLocaleString()}\n`;
+      csvContent += `Approved,${(report?.registration_stats?.approved || 0).toLocaleString()}\n`;
+      csvContent += `Rejected,${(report?.registration_stats?.rejected || 0).toLocaleString()}\n`;
     } else if (activeReport === 'Payment') {
-      csvContent += `Total Payments,GH₵ ${(paymentStats?.total || 0).toLocaleString()}\n`;
-      csvContent += `Mobile Money,GH₵ ${(paymentStats?.momo || 0).toLocaleString()}\n`;
-      csvContent += `Card Payments,GH₵ ${(paymentStats?.card || 0).toLocaleString()}\n`;
-      csvContent += `Bank Transfers,GH₵ ${(paymentStats?.bank || 0).toLocaleString()}\n`;
-      csvContent += `Transactions,${(paymentStats?.count || 0).toLocaleString()}\n`;
+      csvContent += `Total Payments,GH₵ ${(report?.payment_stats?.total || 0).toLocaleString()}\n`;
+      csvContent += `Mobile Money,GH₵ ${(report?.payment_stats?.momo || 0).toLocaleString()}\n`;
+      csvContent += `Card Payments,GH₵ ${(report?.payment_stats?.card || 0).toLocaleString()}\n`;
+      csvContent += `Bank Transfers,GH₵ ${(report?.payment_stats?.bank || 0).toLocaleString()}\n`;
+      csvContent += `Transactions,${(report?.payment_stats?.count || 0).toLocaleString()}\n`;
     } else if (activeReport === 'User') {
-      csvContent += `New Users,${(userStats?.newUsers || 0).toLocaleString()}\n`;
-      csvContent += `Total Users,${(userStats?.totalUsers || 0).toLocaleString()}\n`;
+      csvContent += `New Users,${(report?.new_users || 0).toLocaleString()}\n`;
+      csvContent += `Total Users,${(report?.total_users || 0).toLocaleString()}\n`;
     }
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -157,10 +110,10 @@ const ReportsPage: React.FC = () => {
   };
 
   const statCards = [
-    { label: 'Revenue', value: revenueData ? `GH₵ ${revenueData.credits.toLocaleString()}` : '...', icon: cashOutline, change: '' },
-    { label: 'Registrations', value: registrationStats ? registrationStats.total.toLocaleString() : '...', icon: documentTextOutline, change: '' },
-    { label: 'New Users', value: userStats ? userStats.newUsers.toLocaleString() : '...', icon: peopleOutline, change: '' },
-    { label: 'Transactions', value: paymentStats ? paymentStats.count.toLocaleString() : '...', icon: walletOutline, change: '' },
+    { label: 'Revenue', value: report ? `GH₵ ${report.revenue.credits.toLocaleString()}` : '...', icon: cashOutline, change: '' },
+    { label: 'Registrations', value: report ? report.registration_stats.total.toLocaleString() : '...', icon: documentTextOutline, change: '' },
+    { label: 'New Users', value: report ? report.new_users.toLocaleString() : '...', icon: peopleOutline, change: '' },
+    { label: 'Transactions', value: report ? report.payment_stats.count.toLocaleString() : '...', icon: walletOutline, change: '' },
   ];
 
 
@@ -177,34 +130,34 @@ const ReportsPage: React.FC = () => {
       case 'Revenue':
         return (
           <>
-            <div className="report-row"><span className="rtd rtd-label">Total Revenue</span><span className="rtd rtd-value">GH₵ {(revenueData?.credits || 0).toLocaleString()}</span></div>
-            <div className="report-row"><span className="rtd rtd-label">Total Transactions</span><span className="rtd rtd-value">{(revenueData?.count || 0).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Total Revenue</span><span className="rtd rtd-value">GH₵ {(report?.revenue?.credits || 0).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Total Transactions</span><span className="rtd rtd-value">{(report?.revenue?.count || 0).toLocaleString()}</span></div>
           </>
         );
       case 'Registration':
         return (
           <>
-            <div className="report-row"><span className="rtd rtd-label">Total Registrations</span><span className="rtd rtd-value">{(registrationStats?.total || 0).toLocaleString()}</span></div>
-            <div className="report-row"><span className="rtd rtd-label">Pending</span><span className="rtd rtd-value">{(registrationStats?.pending || 0).toLocaleString()}</span></div>
-            <div className="report-row"><span className="rtd rtd-label">Approved</span><span className="rtd rtd-value">{(registrationStats?.approved || 0).toLocaleString()}</span></div>
-            <div className="report-row"><span className="rtd rtd-label">Rejected</span><span className="rtd rtd-value">{(registrationStats?.rejected || 0).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Total Registrations</span><span className="rtd rtd-value">{(report?.registration_stats?.total || 0).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Pending</span><span className="rtd rtd-value">{(report?.registration_stats?.pending || 0).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Approved</span><span className="rtd rtd-value">{(report?.registration_stats?.approved || 0).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Rejected</span><span className="rtd rtd-value">{(report?.registration_stats?.rejected || 0).toLocaleString()}</span></div>
           </>
         );
       case 'Payment':
         return (
           <>
-            <div className="report-row"><span className="rtd rtd-label">Total Payments</span><span className="rtd rtd-value">GH₵ {(paymentStats?.total || 0).toLocaleString()}</span></div>
-            <div className="report-row"><span className="rtd rtd-label">Mobile Money</span><span className="rtd rtd-value">GH₵ {(paymentStats?.momo || 0).toLocaleString()}</span></div>
-            <div className="report-row"><span className="rtd rtd-label">Card Payments</span><span className="rtd rtd-value">GH₵ {(paymentStats?.card || 0).toLocaleString()}</span></div>
-            <div className="report-row"><span className="rtd rtd-label">Bank Transfers</span><span className="rtd rtd-value">GH₵ {(paymentStats?.bank || 0).toLocaleString()}</span></div>
-            <div className="report-row"><span className="rtd rtd-label">Transactions</span><span className="rtd rtd-value">{(paymentStats?.count || 0).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Total Payments</span><span className="rtd rtd-value">GH₵ {(report?.payment_stats?.total || 0).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Mobile Money</span><span className="rtd rtd-value">GH₵ {(report?.payment_stats?.momo || 0).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Card Payments</span><span className="rtd rtd-value">GH₵ {(report?.payment_stats?.card || 0).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Bank Transfers</span><span className="rtd rtd-value">GH₵ {(report?.payment_stats?.bank || 0).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Transactions</span><span className="rtd rtd-value">{(report?.payment_stats?.count || 0).toLocaleString()}</span></div>
           </>
         );
       case 'User':
         return (
           <>
-            <div className="report-row"><span className="rtd rtd-label">New Users</span><span className="rtd rtd-value">{(userStats?.newUsers || 0).toLocaleString()}</span></div>
-            <div className="report-row"><span className="rtd rtd-label">Total Users</span><span className="rtd rtd-value">{(userStats?.totalUsers || 0).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">New Users</span><span className="rtd rtd-value">{(report?.new_users || 0).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Total Users</span><span className="rtd rtd-value">{(report?.total_users || 0).toLocaleString()}</span></div>
           </>
         );
       default:

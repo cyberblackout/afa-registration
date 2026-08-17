@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
+import { referralApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import DashboardLayout from '../layouts/DashboardLayout';
 import './ReferralPage.css';
@@ -22,15 +23,7 @@ const ReferralPage: React.FC = () => {
 
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
-    queryFn: async () => {
-      const { data } = await supabase.from('profiles').select('*').eq('id', user!.id).single();
-      if (data && !data.referral_code) {
-        await supabase.rpc('generate_referral_code');
-        const { data: updated } = await supabase.from('profiles').select('*').eq('id', user!.id).single();
-        return updated;
-      }
-      return data;
-    },
+    queryFn: () => referralApi.getProfile() as Promise<any>,
     enabled: !!user?.id,
   });
 
@@ -39,38 +32,25 @@ const ReferralPage: React.FC = () => {
 
   const { data: stats } = useQuery({
     queryKey: ['referral_stats', user?.id],
-    queryFn: async () => {
-      const { data } = await supabase.rpc('get_referral_stats');
-      return data as any;
-    },
+    queryFn: () => referralApi.getStats() as Promise<any>,
     enabled: !!user?.id,
   });
 
-  const { data: referrals = [] } = useQuery({
+  const { data: referrals = [] as any[] } = useQuery({
     queryKey: ['my_referrals', user?.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('referrals')
-        .select('*, referred_profile:profiles!referred_id(full_name, email, phone)')
-        .eq('referrer_id', user!.id)
-        .order('created_at', { ascending: false });
-      return data || [];
-    },
+    queryFn: () => referralApi.getMyReferrals() as Promise<any[]>,
     enabled: !!user?.id,
   });
 
-  const { data: rewards = [] } = useQuery({
+  const { data: rewards = [] as any[] } = useQuery({
     queryKey: ['referral_rewards', user?.id],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from('referral_rewards')
-        .select('*')
-        .eq('user_id', user!.id)
-        .order('created_at', { ascending: false });
-      return data || [];
-    },
+    queryFn: () => referralApi.getMyRewards() as Promise<any[]>,
     enabled: !!user?.id,
   });
+
+  const pendingRewards = rewards
+    .filter((r: any) => r.status === 'pending')
+    .reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0);
 
   const { data: transactions = [] } = useQuery({
     queryKey: ['wallet-transactions', user?.id],
@@ -271,7 +251,7 @@ const ReferralPage: React.FC = () => {
                   <Clock size={20} />
                 </div>
                 <span className="rr-earnings-label">Pending Rewards</span>
-                <span className="rr-earnings-value rr-earnings-pending">GHS 0.00</span>
+                <span className="rr-earnings-value rr-earnings-pending">GHS {Number(pendingRewards).toFixed(2)}</span>
               </div>
               <div className="rr-earnings-divider" />
               <div className="rr-earnings-item">

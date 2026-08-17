@@ -32,6 +32,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../services/supabase';
+import { adminCustomerApi, walletApi, orderApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import './CustomersPage.css';
 
@@ -51,29 +52,18 @@ const CustomersPage: React.FC = () => {
 
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ['admin_customers'],
-    queryFn: async () => {
-      const r = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
-      return r.data || [];
-    },
+    queryFn: () => adminCustomerApi.list() as any,
   });
 
   const { data: transactions } = useQuery({
     queryKey: ['admin_customer_transactions', expandedId],
-    queryFn: async () => {
-      if (!expandedId) return [];
-      const r = await supabase.from('wallet_transactions').select('*').eq('user_id', expandedId).order('created_at', { ascending: false }).limit(10);
-      return r.data || [];
-    },
+    queryFn: () => walletApi.adminListTransactions(expandedId!) as any,
     enabled: !!expandedId,
   });
 
   const { data: customerOrders } = useQuery({
     queryKey: ['admin_customer_orders', expandedId],
-    queryFn: async () => {
-      if (!expandedId) return [];
-      const r = await supabase.from('orders').select('*').eq('user_id', expandedId).order('created_at', { ascending: false }).limit(10);
-      return r.data || [];
-    },
+    queryFn: () => orderApi.list(expandedId!) as any,
     enabled: !!expandedId,
   });
 
@@ -97,7 +87,7 @@ const CustomersPage: React.FC = () => {
 
   const saveEdit = async () => {
     if (!editCustomer) return;
-    await supabase.from('profiles').update({ full_name: editName, email: editEmail, phone: editPhone }).eq('id', editCustomer.id);
+    await adminCustomerApi.updateProfile(editCustomer.id, { full_name: editName, email: editEmail, phone: editPhone });
     queryClient.invalidateQueries({ queryKey: ['admin_customers'] });
     setShowEditModal(false);
     setEditCustomer(null);
@@ -112,7 +102,7 @@ const CustomersPage: React.FC = () => {
       header: `${isAdmin ? 'Demote' : 'Promote'} Customer`,
       message: `Are you sure you want to ${isAdmin ? 'demote' : 'promote'} ${c.full_name} to ${newRole}?`,
       action: async () => {
-        await supabase.from('profiles').update({ role: newRole }).eq('id', c.id);
+        await adminCustomerApi.updateRole(c.id, newRole);
         queryClient.invalidateQueries({ queryKey: ['admin_customers'] });
         setToastMessage(`${c.full_name} is now ${newRole}`);
         setShowToast(true);

@@ -10,9 +10,10 @@ import {
   Star, Phone, Clock, Zap, Network,
   UserCheck, LogIn, UserPlus, DollarSign,
 } from 'lucide-react';
-import { supabase } from '../services/supabase';
+import { settingsApi, pricingApi, agentApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import DashboardLayout from '../layouts/DashboardLayout';
+import { useQuery } from '@tanstack/react-query';
 import './BecomeAgentPage.css';
 
 const benefits = [
@@ -44,11 +45,30 @@ const BecomeAgentPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', color: 'success' });
 
+  const { data: agentFeeData } = useQuery({
+    queryKey: ['agent_fee'],
+    queryFn: () => settingsApi.getSetting('agent_fee'),
+  });
+
+  const { data: afaPricingData } = useQuery({
+    queryKey: ['afa_registration_price'],
+    queryFn: async () => {
+      const allPricing = await pricingApi.get();
+      return (allPricing as any[]).find((p) => p.key === 'afa_registration') || null;
+    },
+  });
+
+  const agentFee = Number(agentFeeData ?? 100);
+  const normalPrice = Number(afaPricingData?.normal_price ?? afaPricingData?.amount ?? 0);
+  const agentPrice = Number(afaPricingData?.agent_price ?? 0);
+  const profitPerRegistration = Math.max(normalPrice - agentPrice, 0);
+  const profitExampleCustomers = 100;
+  const estimatedEarnings = profitPerRegistration * profitExampleCustomers;
+
   const handleApply = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.rpc('apply_for_agent');
-      if (error) throw error;
+      const data = await agentApi.apply() as any;
       if (data?.success) {
         if (data.auto_approved) {
           setToast({ show: true, message: `Congratulations! You are now an agent! Your Agent ID: ${data.agent_id}`, color: 'success' });
@@ -239,12 +259,12 @@ const BecomeAgentPage: React.FC = () => {
               <div className="ba-profit-divider" />
               <div className="ba-profit-item">
                 <span className="ba-profit-label">Profit per registration</span>
-                <span className="ba-profit-value ba-profit-accent">GHS 5</span>
+                <span className="ba-profit-value ba-profit-accent">GHS {profitPerRegistration.toFixed(2)}</span>
               </div>
               <div className="ba-profit-divider" />
               <div className="ba-profit-item">
                 <span className="ba-profit-label">Estimated earnings</span>
-                <span className="ba-profit-value ba-profit-highlight">GHS 500</span>
+                <span className="ba-profit-value ba-profit-highlight">GHS {estimatedEarnings.toFixed(2)}</span>
               </div>
             </div>
             <p className="ba-profit-note">The more customers you register, the more you earn.</p>
@@ -283,7 +303,7 @@ const BecomeAgentPage: React.FC = () => {
               <p>Join MTN AFA Agents today and start building your customer network.</p>
               <div className="ba-cta-price-row">
                 <span className="ba-cta-price-label">Registration Fee</span>
-                <span className="ba-cta-price-amount">GHS 100</span>
+                <span className="ba-cta-price-amount">GHS {agentFee.toFixed(2)}</span>
                 <span className="ba-cta-price-note">One-time payment, non-refundable</span>
               </div>
               <div className="ba-cta-includes">

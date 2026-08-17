@@ -6,7 +6,9 @@ import {
 } from '@ionic/react';
 import { checkmarkCircle } from 'ionicons/icons';
 import { motion } from 'framer-motion';
-import { supabase } from '../services/supabase';
+import { useQueryClient } from '@tanstack/react-query';
+import { useHistory } from 'react-router-dom';
+import { registrationApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { usePricing } from '../hooks/useData';
 import DashboardLayout from '../layouts/DashboardLayout';
@@ -15,6 +17,8 @@ import './RegisterAFAPage.css';
 const RegisterAFAPage: React.FC = () => {
   const { user } = useAuthStore();
   const { data: pricing } = usePricing();
+  const queryClient = useQueryClient();
+  const history = useHistory();
 
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -32,7 +36,7 @@ const RegisterAFAPage: React.FC = () => {
   const afaPricing = pricing?.find(
     (p: any) => p.key === 'afa_registration' || p.label?.toLowerCase().includes('afa')
   );
-  const registrationPrice = afaPricing?.amount ?? 15;
+  const registrationPrice = afaPricing?.amount ?? 150;
 
   const validate = (): boolean => {
     const errs: Record<string, string> = {};
@@ -53,36 +57,23 @@ const RegisterAFAPage: React.FC = () => {
 
     setLoading(true);
     try {
-      const { data: regData, error: regError } = await supabase
-        .from('registrations')
-        .insert({
-          user_id: user!.id,
-          full_name: fullName.trim(),
-          phone: phone.trim(),
-          id_number: ghanaCardNumber.trim(),
-          address: location.trim(),
-          date_of_birth: dateOfBirth,
-          occupation: occupation.trim(),
-          status: 'pending',
-        })
-        .select('id')
-        .single();
-
-      if (regError) throw regError;
-
-      // Add timeline entry
-      await supabase.from('registration_timeline').insert({
-        registration_id: regData.id,
-        user_id: user!.id,
-        status: 'pending',
-        note: 'Registration submitted – awaiting admin validation',
+      await registrationApi.create({
+        full_name: fullName.trim(),
+        phone: phone.trim(),
+        ghana_card_id: ghanaCardNumber.trim(),
+        address: location.trim(),
+        date_of_birth: dateOfBirth,
+        occupation: occupation.trim(),
       });
 
       setSubmitted(true);
       setToast({ show: true, message: 'Registration submitted successfully!', color: 'success' });
 
+      // Invalidate orders so the Orders page shows the new entry immediately
+      queryClient.invalidateQueries({ queryKey: ['orders', user?.id] });
+
       setTimeout(() => {
-        window.location.href = '/orders';
+        history.push('/orders');
       }, 2500);
     } catch (err: any) {
       setToast({ show: true, message: err.message || 'Submission failed. Please try again.', color: 'danger' });

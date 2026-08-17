@@ -3,17 +3,11 @@ import {
   IonIcon,
   IonModal,
   IonToast,
-  IonBadge,
 } from '@ionic/react';
 import {
   cartOutline,
   searchOutline,
   eyeOutline,
-  checkmarkCircle,
-  closeCircle,
-  banOutline,
-  timeOutline,
-  arrowForward,
   walletOutline,
   cardOutline,
   personOutline,
@@ -22,6 +16,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../services/supabase';
+import { orderApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import './OrdersPage.css';
 
@@ -47,14 +42,10 @@ const OrdersPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [updating, setUpdating] = useState(false);
 
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['admin_orders'],
-    queryFn: async () => {
-      const r = await supabase.from('orders').select('*, profiles(full_name, email, phone)').order('created_at', { ascending: false });
-      return r.data || [];
-    },
+    queryFn: () => orderApi.list() as any,
   });
 
   useEffect(() => {
@@ -75,22 +66,6 @@ const OrdersPage: React.FC = () => {
   const openDetail = (o: any) => {
     setSelectedOrder(o);
     setShowModal(true);
-  };
-
-  const updateStatus = async (id: string, status: string) => {
-    setUpdating(true);
-    try {
-      await supabase.from('orders').update({ status }).eq('id', id);
-      queryClient.invalidateQueries({ queryKey: ['admin_orders'] });
-      setShowModal(false);
-      setToastMessage(`Order ${id?.slice(0, 8)} ${status.toLowerCase()} successfully`);
-      setShowToast(true);
-    } catch (err: any) {
-      setToastMessage(err.message || 'Update failed');
-      setShowToast(true);
-    } finally {
-      setUpdating(false);
-    }
   };
 
   const formatAmount = (amount: number) => `GH₵ ${amount.toFixed(2)}`;
@@ -186,16 +161,6 @@ const OrdersPage: React.FC = () => {
                         <button className="action-icon-btn" onClick={(e) => { e.stopPropagation(); openDetail(order); }} title="View">
                           <IonIcon icon={eyeOutline} />
                         </button>
-                        {(order.status || '') === 'pending' && (
-                          <>
-                            <button className="action-icon-btn approve-icon" onClick={(e) => { e.stopPropagation(); updateStatus(order.id, 'approved'); }} title="Approve">
-                              <IonIcon icon={checkmarkCircle} />
-                            </button>
-                            <button className="action-icon-btn reject-icon" onClick={(e) => { e.stopPropagation(); updateStatus(order.id, 'rejected'); }} title="Reject">
-                              <IonIcon icon={closeCircle} />
-                            </button>
-                          </>
-                        )}
                       </span>
                     </div>
                   </motion.div>
@@ -279,27 +244,6 @@ const OrdersPage: React.FC = () => {
                 <span className={`payment-status-badge ${(selectedOrder.payment_status || 'unpaid').toLowerCase()}`}>
                   {selectedOrder.payment_status || 'Unpaid'}
                 </span>
-              </div>
-
-              <div className="modal-actions">
-                {(selectedOrder.status || '') === 'pending' && (
-                  <>
-                    <button className="action-btn approve-action" disabled={updating} onClick={() => updateStatus(selectedOrder.id, 'approved')}>
-                      <IonIcon icon={checkmarkCircle} />
-                      <span>Approve</span>
-                    </button>
-                    <button className="action-btn reject-action" disabled={updating} onClick={() => updateStatus(selectedOrder.id, 'rejected')}>
-                      <IonIcon icon={closeCircle} />
-                      <span>Reject</span>
-                    </button>
-                  </>
-                )}
-                {(selectedOrder.status || '') !== 'cancelled' && (selectedOrder.status || '') !== 'rejected' && (
-                  <button className="action-btn cancel-action" disabled={updating} onClick={() => updateStatus(selectedOrder.id, 'cancelled')}>
-                    <IonIcon icon={banOutline} />
-                    <span>Cancel</span>
-                  </button>
-                )}
               </div>
             </div>
           </div>

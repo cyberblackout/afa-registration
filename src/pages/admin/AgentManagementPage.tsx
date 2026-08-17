@@ -10,7 +10,7 @@ import {
 } from 'ionicons/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { supabase } from '../../services/supabase';
+import { agentApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import './AgentManagementPage.css';
 
@@ -26,7 +26,7 @@ const AgentManagementPage: React.FC = () => {
   const { data: agentsData, isLoading: agentsLoading } = useQuery({
     queryKey: ['admin_agents'],
     queryFn: async () => {
-      const { data } = await supabase.rpc('admin_get_agents');
+      const data = await agentApi.adminGetApplications();
       return data as any || { agents: [] };
     },
   });
@@ -34,18 +34,14 @@ const AgentManagementPage: React.FC = () => {
   const { data: appsData, isLoading: appsLoading } = useQuery({
     queryKey: ['admin_agent_applications'],
     queryFn: async () => {
-      const { data } = await supabase.rpc('admin_get_agent_applications');
+      const data = await agentApi.adminGetApplications();
       return data as any || { applications: [] };
     },
   });
 
   const approveMutation = useMutation({
     mutationFn: async ({ id, status, notes }: { id: string; status: string; notes?: string }) => {
-      const { data } = await supabase.rpc('approve_agent_application', {
-        p_application_id: id,
-        p_status: status,
-        p_admin_notes: notes,
-      });
+      const data = await agentApi.adminApprove(id, status, notes);
       return data;
     },
     onSuccess: () => {
@@ -63,10 +59,7 @@ const AgentManagementPage: React.FC = () => {
 
   const toggleStatusMutation = useMutation({
     mutationFn: async ({ userId, status }: { userId: string; status: string }) => {
-      const { data } = await supabase.rpc('admin_toggle_agent_status', {
-        p_user_id: userId,
-        p_status: status,
-      });
+      const data = await agentApi.adminToggleStatus(userId, status);
       return data;
     },
     onSuccess: () => {

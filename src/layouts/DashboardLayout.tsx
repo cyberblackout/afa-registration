@@ -96,17 +96,22 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
   useEffect(() => {
     const fetchConfig = async () => {
-      const { data } = await supabase.from('system_settings').select('setting_name, setting_value');
-      if (!data) return;
-      const map: Record<string, string> = {};
-      data.forEach((s: any) => { map[s.setting_name] = s.setting_value; });
-      setWa({
-        enabled: map['whatsapp_enabled'] !== 'false',
-        userNumber: (map['whatsapp_user_number'] || '').replace(/[^0-9]/g, ''),
-        agentNumber: (map['whatsapp_agent_number'] || '').replace(/[^0-9]/g, ''),
-        userMessage: map['whatsapp_user_message'] || defaultConfig.userMessage,
-        agentMessage: map['whatsapp_agent_message'] || defaultConfig.agentMessage,
-      });
+      try {
+        const { adminConfigApi } = await import('../services/api');
+        const data = await adminConfigApi.getSystemSettings();
+        if (!data) return;
+        const map: Record<string, string> = {};
+        data.forEach((s: any) => { map[s.setting_name] = s.setting_value; });
+        setWa({
+          enabled: map['whatsapp_enabled'] !== 'false',
+          userNumber: (map['whatsapp_user_number'] || '').replace(/[^0-9]/g, ''),
+          agentNumber: (map['whatsapp_agent_number'] || '').replace(/[^0-9]/g, ''),
+          userMessage: map['whatsapp_user_message'] || defaultConfig.userMessage,
+          agentMessage: map['whatsapp_agent_message'] || defaultConfig.agentMessage,
+        });
+      } catch (e) {
+        // Non-critical
+      }
     };
     fetchConfig();
   }, []);

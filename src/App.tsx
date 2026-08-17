@@ -1,34 +1,35 @@
 import { Redirect, Route } from 'react-router-dom';
 import { IonApp, IonLoading, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
+import { lazy, Suspense } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './store/authStore';
 import { useIsAdmin } from './hooks/useData';
 import { AuthProvider } from './contexts/AuthContext';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import DashboardPage from './pages/DashboardPage';
-import WalletPage from './pages/WalletPage';
-import RegisterAFAPage from './pages/RegisterAFAPage';
-import OrdersPage from './pages/OrdersPage';
-import ProfilePage from './pages/ProfilePage';
-import NotificationsPage from './pages/NotificationsPage';
-import ReferralPage from './pages/ReferralPage';
-import BecomeAgentPage from './pages/BecomeAgentPage';
-import AgentDashboardPage from './pages/AgentDashboardPage';
-import AdminAgentManagement from './pages/admin/AgentManagementPage';
-import AdminLogin from './pages/admin/AdminLogin';
-import AdminDashboard from './pages/admin/DashboardPage';
-import AdminRegistrations from './pages/admin/RegistrationsPage';
-import AdminCustomers from './pages/admin/CustomersPage';
-import AdminWallet from './pages/admin/WalletPage';
-import AdminPayments from './pages/admin/PaymentsPage';
-import AdminOrders from './pages/admin/OrdersPage';
-import AdminPricing from './pages/admin/PricingPage';
-import AdminNotifs from './pages/admin/NotificationsPage';
-import AdminReferrals from './pages/admin/ReferralManagementPage';
-import AdminReports from './pages/admin/ReportsPage';
-import AdminSettings from './pages/admin/SettingsPage';
+
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const WalletPage = lazy(() => import('./pages/WalletPage'));
+const RegisterAFAPage = lazy(() => import('./pages/RegisterAFAPage'));
+const OrdersPage = lazy(() => import('./pages/OrdersPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const NotificationsPage = lazy(() => import('./pages/NotificationsPage'));
+const ReferralPage = lazy(() => import('./pages/ReferralPage'));
+const BecomeAgentPage = lazy(() => import('./pages/BecomeAgentPage'));
+const AgentDashboardPage = lazy(() => import('./pages/AgentDashboardPage'));
+const AdminAgentManagement = lazy(() => import('./pages/admin/AgentManagementPage'));
+const AdminLogin = lazy(() => import('./pages/admin/AdminLogin'));
+const AdminDashboard = lazy(() => import('./pages/admin/DashboardPage'));
+const AdminRegistrations = lazy(() => import('./pages/admin/RegistrationsPage'));
+const AdminCustomers = lazy(() => import('./pages/admin/CustomersPage'));
+const AdminWallet = lazy(() => import('./pages/admin/WalletPage'));
+const AdminPayments = lazy(() => import('./pages/admin/PaymentsPage'));
+const AdminOrders = lazy(() => import('./pages/admin/OrdersPage'));
+const AdminNotifs = lazy(() => import('./pages/admin/NotificationsPage'));
+const AdminReferrals = lazy(() => import('./pages/admin/ReferralManagementPage'));
+const AdminReports = lazy(() => import('./pages/admin/ReportsPage'));
+const AdminSettings = lazy(() => import('./pages/admin/SettingsPage'));
 
 import '@ionic/react/css/core.css';
 import '@ionic/react/css/normalize.css';
@@ -116,6 +117,7 @@ const App: React.FC = () => (
     <IonApp>
       <IonReactRouter>
         <IonRouterOutlet>
+          <Suspense fallback={<div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}><IonLoading isOpen /></div>}>
           <Route exact path="/login" component={Login} />
           <Route exact path="/register" component={Register} />
           <Route exact path="/cyberin" component={AdminLogin} />
@@ -134,8 +136,10 @@ const App: React.FC = () => (
           <ProtectedRoute exact path="/cyberin/wallet" component={AdminWallet} requireAdmin />
           <ProtectedRoute exact path="/cyberin/payments" component={AdminPayments} requireAdmin />
           <ProtectedRoute exact path="/cyberin/orders" component={AdminOrders} requireAdmin />
-          <ProtectedRoute exact path="/cyberin/pricing" component={AdminPricing} requireAdmin />
           <ProtectedRoute exact path="/cyberin/notifications" component={AdminNotifs} requireAdmin />
+          <Route exact path="/cyberin/pricing">
+            <Redirect to="/cyberin/settings" />
+          </Route>
           <ProtectedRoute exact path="/cyberin/referrals" component={AdminReferrals} requireAdmin />
           <ProtectedRoute exact path="/cyberin/agents" component={AdminAgentManagement} requireAdmin />
           <ProtectedRoute exact path="/cyberin/reports" component={AdminReports} requireAdmin />
@@ -143,6 +147,7 @@ const App: React.FC = () => (
           <Route exact path="/">
             <Redirect to="/login" />
           </Route>
+          </Suspense>
         </IonRouterOutlet>
       </IonReactRouter>
     </IonApp>

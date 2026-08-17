@@ -19,6 +19,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
+import { walletApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import DashboardLayout from '../layouts/DashboardLayout';
 import './WalletPage.css';
@@ -114,8 +115,8 @@ const WalletPage: React.FC = () => {
   const { data: paystackConfig } = useQuery({
     queryKey: ['paystack-config'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_paystack_config');
-      if (error) throw error;
+      const { adminConfigApi } = await import('../services/api');
+      const data = await adminConfigApi.getPaystackConfig();
       return data as { public_key: string; currency: string };
     },
     staleTime: 5 * 60 * 1000,
@@ -147,19 +148,7 @@ const WalletPage: React.FC = () => {
 
   const creditWalletMutation = useMutation({
     mutationFn: async ({ amount, reference, method }: { amount: number; reference: string; method: string }) => {
-      const { error } = await supabase.rpc('credit_wallet', {
-        p_user_id: user!.id,
-        p_amount: amount,
-        p_description: `Wallet Top Up via ${method}`,
-        p_reference: reference,
-      });
-      if (error) throw error;
-
-      // Update the payment_method on the transaction
-      await supabase
-        .from('wallet_transactions')
-        .update({ payment_method: method, status: 'Completed' })
-        .eq('reference', reference);
+      await walletApi.topUp(amount, reference, method);
     },
     onSuccess: async (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['wallet'] });

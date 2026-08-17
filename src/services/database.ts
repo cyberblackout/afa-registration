@@ -1,321 +1,680 @@
-import { supabase } from './supabase';
+import {
+  profileApi,
+  registrationApi,
+  walletApi,
+  orderApi,
+  notificationApi,
+  referralApi,
+  agentApi,
+  adminSettingsApi,
+  adminCustomerApi,
+  adminDashboardApi,
+  adminReportsApi,
+  adminPaymentApi,
+  ticketApi,
+  adminConfigApi,
+  adminAuditApi,
+  pushApi,
+  pricingApi,
+  settingsApi,
+  auditApi,
+  rolePermissionsApi,
+  whatsappConfigApi,
+  paymentConfigApi,
+  announcementsApi,
+} from './api';
 import { Profile } from '../types';
 
 export const db = {
   // PROFILES
-  getProfile: (userId: string) =>
-    supabase.from('profiles').select('*').eq('id', userId).single(),
+  getProfile: async (userId: string) => {
+    try {
+      const data = await profileApi.get(userId);
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  updateProfile: (userId: string, data: Partial<Profile>) =>
-    supabase.from('profiles').update(data).eq('id', userId),
+  updateProfile: async (userId: string, data: Partial<Profile>) => {
+    try {
+      await profileApi.update({ user_id: userId, ...data });
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
   uploadAvatar: async (userId: string, file: File) => {
-    const ext = file.name.split('.').pop();
-    const filePath = `avatars/${userId}.${ext}`;
-    const { error: uploadError } = await supabase.storage
-      .from('profiles')
-      .upload(filePath, file, { upsert: true });
-    if (uploadError) throw uploadError;
-    const { data: urlData } = supabase.storage
-      .from('profiles')
-      .getPublicUrl(filePath);
-    return supabase
-      .from('profiles')
-      .update({ avatar_url: urlData.publicUrl })
-      .eq('id', userId);
+    try {
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.readAsDataURL(file);
+      });
+      const result = await profileApi.uploadAvatar(file.name, base64);
+      return { data: result, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
   },
 
   // AUTH / ROLES
-  getUserRole: (userId: string) =>
-    supabase.rpc('get_user_role', { user_id: userId }),
+  getUserRole: async (userId: string) => {
+    try {
+      const data = await profileApi.getUserRole(userId);
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  isAdmin: () => supabase.rpc('is_admin'),
+  isAdmin: async () => {
+    try {
+      const data = await profileApi.isAdmin();
+      return { data: data ?? false, error: null };
+    } catch (error: any) {
+      return { data: false, error: { message: error.message } };
+    }
+  },
 
-  getAllUsers: () =>
-    supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false }),
+  getAllUsers: async () => {
+    try {
+      const data = await adminCustomerApi.list();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  updateUserRole: (userId: string, role: string) =>
-    supabase.from('profiles').update({ role: role as any }).eq('id', userId),
+  updateUserRole: async (userId: string, role: string) => {
+    try {
+      await adminCustomerApi.updateRole(userId, role);
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
   // REGISTRATIONS
-  getRegistrations: (userId?: string) => {
-    let query = supabase
-      .from('registrations')
-      .select('*, registration_documents(*), registration_timeline(*)')
-      .order('created_at', { ascending: false });
-    if (userId) query = query.eq('user_id', userId);
-    return query;
+  getRegistrations: async (userId?: string) => {
+    try {
+      const data = await registrationApi.adminList(undefined, userId);
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
   },
 
-  getRegistration: (id: string) =>
-    supabase
-      .from('registrations')
-      .select('*, registration_documents(*), registration_timeline(*)')
-      .eq('id', id)
-      .single(),
+  getRegistration: async (id: string) => {
+    try {
+      const data = await profileApi.getRegistration(id);
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  createRegistration: (data: any) =>
-    supabase.from('registrations').insert(data).select().single(),
+  createRegistration: async (data: any) => {
+    try {
+      const result = await registrationApi.create(data) as any;
+      return { data: result, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  updateRegistrationStatus: (id: string, status: string, adminNotes?: string) =>
-    supabase.from('registrations').update({ status, admin_notes: adminNotes }).eq('id', id),
+  updateRegistrationStatus: async (id: string, status: string, adminNotes?: string) => {
+    try {
+      await registrationApi.adminUpdateStatus(id, status, adminNotes);
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  addRegistrationTimeline: (data: any) =>
-    supabase.from('registration_timeline').insert(data),
+  addRegistrationTimeline: async (data: any) => {
+    try {
+      await registrationApi.adminAddTimeline(data.registration_id, data.status, data.note);
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  addRegistrationDocument: (data: any) =>
-    supabase.from('registration_documents').insert(data),
+  addRegistrationDocument: async (data: any) => {
+    try {
+      await registrationApi.adminAddDocument(data.registration_id, data.document_type, data.document_url, data.file_name);
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  updateDocumentStatus: (id: string, status: string, adminNotes?: string) =>
-    supabase.from('registration_documents').update({ status, admin_notes: adminNotes }).eq('id', id),
+  updateDocumentStatus: async (id: string, status: string, adminNotes?: string) => {
+    try {
+      await registrationApi.adminUpdateDocumentStatus(id, status, adminNotes);
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  assignRegistrationAdmin: (id: string, adminId: string) =>
-    supabase.from('registrations').update({ assigned_admin_id: adminId }).eq('id', id),
+  assignRegistrationAdmin: async (id: string, adminId: string) => {
+    try {
+      await registrationApi.adminAssignAdmin(id, adminId);
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
   // WALLET
-  getWalletBalance: (userId: string) =>
-    supabase.from('profiles').select('wallet_balance').eq('id', userId).single(),
+  getWalletBalance: async (userId: string) => {
+    try {
+      const data = await profileApi.getWalletBalance(userId);
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  getTransactions: (userId: string) =>
-    supabase
-      .from('wallet_transactions')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false }),
+  getTransactions: async (userId: string) => {
+    try {
+      const data = await walletApi.getTransactions();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  getAllTransactions: () =>
-    supabase
-      .from('wallet_transactions')
-      .select('*, profiles(full_name, email)')
-      .order('created_at', { ascending: false }),
+  getAllTransactions: async () => {
+    try {
+      const data = await walletApi.adminListUsers();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  creditWallet: (userId: string, amount: number, description: string, reference?: string) =>
-    supabase.rpc('credit_wallet', {
-      p_user_id: userId,
-      p_amount: amount,
-      p_description: description,
-      p_reference: reference,
-    }),
+  creditWallet: async (userId: string, amount: number, description: string, reference?: string) => {
+    try {
+      await walletApi.adminCredit(userId, amount, description);
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  debitWallet: (userId: string, amount: number, description: string) =>
-    supabase.rpc('debit_wallet', {
-      p_user_id: userId,
-      p_amount: amount,
-      p_description: description,
-    }),
+  debitWallet: async (userId: string, amount: number, description: string) => {
+    try {
+      await walletApi.adminDebit(userId, amount, description);
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
   // ORDERS
-  getOrders: (userId?: string) => {
-    let query = supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (userId) query = query.eq('user_id', userId);
-    return query;
+  getOrders: async (userId?: string) => {
+    try {
+      const data = await orderApi.list(userId);
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
   },
 
-  createOrder: (data: any) =>
-    supabase.from('orders').insert(data).select().single(),
+  createOrder: async (data: any) => {
+    try {
+      const result = await orderApi.create(data.amount, data.description);
+      return { data: result, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  updateOrderStatus: (id: string, status: string) =>
-    supabase.from('orders').update({ status }).eq('id', id),
+  updateOrderStatus: async (id: string, status: string) => {
+    try {
+      await orderApi.updateStatus(id, status);
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
   // NOTIFICATIONS
-  getNotifications: (userId: string) =>
-    supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false }),
-
-  getUnreadCount: (userId: string) =>
-    supabase
-      .from('notifications')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', userId)
-      .eq('read', false),
-
-  markNotificationRead: (id: string) =>
-    supabase.from('notifications').update({ read: true }).eq('id', id),
-
-  markAllNotificationsRead: (userId: string) =>
-    supabase
-      .from('notifications')
-      .update({ read: true })
-      .eq('user_id', userId)
-      .eq('read', false),
-
-  deleteNotification: (id: string) =>
-    supabase.from('notifications').delete().eq('id', id),
-
-  createNotification: (data: any) =>
-    supabase.from('notifications').insert(data),
-
-  // PRICING
-  getPricing: () =>
-    supabase.from('pricing').select('*').eq('active', true),
-
-  updatePricing: (id: string, amount: number) =>
-    supabase.from('pricing').update({ amount }).eq('id', id),
-
-  // SETTINGS
-  getSettings: () => supabase.from('app_settings').select('*'),
-
-  getSetting: (key: string) =>
-    supabase.from('app_settings').select('value').eq('key', key).single(),
-
-  updateSetting: (key: string, value: any) =>
-    supabase.from('app_settings').update({ value }).eq('key', key),
-
-  // AUDIT LOGS
-  getAuditLogs: () =>
-    supabase
-      .from('audit_logs')
-      .select('*, profiles(full_name, email)')
-      .order('created_at', { ascending: false }),
-
-  createAuditLog: (data: any) => supabase.from('audit_logs').insert(data),
-
-  // ANNOUNCEMENTS
-  getActiveAnnouncements: () =>
-    supabase.from('announcements').select('*').eq('active', true),
-
-  getAnnouncements: () =>
-    supabase
-      .from('announcements')
-      .select('*')
-      .order('created_at', { ascending: false }),
-
-  createAnnouncement: (data: any) =>
-    supabase.from('announcements').insert(data),
-
-  // WHATSAPP CONFIG
-  getWhatsAppConfig: () => supabase.from('whatsapp_config').select('*'),
-
-  updateWhatsAppConfig: (key: string, value: string) =>
-    supabase.from('whatsapp_config').upsert({ key, value }),
-
-  // PAYMENT CONFIG
-  getPaymentConfig: () => supabase.from('payment_config').select('*'),
-
-  updatePaymentConfig: (key: string, value: string) =>
-    supabase.from('payment_config').upsert({ key, value }),
-
-  // SUPPORT TICKETS
-  getTickets: (userId?: string) => {
-    let query = supabase
-      .from('support_tickets')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (userId) query = query.eq('user_id', userId);
-    return query;
+  getNotifications: async (userId: string) => {
+    try {
+      const data = await notificationApi.list();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
   },
 
-  createTicket: (data: any) =>
-    supabase.from('support_tickets').insert(data),
+  getUnreadCount: async (userId: string) => {
+    try {
+      const result = await notificationApi.unreadCount() as any;
+      return { count: result.count, error: null };
+    } catch (error: any) {
+      return { count: 0, error: { message: error.message } };
+    }
+  },
 
-  updateTicketStatus: (id: string, status: string) =>
-    supabase.from('support_tickets').update({ status }).eq('id', id),
+  markNotificationRead: async (id: string) => {
+    try {
+      await notificationApi.markRead(id);
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  markAllNotificationsRead: async (userId: string) => {
+    try {
+      await notificationApi.markAllRead();
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  deleteNotification: async (id: string) => {
+    try {
+      await notificationApi.delete(id);
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  createNotification: async (data: any) => {
+    try {
+      await notificationApi.adminSend(data.title, data.message, data.type || 'info', [data.user_id]);
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  // PRICING
+  getPricing: async () => {
+    try {
+      const data = await pricingApi.get();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  // SETTINGS
+  getSettings: async () => {
+    try {
+      const data = await settingsApi.get();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  getSetting: async (key: string) => {
+    try {
+      const value = await settingsApi.getSetting(key);
+      return { data: { value }, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  updateSetting: async (key: string, value: any) => {
+    try {
+      await adminSettingsApi.saveAppSettings({ [key]: typeof value === 'string' ? value : JSON.stringify(value) });
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  // AUDIT LOGS
+  getAuditLogs: async () => {
+    try {
+      const data = await adminAuditApi.list();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  createAuditLog: async (data: any) => {
+    try {
+      await auditApi.create(data);
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  // ANNOUNCEMENTS
+  getActiveAnnouncements: async () => {
+    try {
+      const data = await announcementsApi.getActive();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  getAnnouncements: async () => {
+    try {
+      const data = await adminConfigApi.getAnnouncements();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  createAnnouncement: async (data: any) => {
+    try {
+      await adminConfigApi.createAnnouncement(data.title, data.message, data.active);
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  // WHATSAPP CONFIG
+  getWhatsAppConfig: async () => {
+    try {
+      const data = await whatsappConfigApi.get();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  updateWhatsAppConfig: async (key: string, value: string) => {
+    try {
+      await adminConfigApi.updateWhatsApp({ [key]: value });
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  // PAYMENT CONFIG
+  getPaymentConfig: async () => {
+    try {
+      const data = await paymentConfigApi.get();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  updatePaymentConfig: async (key: string, value: string) => {
+    try {
+      await adminConfigApi.updatePayment({ [key]: value });
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  // SUPPORT TICKETS
+  getTickets: async (userId?: string) => {
+    try {
+      const data = await ticketApi.list();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  createTicket: async (data: any) => {
+    try {
+      await ticketApi.create(data.subject, data.message, data.priority);
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
+
+  updateTicketStatus: async (id: string, status: string) => {
+    try {
+      await ticketApi.updateStatus(id, status);
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
   // REFERRALS
-  generateReferralCode: () => supabase.rpc('generate_referral_code'),
+  generateReferralCode: async () => {
+    try {
+      const data = await referralApi.generateCode();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  getReferralStats: () => supabase.rpc('get_referral_stats'),
+  getReferralStats: async () => {
+    try {
+      const data = await referralApi.getStats();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  validateReferralCode: (code: string) =>
-    supabase.rpc('validate_referral_code', { code }),
+  validateReferralCode: async (code: string) => {
+    try {
+      const data = await referralApi.validateCode(code);
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  getMyReferrals: (userId: string) =>
-    supabase
-      .from('referrals')
-      .select('*, referred_profile:profiles!referred_id(full_name, email, phone)')
-      .eq('referrer_id', userId)
-      .order('created_at', { ascending: false }),
+  getMyReferrals: async (userId: string) => {
+    try {
+      const data = await referralApi.getMyReferrals();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  getMyReferralRewards: (userId: string) =>
-    supabase
-      .from('referral_rewards')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false }),
+  getMyReferralRewards: async (userId: string) => {
+    try {
+      const data = await referralApi.getMyRewards();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  getMyReferralCode: (userId: string) =>
-    supabase.from('profiles').select('referral_code').eq('id', userId).single(),
+  getMyReferralCode: async (userId: string) => {
+    try {
+      const data = await referralApi.getProfile() as any;
+      return { data: { referral_code: data?.referral_code }, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  processReferralReward: (registrationId: string) =>
-    supabase.rpc('process_referral_reward', { registration_id: registrationId }),
+  processReferralReward: async (registrationId: string) => {
+    try {
+      const data = await registrationApi.adminProcessReferralReward(registrationId);
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  adminGetReferralAnalytics: () => supabase.rpc('admin_get_referral_analytics'),
+  adminGetReferralAnalytics: async () => {
+    try {
+      const data = await referralApi.adminAnalytics();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  adminGetAllReferrals: () =>
-    supabase
-      .from('referrals')
-      .select('*, referrer:profiles!referrer_id(full_name, email, phone), referred:profiles!referred_id(full_name, email, phone)')
-      .order('created_at', { ascending: false }),
+  adminGetAllReferrals: async () => {
+    try {
+      const data = await referralApi.adminList();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  adminUpdateReferralStatus: (id: string, status: string) =>
-    supabase.from('referrals').update({ status }).eq('id', id),
+  adminUpdateReferralStatus: async (id: string, status: string) => {
+    try {
+      await referralApi.adminUpdateStatus(id, status);
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
   // AGENT SYSTEM
-  applyForAgent: () => supabase.rpc('apply_for_agent'),
+  applyForAgent: async () => {
+    try {
+      const data = await agentApi.apply();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  getAgentDashboard: () => supabase.rpc('get_agent_dashboard'),
+  getAgentDashboard: async () => {
+    try {
+      const data = await agentApi.getDashboard();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  getAgentPricing: () => supabase.rpc('get_agent_pricing'),
+  getAgentPricing: async () => {
+    try {
+      const data = await agentApi.getPricing();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  checkPermission: (permission: string) =>
-    supabase.rpc('check_permission', { p_permission: permission }),
+  checkPermission: async (permission: string) => {
+    try {
+      const data = await agentApi.checkPermission(permission);
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  getAgentApplications: () => supabase.from('agent_applications').select('*').order('created_at', { ascending: false }),
+  getAgentApplications: async () => {
+    try {
+      const data = await agentApi.getApplications();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  adminGetAgentApplications: () => supabase.rpc('admin_get_agent_applications'),
+  adminGetAgentApplications: async () => {
+    try {
+      const data = await agentApi.adminGetApplications();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  adminGetAgents: () => supabase.rpc('admin_get_agents'),
+  adminGetAgents: async () => {
+    try {
+      const data = await agentApi.adminGetApplications();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  approveAgentApplication: (applicationId: string, status: string, adminNotes?: string) =>
-    supabase.rpc('approve_agent_application', {
-      p_application_id: applicationId,
-      p_status: status,
-      p_admin_notes: adminNotes,
-    }),
+  approveAgentApplication: async (applicationId: string, status: string, adminNotes?: string) => {
+    try {
+      const data = await agentApi.adminApprove(applicationId, status, adminNotes);
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  adminToggleAgentStatus: (userId: string, status: string) =>
-    supabase.rpc('admin_toggle_agent_status', {
-      p_user_id: userId,
-      p_status: status,
-    }),
+  adminToggleAgentStatus: async (userId: string, status: string) => {
+    try {
+      const data = await agentApi.adminToggleStatus(userId, status);
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  getAgentTransactions: (agentId: string) =>
-    supabase
-      .from('agent_transactions')
-      .select('*')
-      .eq('agent_id', agentId)
-      .order('created_at', { ascending: false }),
+  getAgentTransactions: async (agentId: string) => {
+    try {
+      const data = await agentApi.getTransactions(agentId);
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  getAgentApplication: (userId: string) =>
-    supabase
-      .from('agent_applications')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
+  getAgentApplication: async (userId: string) => {
+    try {
+      const data = await agentApi.getApplication(userId);
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  getRolePermissions: () => supabase.from('role_permissions').select('*'),
+  getRolePermissions: async () => {
+    try {
+      const data = await rolePermissionsApi.get();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
   // SYSTEM SETTINGS (WhatsApp config)
-  getSystemSettings: () =>
-    supabase.from('system_settings').select('*'),
+  getSystemSettings: async () => {
+    try {
+      const data = await adminConfigApi.getSystemSettings();
+      return { data, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  getSystemSetting: (name: string) =>
-    supabase.from('system_settings').select('setting_value').eq('setting_name', name).single(),
+  getSystemSetting: async (name: string) => {
+    try {
+      const settings = await adminConfigApi.getSystemSettings();
+      const found = settings.find((s: any) => s.setting_name === name);
+      return { data: found ? { setting_value: found.setting_value } : null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 
-  upsertSystemSetting: (name: string, value: string) =>
-    supabase.from('system_settings').upsert(
-      { setting_name: name, setting_value: value },
-      { onConflict: 'setting_name' }
-    ),
+  upsertSystemSetting: async (name: string, value: string) => {
+    try {
+      await adminSettingsApi.saveSystemSettings({ [name]: value });
+      return { data: null, error: null };
+    } catch (error: any) {
+      return { data: null, error: { message: error.message } };
+    }
+  },
 };
