@@ -36,6 +36,10 @@ import { adminCustomerApi, walletApi, orderApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import './CustomersPage.css';
 
+// Ghana is UTC+0 — force Africa/Accra timezone instead of device local
+const formatGhanaDate = (dateStr: string) =>
+  new Date(dateStr).toLocaleDateString('en-GB', { timeZone: 'Africa/Accra' });
+
 const CustomersPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
@@ -166,7 +170,7 @@ const CustomersPage: React.FC = () => {
                         <div className="customer-meta">
                           <span className="customer-phone">{customer.phone}</span>
                           <span className={`customer-status ${customer.role === 'admin' ? 'status-active' : 'status-suspended'}`}>{roleLabel}</span>
-                          <span className="customer-date">{new Date(customer.created_at).toLocaleDateString()}</span>
+                          <span className="customer-date">{formatGhanaDate(customer.created_at)}</span>
                         </div>
                         <div className="customer-actions">
                           <button className="action-btn edit-btn" onClick={(e) => { e.stopPropagation(); openEdit(customer); }} title="Edit">
@@ -213,7 +217,7 @@ const CustomersPage: React.FC = () => {
                                 <div className="detail-table">
                                   {transactions.map((t: any, i: number) => (
                                     <div key={t.id || i} className="detail-row">
-                                      <span>{new Date(t.created_at).toLocaleDateString()}</span>
+                                      <span>{formatGhanaDate(t.created_at)}</span>
                                       <span className={t.type === 'credit' ? 'tx-credit' : 'tx-debit'}>
                                         {t.type === 'credit' ? '+' : '-'}GH₵ {(t.amount || 0).toFixed(2)}
                                       </span>
