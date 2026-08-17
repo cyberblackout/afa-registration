@@ -332,6 +332,22 @@ export const notificationApi = {
 
   adminInsertNotification: (userId: string, title: string, message: string, type?: string): Promise<any> =>
     invoke<any>('admin-notifications', { action: 'insert_notification', user_id: userId, title, message, type }),
+
+  // Real channel sends via Edge Functions
+  sendEmail: (to: string, subject: string, html: string, type: string, userId?: string): Promise<any> =>
+    invoke<any>('send-email', { to, subject, html, type, user_id: userId }),
+
+  sendSms: (userId: string, phone: string, message: string, type: string): Promise<any> =>
+    invoke<any>('send-sms', { user_id: userId, phone, message, type }),
+
+  sendPush: (userId: string | null, title: string, body: string, url?: string, type?: string): Promise<any> =>
+    invoke<any>('send-push', { user_id: userId, title, body, url, type }),
+
+  // Delivery log
+  getDeliveryLog: (channel?: string): Promise<any[]> => {
+    const params = channel ? `?channel=${channel}` : '';
+    return invoke<any[]>(`send-email${params}`, undefined, 'GET');
+  },
 };
 
 // ============================================================

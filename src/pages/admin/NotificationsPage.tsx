@@ -1,29 +1,25 @@
 import React, { useState, useRef } from 'react';
 import {
-  IonContent,
-  IonPage,
   IonButton,
   IonIcon,
   IonInput,
   IonItem,
   IonLabel,
-  IonCard,
-  IonCardContent,
   IonToast,
   IonTextarea,
 } from '@ionic/react';
 import {
   notificationsOutline,
   sendOutline,
-  imageOutline,
+  mailOutline,
+  chatbubbleOutline,
+  phonePortraitOutline,
+  personOutline,
   checkmarkCircle,
   closeCircle,
   timeOutline,
-  chatbubbleOutline,
-  mailOutline,
-  phonePortraitOutline,
-  peopleOutline,
-  personOutline,
+  refreshOutline,
+  eyeOutline,
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -32,10 +28,9 @@ import { notificationApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import './NotificationsPage.css';
 
+type Tab = 'email' | 'sms' | 'push' | 'log';
 type RecipientType = 'everyone' | 'specific';
-type NotificationType = 'info' | 'success' | 'warning' | 'error';
 
-// Ghana is UTC+0 — force Africa/Accra timezone instead of device local
 const formatGhanaDateTime = (dateStr: string) =>
   new Date(dateStr).toLocaleString('en-GB', {
     timeZone: 'Africa/Accra',
@@ -47,134 +42,222 @@ const formatGhanaDateTime = (dateStr: string) =>
     hour12: true,
   });
 
+const statusColors: Record<string, string> = {
+  pending: '#f57f17',
+  sent: '#2e7d32',
+  failed: '#c62828',
+  delivered: '#1565c0',
+  bounced: '#c62828',
+};
+
 const NotificationsPage: React.FC = () => {
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<Tab>('email');
   const [recipientType, setRecipientType] = useState<RecipientType>('everyone');
   const [specificEmail, setSpecificEmail] = useState('');
-  const [notifType, setNotifType] = useState<NotificationType>('info');
-  const [title, setTitle] = useState('');
+  const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
-  const [imageName, setImageName] = useState('');
+  const [isMarketing, setIsMarketing] = useState(false);
+  const [sending, setSending] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [sending, setSending] = useState(false);
-  const [sendPush, setSendPush] = useState(true);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [toastColor, setToastColor] = useState('success');
+  const [logChannelFilter, setLogChannelFilter] = useState<string>('all');
 
-  const { data: recentNotifications = [] } = useQuery({
-    queryKey: ['admin_recent_notifications'],
-    queryFn: () => notificationApi.adminList() as any,
+  // Delivery log query
+  const { data: deliveryLog = [], isLoading: logLoading } = useQuery({
+    queryKey: ['notifications_log', logChannelFilter],
+    queryFn: async () => {
+      let query = supabase
+        .from('notifications_log')
+        .select('*, profiles!notifications_log_user_id_fkey(full_name, email)')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (logChannelFilter !== 'all') {
+        query = query.eq('channel', logChannelFilter);
+      }
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: activeTab === 'log',
   });
 
-  const handleSend = async () => {
-    if (!title.trim() || !message.trim()) {
-      setToastMessage('Title and message are required');
-      setShowToast(true);
-      return;
+  const resolveRecipients = async (): Promise<{ userIds: string[]; emails: string[]; phones: string[] }> => {
+    if (recipientType === 'everyone') {
+      const allIds = await notificationApi.adminGetAllUserIds();
+      // Get profiles with emails and phones
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, email, phone')
+        .in('id', allIds);
+      return {
+        userIds: allIds,
+        emails: (profiles || []).map((p: any) => p.email).filter(Boolean),
+        phones: (profiles || []).map((p: any) => p.phone).filter(Boolean),
+      };
+    } else {
+      const resolvedId = await notificationApi.adminResolveEmail(specificEmail);
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, email, phone')
+        .eq('id', resolvedId)
+        .single();
+      return {
+        userIds: [resolvedId],
+        emails: profile?.email ? [profile.email] : [],
+        phones: profile?.phone ? [profile.phone] : [],
+      };
     }
-    if (recipientType === 'specific' && !specificEmail.trim()) {
-      setToastMessage('Please enter an email address for the specific user');
-      setShowToast(true);
+  };
+
+  const showToastMsg = (msg: string, color = 'success') => {
+    setToastMessage(msg);
+    setToastColor(color);
+    setShowToast(true);
+  };
+
+  const handleSendEmail = async () => {
+    if (!subject.trim() || !message.trim()) {
+      showToastMsg('Subject and message are required', 'warning');
       return;
     }
     setSending(true);
     try {
-      let userIds: string[] = [];
-
-      if (recipientType === 'everyone') {
-        const allIds = await notificationApi.adminGetAllUserIds();
-        userIds = allIds;
-      } else if (recipientType === 'specific') {
-        try {
-          const resolvedId = await notificationApi.adminResolveEmail(specificEmail);
-          userIds = [resolvedId];
-        } catch {
-          setToastMessage('User with that email not found');
-          setShowToast(true);
-          setSending(false);
-          return;
-        }
+      const recipients = await resolveRecipients();
+      if (recipients.emails.length === 0) {
+        showToastMsg('No email addresses found for recipients', 'warning');
+        setSending(false);
+        return;
       }
 
-      let imageUrl = '';
-      const file = fileInputRef.current?.files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        const base64 = await new Promise<string>((resolve) => {
-          reader.onload = () => {
-            const result = reader.result as string;
-            resolve(result.split(',')[1]); // Remove data:image/...;base64, prefix
-          };
-          reader.readAsDataURL(file);
-        });
-        const uploadResult = await notificationApi.adminUploadImage(file.name, base64) as any;
-        imageUrl = uploadResult.url;
+      let sent = 0;
+      let skipped = 0;
+      for (let i = 0; i < recipients.userIds.length; i++) {
+        const email = recipients.emails[i];
+        if (!email) { skipped++; continue; }
+        const result = await notificationApi.sendEmail(
+          email,
+          subject.trim(),
+          message.trim(),
+          isMarketing ? 'marketing' : 'transactional',
+          recipients.userIds[i]
+        );
+        if (result?.skipped) skipped++;
+        else sent++;
       }
 
-      await notificationApi.adminSend(title.trim(), message.trim(), notifType, userIds, recipientType === 'everyone');
+      // Also insert in-app notification
+      await notificationApi.adminSend(subject.trim(), message.trim(), 'info', recipients.userIds, recipientType === 'everyone');
 
-      if (sendPush) {
-        for (const uid of userIds) {
-          try {
-            await supabase.functions.invoke('send-push', {
-              body: {
-                user_id: uid,
-                title: title.trim(),
-                body: message.trim(),
-                url: '/notifications',
-                type: 'marketing',
-              },
-            });
-          } catch {
-            // push is non-critical
-          }
-        }
-      }
-
-      queryClient.invalidateQueries({ queryKey: ['admin_recent_notifications'] });
-      setTitle('');
+      showToastMsg(`Email: ${sent} sent, ${skipped} skipped (opted out)`);
+      queryClient.invalidateQueries({ queryKey: ['notifications_log'] });
+      setSubject('');
       setMessage('');
-      setImageName('');
-      setToastMessage(`Notification sent to ${userIds.length} user(s)`);
-      setShowToast(true);
     } catch (err: any) {
-      setToastMessage(err.message || 'Failed to send notification');
-      setShowToast(true);
+      showToastMsg(err.message || 'Failed to send email', 'danger');
     } finally {
       setSending(false);
     }
   };
 
-  const handleAttachImage = () => {
-    fileInputRef.current?.click();
-  };
+  const handleSendSms = async () => {
+    if (!message.trim()) {
+      showToastMsg('Message is required', 'warning');
+      return;
+    }
+    setSending(true);
+    try {
+      const recipients = await resolveRecipients();
+      if (recipients.phones.length === 0) {
+        showToastMsg('No phone numbers found for recipients', 'warning');
+        setSending(false);
+        return;
+      }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageName(file.name);
+      let sent = 0;
+      let skipped = 0;
+      for (let i = 0; i < recipients.userIds.length; i++) {
+        const phone = recipients.phones[i];
+        if (!phone) { skipped++; continue; }
+        const result = await notificationApi.sendSms(
+          recipients.userIds[i],
+          phone,
+          message.trim(),
+          isMarketing ? 'marketing' : 'transactional'
+        );
+        if (result?.skipped) skipped++;
+        else sent++;
+      }
+
+      showToastMsg(`SMS: ${sent} sent, ${skipped} skipped (opted out)`);
+      queryClient.invalidateQueries({ queryKey: ['notifications_log'] });
+      setMessage('');
+    } catch (err: any) {
+      showToastMsg(err.message || 'Failed to send SMS', 'danger');
+    } finally {
+      setSending(false);
     }
   };
 
-  const recipientOptions: { value: RecipientType; label: string; icon: string }[] = [
-    { value: 'everyone', label: 'Everyone', icon: 'peopleOutline' },
-    { value: 'specific', label: 'Specific User', icon: 'personOutline' },
-  ];
+  const handleSendPush = async () => {
+    if (!subject.trim() || !message.trim()) {
+      showToastMsg('Title and message are required', 'warning');
+      return;
+    }
+    setSending(true);
+    try {
+      let sent = 0;
+      let skipped = 0;
 
-  const recipientIcons: Record<string, string> = {
-    peopleOutline, personOutline,
+      if (recipientType === 'everyone') {
+        const result = await notificationApi.sendPush(
+          null,
+          subject.trim(),
+          message.trim(),
+          '/notifications',
+          isMarketing ? 'marketing' : 'transactional'
+        );
+        sent = result?.sent || 0;
+        skipped = result?.skipped || 0;
+      } else {
+        const resolvedId = await notificationApi.adminResolveEmail(specificEmail);
+        const result = await notificationApi.sendPush(
+          resolvedId,
+          subject.trim(),
+          message.trim(),
+          '/notifications',
+          isMarketing ? 'marketing' : 'transactional'
+        );
+        if (result?.skipped) skipped = 1;
+        else sent = result?.sent || 0;
+      }
+
+      showToastMsg(`Push: ${sent} sent, ${skipped} skipped (opted out)`);
+      queryClient.invalidateQueries({ queryKey: ['notifications_log'] });
+      setSubject('');
+      setMessage('');
+    } catch (err: any) {
+      showToastMsg(err.message || 'Failed to send push', 'danger');
+    } finally {
+      setSending(false);
+    }
   };
 
-  const notifTypeIcons: Record<string, string> = {
-    chatbubbleOutline, checkmarkCircle, timeOutline, closeCircle,
+  const handleSend = () => {
+    if (activeTab === 'email') handleSendEmail();
+    else if (activeTab === 'sms') handleSendSms();
+    else if (activeTab === 'push') handleSendPush();
   };
 
-  const notifTypes: { value: NotificationType; label: string; icon: string }[] = [
-    { value: 'info', label: 'Info', icon: 'chatbubbleOutline' },
-    { value: 'success', label: 'Success', icon: 'checkmarkCircle' },
-    { value: 'warning', label: 'Warning', icon: 'timeOutline' },
-    { value: 'error', label: 'Error', icon: 'closeCircle' },
+  const tabs: { key: Tab; label: string; icon: string }[] = [
+    { key: 'email', label: 'Email', icon: 'mailOutline' },
+    { key: 'sms', label: 'SMS', icon: 'chatbubbleOutline' },
+    { key: 'push', label: 'Push', icon: 'phonePortraitOutline' },
+    { key: 'log', label: 'Log', icon: 'eyeOutline' },
   ];
+
+  const tabIcons: Record<string, string> = { mailOutline, chatbubbleOutline, phonePortraitOutline, eyeOutline };
 
   return (
     <AdminLayout>
@@ -182,27 +265,46 @@ const NotificationsPage: React.FC = () => {
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
           <div className="page-title-row">
             <IonIcon icon={notificationsOutline} className="page-icon" />
-            <h1>Send Notification</h1>
+            <h1>Notifications</h1>
           </div>
         </motion.div>
 
-        <div className="notif-content">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="notif-form-card">
-            <IonCard className="form-card">
-              <IonCardContent>
+        <div className="notif-tabs">
+          {tabs.map(tab => (
+            <button
+              key={tab.key}
+              className={`notif-tab ${activeTab === tab.key ? 'notif-tab-active' : ''}`}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              <IonIcon icon={tabIcons[tab.icon] || notificationsOutline} />
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <AnimatePresence mode="wait">
+          {activeTab !== 'log' ? (
+            <motion.div key="compose" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="notif-compose">
+              <div className="notif-form-card">
+                <div className="form-section">
+                  <div className="form-section-title">Channel</div>
+                  <div className="channel-badge">
+                    <IonIcon icon={tabIcons[tabs.find(t => t.key === activeTab)?.icon || 'mailOutline']} />
+                    <span>{tabs.find(t => t.key === activeTab)?.label}</span>
+                  </div>
+                </div>
+
                 <div className="form-section">
                   <div className="form-section-title">Recipient</div>
                   <div className="recipient-options">
-                    {recipientOptions.map(opt => (
-                      <button
-                        key={opt.value}
-                        className={`recipient-btn ${recipientType === opt.value ? 'recipient-active' : ''}`}
-                        onClick={() => setRecipientType(opt.value)}
-                      >
-                        <IonIcon icon={recipientIcons[opt.icon]} />
-                        <span>{opt.label}</span>
-                      </button>
-                    ))}
+                    <button className={`recipient-btn ${recipientType === 'everyone' ? 'recipient-active' : ''}`} onClick={() => setRecipientType('everyone')}>
+                      <IonIcon icon={notificationsOutline} />
+                      <span>Everyone</span>
+                    </button>
+                    <button className={`recipient-btn ${recipientType === 'specific' ? 'recipient-active' : ''}`} onClick={() => setRecipientType('specific')}>
+                      <IonIcon icon={personOutline} />
+                      <span>Specific User</span>
+                    </button>
                   </div>
                   {recipientType === 'specific' && (
                     <IonItem className="specific-email-item">
@@ -212,107 +314,92 @@ const NotificationsPage: React.FC = () => {
                   )}
                 </div>
 
-                <div className="form-section">
-                  <div className="form-section-title">Notification Type</div>
-                  <div className="notif-type-options">
-                    {notifTypes.map(nt => (
-                      <button
-                        key={nt.value}
-                        className={`type-btn ${notifType === nt.value ? 'type-active' : ''}`}
-                        onClick={() => setNotifType(nt.value)}
-                      >
-                        <IonIcon icon={notifTypeIcons[nt.icon] || chatbubbleOutline} />
-                        <span>{nt.label}</span>
-                      </button>
-                    ))}
+                {activeTab === 'email' && (
+                  <div className="form-section">
+                    <div className="form-section-title">Subject</div>
+                    <IonItem>
+                      <IonInput value={subject} onIonChange={(e) => setSubject(e.detail.value || '')} placeholder="Email subject..." />
+                    </IonItem>
                   </div>
-                </div>
+                )}
 
                 <div className="form-section">
                   <div className="form-section-title">Content</div>
                   <IonItem>
-                    <IonLabel position="stacked">Title</IonLabel>
-                    <IonInput value={title} onIonChange={(e) => setTitle(e.detail.value || '')} placeholder="Notification title..." />
+                    <IonLabel position="stacked">{activeTab === 'email' ? 'Email Body' : activeTab === 'sms' ? 'SMS Message' : 'Push Title'}</IonLabel>
+                    {activeTab === 'push' ? (
+                      <IonInput value={subject} onIonChange={(e) => setSubject(e.detail.value || '')} placeholder="Push notification title..." />
+                    ) : (
+                      <IonTextarea value={message} onIonChange={(e) => setMessage(e.detail.value || '')} placeholder={activeTab === 'email' ? 'Write your email...' : 'Write your SMS...'} rows={5} />
+                    )}
                   </IonItem>
-                  <IonItem>
-                    <IonLabel position="stacked">Message</IonLabel>
-                    <IonTextarea value={message} onIonChange={(e) => setMessage(e.detail.value || '')} placeholder="Write your message..." rows={5} />
-                  </IonItem>
-                  <div className="attach-section">
-                    <input
-                      type="file"
-                      ref={fileInputRef}
-                      onChange={handleFileChange}
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                    />
-                    <button className="attach-btn" onClick={handleAttachImage}>
-                      <IonIcon icon={imageOutline} />
-                      <span>{imageName || 'Attach Image'}</span>
-                    </button>
-                  </div>
+                  {activeTab === 'push' && (
+                    <IonItem>
+                      <IonLabel position="stacked">Push Body</IonLabel>
+                      <IonTextarea value={message} onIonChange={(e) => setMessage(e.detail.value || '')} placeholder="Push notification body..." rows={3} />
+                    </IonItem>
+                  )}
                 </div>
 
                 <div className="form-section">
-                  <div className="toggle-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0' }}>
-                    <label className="toggle-switch" style={{ position: 'relative', display: 'inline-block', width: 44, height: 24 }}>
-                      <input type="checkbox" checked={sendPush} onChange={(e) => setSendPush(e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
-                      <span className="toggle-slider" style={{ position: 'absolute', cursor: 'pointer', inset: 0, background: sendPush ? '#FFCB05' : '#ccc', borderRadius: 24, transition: '0.3s' }} />
+                  <div className="toggle-row">
+                    <label className="toggle-switch">
+                      <input type="checkbox" checked={isMarketing} onChange={(e) => setIsMarketing(e.target.checked)} />
+                      <span className="toggle-slider" />
                     </label>
-                    <span style={{ fontSize: 14, color: '#666' }}>Also send as push notification</span>
+                    <span className="toggle-label">Marketing message (respects opt-out)</span>
                   </div>
                 </div>
 
                 <IonButton expand="block" className="send-btn" onClick={handleSend} disabled={sending}>
                   <IonIcon icon={sendOutline} slot="start" />
-                  {sending ? 'Sending...' : 'Send Notification'}
+                  {sending ? 'Sending...' : `Send ${tabs.find(t => t.key === activeTab)?.label}`}
                 </IonButton>
-              </IonCardContent>
-            </IonCard>
-          </motion.div>
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div key="log" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="notif-log">
+              <div className="log-filters">
+                {['all', 'email', 'sms', 'push'].map(ch => (
+                  <button key={ch} className={`log-filter-btn ${logChannelFilter === ch ? 'filter-active' : ''}`} onClick={() => setLogChannelFilter(ch)}>
+                    {ch.charAt(0).toUpperCase() + ch.slice(1)}
+                  </button>
+                ))}
+              </div>
 
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="notif-history-card">
-            <IonCard className="form-card">
-              <IonCardContent>
-                <div className="form-section-title history-title">
-                  <IonIcon icon={notificationsOutline} />
-                  <span>Recent Notifications</span>
-                </div>
-                <div className="sent-list">
-                  {recentNotifications.length === 0 ? (
-                    <p className="empty-history">No notifications sent yet</p>
-                  ) : (
-                    recentNotifications.map((n: any, i: number) => (
-                      <motion.div key={n.id} className="sent-item" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}>
-                        <div className="sent-item-top">
-                          <span className="sent-title">{n.title}</span>
-                          <span className={`sent-status sent`}>Sent</span>
-                        </div>
-                        <div className="sent-item-bottom">
-                          <span className="sent-recipient">
-                            <IonIcon icon={personOutline} />
-                            {n.profiles?.full_name || n.user_id?.slice(0, 8) || 'User'}
-                          </span>
-                          <span className="sent-date">{formatGhanaDateTime(n.created_at)}</span>
-                        </div>
-                      </motion.div>
-                    ))
-                  )}
-                </div>
-              </IonCardContent>
-            </IonCard>
-          </motion.div>
-        </div>
+              <div className="log-list">
+                {logLoading ? (
+                  <div className="empty-history">Loading log...</div>
+                ) : deliveryLog.length === 0 ? (
+                  <div className="empty-history">No notifications sent yet</div>
+                ) : (
+                  deliveryLog.map((entry: any) => (
+                    <div key={entry.id} className="log-item">
+                      <div className="log-item-top">
+                        <span className={`log-channel-badge log-channel-${entry.channel}`}>{entry.channel}</span>
+                        <span className="log-status" style={{ color: statusColors[entry.status] || '#666' }}>
+                          {entry.status}
+                        </span>
+                        {entry.is_marketing && <span className="log-marketing-badge">Marketing</span>}
+                      </div>
+                      <div className="log-item-mid">
+                        <span className="log-recipient">{entry.recipient}</span>
+                        {entry.subject && <span className="log-subject">{entry.subject}</span>}
+                      </div>
+                      <div className="log-item-bottom">
+                        <span className="log-date">{formatGhanaDateTime(entry.created_at)}</span>
+                        {entry.error_message && <span className="log-error">{entry.error_message}</span>}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
-      <IonToast
-        isOpen={showToast}
-        onDidDismiss={() => setShowToast(false)}
-        message={toastMessage}
-        duration={3000}
-        position="top"
-        color="success"
-      />
+      <IonToast isOpen={showToast} onDidDismiss={() => setShowToast(false)} message={toastMessage} duration={4000} position="top" color={toastColor as any} />
     </AdminLayout>
   );
 };
