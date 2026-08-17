@@ -37,6 +37,22 @@ import './PaymentsPage.css';
 
 const PaymentsPage: React.FC = () => {
   const queryClient = useQueryClient();
+
+  // Ghana is UTC+0 — force Africa/Accra timezone instead of device local
+  const formatGhanaDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString('en-GB', { timeZone: 'Africa/Accra' });
+
+  const formatGhanaDateTime = (dateStr: string) =>
+    new Date(dateStr).toLocaleString('en-GB', {
+      timeZone: 'Africa/Accra',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [methodFilter, setMethodFilter] = useState('All');
@@ -193,7 +209,7 @@ const PaymentsPage: React.FC = () => {
                     </div>
                     <div className="payment-card-row">
                       <span className="payment-method">{payment.payment_method || 'N/A'}</span>
-                      <span className="payment-date">{new Date(payment.created_at).toLocaleDateString()}</span>
+                      <span className="payment-date">{formatGhanaDate(payment.created_at)}</span>
                     </div>
                     <div className="payment-card-row">
                       <button className="view-payment-btn" onClick={() => openDetail(payment)}>
@@ -207,7 +223,7 @@ const PaymentsPage: React.FC = () => {
                       <span className="ptd ptd-customer">{payment.profiles?.full_name || 'Unknown'}</span>
                       <span className="ptd ptd-amount">{formatAmount(payment.amount || 0)}</span>
                       <span className="ptd ptd-method">{payment.payment_method || 'N/A'}</span>
-                      <span className="ptd ptd-date">{new Date(payment.created_at).toLocaleDateString()}</span>
+                      <span className="ptd ptd-date">{formatGhanaDate(payment.created_at)}</span>
                       <span className="ptd ptd-status">
                         <span className={`payment-status-badge ${(payment.status || 'pending').toLowerCase()}`}>{statusLabel(payment.status)}</span>
                       </span>
@@ -252,7 +268,7 @@ const PaymentsPage: React.FC = () => {
                   </div>
                   <div className="detail-item">
                     <span className="detail-label">Date</span>
-                    <span className="detail-value">{new Date(selectedPayment.created_at).toLocaleString()}</span>
+                    <span className="detail-value">{formatGhanaDateTime(selectedPayment.created_at)}</span>
                   </div>
                   <div className="detail-item">
                     <span className="detail-label">Payment Method</span>
