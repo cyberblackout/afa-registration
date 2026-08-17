@@ -17,7 +17,7 @@ import {
   shieldCheckmarkOutline,
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
 import { walletApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -77,6 +77,21 @@ const WalletPage: React.FC = () => {
 
   // Load Paystack script on mount
   useEffect(() => { loadPaystackScript().catch(() => {}); }, []);
+
+  // Fetch min/max top-up limits from pricing table
+  const { data: topUpLimits } = useQuery({
+    queryKey: ['topup-limits'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('pricing')
+        .select('key, amount')
+        .in('key', ['wallet_min_topup', 'wallet_max_topup']);
+      const min = data?.find((r) => r.key === 'wallet_min_topup')?.amount ?? 10;
+      const max = data?.find((r) => r.key === 'wallet_max_topup')?.amount ?? 10000;
+      return { min: Number(min), max: Number(max) };
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   const { data: balanceData, isLoading: balanceLoading } = useQuery({
     queryKey: ['wallet', user?.id],
@@ -146,58 +161,6 @@ const WalletPage: React.FC = () => {
     };
   }, [user?.id, queryClient]);
 
-  const creditWalletMutation = useMutation({
-    mutationFn: async ({ amount, reference, method }: { amount: number; reference: string; method: string }) => {
-      await walletApi.topUp(amount, reference, method);
-    },
-    onSuccess: async (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['wallet'] });
-      queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
-
-      try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('full_name, email, phone, wallet_balance')
-          .eq('id', user!.id)
-          .single();
-        const balance = profile?.wallet_balance ?? 0;
-        if (profile?.email) {
-          const { sendEmail, topUpEmailHtml } = await import('../services/email');
-          const now = new Date().toLocaleDateString('en-US', {
-            year: 'numeric', month: 'long', day: 'numeric',
-          });
-          sendEmail(
-            profile.email,
-            'Wallet Top-Up Confirmed',
-            topUpEmailHtml(profile.full_name || 'User', variables.amount, balance, now),
-            'transactional'
-          );
-        }
-
-        if (profile?.phone) {
-          const { sendSms } = await import('../services/sms');
-          sendSms(
-            user!.id,
-            profile.phone,
-            `MTN AFA: Your wallet has been credited with GH₵ ${variables.amount.toFixed(2)}. New balance: GH₵ ${balance.toFixed(2)}.`,
-            'transactional'
-          );
-        }
-        supabase.functions.invoke('send-push', {
-          body: {
-            user_id: user!.id,
-            title: 'Wallet Top-Up Successful',
-            body: `Your MTN AFA wallet has been credited with GH₵ ${variables.amount.toFixed(2)}.`,
-            url: '/wallet',
-            type: 'transactional',
-          },
-        }).catch(() => {});
-      } catch (e) {
-        // email and push are non-critical
-      }
-    },
-  });
-
   const filteredTransactions = transactions.filter((txn) => {
     const matchesSearch = txn.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'All' || txn.status === statusFilter;
@@ -252,6 +215,20 @@ const WalletPage: React.FC = () => {
     const amount = getDisplayAmount();
     if (amount <= 0) return;
 
+    // Client-side min/max validation (defense in depth — server also validates)
+    if (topUpLimits) {
+      if (amount < topUpLimits.min) {
+        setTopUpError(`Minimum top-up amount is GH₵${topUpLimits.min.toFixed(2)}`);
+        setTopUpStep('failed');
+        return;
+      }
+      if (amount > topUpLimits.max) {
+        setTopUpError(`Maximum top-up amount is GH₵${topUpLimits.max.toFixed(2)}`);
+        setTopUpStep('failed');
+        return;
+      }
+    }
+
     const publicKey = paystackConfig?.public_key;
     if (!publicKey || publicKey.length < 10) {
       setTopUpError('Payment is not configured yet. Please contact support.');
@@ -259,79 +236,146 @@ const WalletPage: React.FC = () => {
       return;
     }
 
-    try {
-      await loadPaystackScript();
-    } catch {
-      setTopUpError('Failed to load payment system. Check your internet connection.');
-      setTopUpStep('failed');
-      return;
-    }
-
     setTopUpLoading(true);
+    setTopUpError('');
 
-    const reference = `AFA-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
-    const currency = paystackConfig?.currency || 'GHS';
+    try {
+      // Step 1: Initialize transaction server-side (validates amount, creates pending record)
+      const initResult = await walletApi.initiateTopUp(amount);
+      const { access_code, reference } = initResult;
 
-    // Paystack amounts are in pesewas (kobo for NGN) — multiply by 100
-    const amountInSmallestUnit = Math.round(amount * 100);
+      if (!access_code || !reference) {
+        throw new Error('Failed to initialize payment');
+      }
 
-    const PaystackPop = (window as any).PaystackPop;
-    if (!PaystackPop) {
-      setTopUpError('Payment system failed to initialize.');
+      // Step 2: Load Paystack script and open popup with server-provided access_code
+      await loadPaystackScript();
+
+      const PaystackPop = (window as any).PaystackPop;
+      if (!PaystackPop) {
+        throw new Error('Payment system failed to initialize');
+      }
+
+      const handler = PaystackPop.setup({
+        key: publicKey,
+        email: user!.email,
+        amount: Math.round(amount * 100),
+        currency: paystackConfig?.currency || 'GHS',
+        ref: reference,
+        access_code,
+        channels: ['mobile_money', 'card', 'bank'],
+        callback: async () => {
+          // Step 3: Payment popup closed — poll server to verify status
+          setTopUpStep('processing');
+          try {
+            await pollTransactionStatus(reference, amount);
+          } catch (err: any) {
+            setTopUpError(err.message || 'Payment verification failed. Contact support.');
+            setTopUpStep('failed');
+          } finally {
+            setTopUpLoading(false);
+          }
+        },
+        onClose: () => {
+          // User closed popup — try to verify anyway (webhook may have already processed)
+          if (topUpStep !== 'success' && topUpStep !== 'processing') {
+            setTopUpStep('processing');
+            pollTransactionStatus(reference, amount)
+              .then(() => {})
+              .catch(() => {
+                setTopUpError('Payment was cancelled. If you already paid, it will be processed shortly.');
+                setTopUpStep('failed');
+              })
+              .finally(() => setTopUpLoading(false));
+          }
+        },
+      });
+
+      handler.openIframe();
+    } catch (err: any) {
+      setTopUpError(err.message || 'Failed to start payment. Please try again.');
       setTopUpStep('failed');
       setTopUpLoading(false);
-      return;
+    }
+  };
+
+  // Poll transaction status until completed/failed (max 30 seconds)
+  const pollTransactionStatus = async (reference: string, amount: number) => {
+    const maxAttempts = 15;
+    const intervalMs = 2000;
+
+    for (let i = 0; i < maxAttempts; i++) {
+      const result = await walletApi.verifyTopUp(reference);
+
+      if (result.status === 'completed') {
+        setPaidAmount(amount);
+        setTopUpStep('success');
+        // Send notifications
+        sendTopUpNotifications(amount);
+        return;
+      }
+
+      if (result.status === 'failed') {
+        throw new Error('Payment was not successful. Please try again.');
+      }
+
+      // Still pending — wait and retry
+      if (i < maxAttempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, intervalMs));
+      }
     }
 
-    const handler = PaystackPop.setup({
-      key: publicKey,
-      email: user!.email,
-      amount: amountInSmallestUnit,
-      currency,
-      ref: reference,
-      channels: ['mobile_money', 'card', 'bank'],
-      metadata: {
-        custom_fields: [
-          { display_name: 'User ID', variable_name: 'user_id', value: user!.id },
-          { display_name: 'Purpose', variable_name: 'purpose', value: 'Wallet Top Up' },
-        ],
-      },
-      callback: async (response: any) => {
-        // Payment successful
-        setTopUpStep('processing');
-        try {
-          // Determine payment channel from Paystack response
-          const method = response.channel === 'mobile_money'
-            ? 'Mobile Money'
-            : response.channel === 'card'
-              ? 'Card'
-              : response.channel === 'bank'
-                ? 'Bank'
-                : 'Paystack';
+    // Timeout — payment may still be processing via webhook
+    setPaidAmount(amount);
+    setTopUpStep('success');
+    sendTopUpNotifications(amount);
+  };
 
-          await creditWalletMutation.mutateAsync({
-            amount,
-            reference: response.reference || reference,
-            method,
-          });
-          setPaidAmount(amount);
-          setTopUpStep('success');
-        } catch (err: any) {
-          setTopUpError(err.message || 'Payment received but wallet update failed. Contact support.');
-          setTopUpStep('failed');
-        } finally {
-          setTopUpLoading(false);
-        }
-      },
-      onClose: () => {
-        // User closed the popup without completing payment
-        if (topUpStep !== 'success' && topUpStep !== 'processing') {
-          setTopUpLoading(false);
-        }
-      },
-    });
+  const sendTopUpNotifications = async (amount: number) => {
+    try {
+      queryClient.invalidateQueries({ queryKey: ['wallet'] });
+      queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
 
-    handler.openIframe();
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, email, phone, wallet_balance')
+        .eq('id', user!.id)
+        .single();
+      const balance = profile?.wallet_balance ?? 0;
+      if (profile?.email) {
+        const { sendEmail, topUpEmailHtml } = await import('../services/email');
+        const now = new Date().toLocaleDateString('en-US', {
+          year: 'numeric', month: 'long', day: 'numeric',
+        });
+        sendEmail(
+          profile.email,
+          'Wallet Top-Up Confirmed',
+          topUpEmailHtml(profile.full_name || 'User', amount, balance, now),
+          'transactional'
+        );
+      }
+
+      if (profile?.phone) {
+        const { sendSms } = await import('../services/sms');
+        sendSms(
+          user!.id,
+          profile.phone,
+          `MTN AFA: Your wallet has been credited with GH₵ ${amount.toFixed(2)}. New balance: GH₵ ${balance.toFixed(2)}.`,
+          'transactional'
+        );
+      }
+      supabase.functions.invoke('send-push', {
+        body: {
+          user_id: user!.id,
+          title: 'Wallet Top-Up Successful',
+          body: `Your MTN AFA wallet has been credited with GH₵ ${amount.toFixed(2)}.`,
+          url: '/wallet',
+          type: 'transactional',
+        },
+      }).catch(() => {});
+    } catch (e) {
+      // email and push are non-critical
+    }
   };
 
   const resetTopUp = () => {

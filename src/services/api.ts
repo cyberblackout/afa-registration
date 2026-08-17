@@ -116,6 +116,12 @@ export const walletApi = {
   getTransactions: (): Promise<any[]> =>
     invoke<any[]>('wallet-topup', { action: 'get_transactions' }),
 
+  initiateTopUp: (amount: number): Promise<any> =>
+    invoke<any>('initiate-wallet-topup', { amount }),
+
+  verifyTopUp: (reference: string): Promise<any> =>
+    invoke<any>('verify-wallet-topup', { reference }),
+
   adminListUsers: (): Promise<any[]> =>
     invoke<any[]>('admin-wallet', { action: 'list_users' }),
 
