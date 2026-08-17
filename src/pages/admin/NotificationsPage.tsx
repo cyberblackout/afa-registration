@@ -35,6 +35,18 @@ import './NotificationsPage.css';
 type RecipientType = 'everyone' | 'specific';
 type NotificationType = 'info' | 'success' | 'warning' | 'error';
 
+// Ghana is UTC+0 — force Africa/Accra timezone instead of device local
+const formatGhanaDateTime = (dateStr: string) =>
+  new Date(dateStr).toLocaleString('en-GB', {
+    timeZone: 'Africa/Accra',
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+
 const NotificationsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [recipientType, setRecipientType] = useState<RecipientType>('everyone');
@@ -281,7 +293,7 @@ const NotificationsPage: React.FC = () => {
                             <IonIcon icon={personOutline} />
                             {n.profiles?.full_name || n.user_id?.slice(0, 8) || 'User'}
                           </span>
-                          <span className="sent-date">{new Date(n.created_at).toLocaleString()}</span>
+                          <span className="sent-date">{formatGhanaDateTime(n.created_at)}</span>
                         </div>
                       </motion.div>
                     ))
