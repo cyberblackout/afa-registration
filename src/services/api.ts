@@ -84,8 +84,8 @@ export const registrationApi = {
     return invoke<any[]>(`admin-registrations${qs ? '?' + qs : ''}`, undefined, 'GET');
   },
 
-  adminUpdateStatus: (id: string, status: string, adminNotes?: string): Promise<any> =>
-    invoke<any>('admin-registrations', { action: 'update_status', id, status, admin_notes: adminNotes }),
+  adminUpdateStatus: (id: string, status: string, adminNotes?: string, userMessage?: string): Promise<any> =>
+    invoke<any>('admin-registrations', { action: 'update_status', id, status, admin_notes: adminNotes, user_message: userMessage }),
 
   adminBulkUpdate: (ids: string[], status: string): Promise<any> =>
     invoke<any>('admin-registrations', { action: 'bulk_update', ids, status }),

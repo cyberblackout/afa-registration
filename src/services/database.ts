@@ -124,9 +124,9 @@ export const db = {
     }
   },
 
-  updateRegistrationStatus: async (id: string, status: string, adminNotes?: string) => {
+  updateRegistrationStatus: async (id: string, status: string, adminNotes?: string, userMessage?: string) => {
     try {
-      await registrationApi.adminUpdateStatus(id, status, adminNotes);
+      await registrationApi.adminUpdateStatus(id, status, adminNotes, userMessage);
       return { data: null, error: null };
     } catch (error: any) {
       return { data: null, error: { message: error.message } };

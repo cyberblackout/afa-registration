@@ -20,7 +20,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../services/supabase';
-import { registrationApi, notificationApi, adminCustomerApi } from '../../services/api';
+import { registrationApi } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import AdminLayout from '../../layouts/AdminLayout';
 import './RegistrationsPage.css';
@@ -65,6 +65,7 @@ const RegistrationsPage: React.FC = () => {
   const [selectedReg, setSelectedReg] = useState<any>(null);
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
   const [adminNotes, setAdminNotes] = useState('');
+  const [userMessage, setUserMessage] = useState('');
   const [statusLoading, setStatusLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -118,80 +119,16 @@ const RegistrationsPage: React.FC = () => {
   const updateStatus = async (id: string, status: string) => {
     setStatusLoading(true);
     try {
-      await registrationApi.adminUpdateStatus(id, status, adminNotes);
-      const reg = registrations.find((r: any) => r.id === id);
-      if (reg?.user_id) {
-        await notificationApi.adminInsertNotification(
-          reg.user_id,
-          'Registration Status Update',
-          `Your registration (${reg?.reg_number || id?.slice(0, 6)}) has been ${status}.`,
-          status === 'approved' ? 'success' : status === 'rejected' ? 'error' : 'info'
-        );
-
-          try {
-            const profile = await adminCustomerApi.getUser(reg.user_id);
-            if (profile?.email) {
-              const { sendEmail, registrationStatusHtml } = await import('../../services/email');
-              sendEmail(
-                profile.email,
-                `Registration ${status} - MTN AFA Portal`,
-                registrationStatusHtml(profile.full_name || 'User', reg?.reg_number || id?.slice(0, 6), status, adminNotes || undefined),
-                'transactional'
-              );
-            }
-            const statusLabels: Record<string, string> = {
-              pending: 'Pending Review',
-              processing: 'Under Processing',
-              document_verification: 'Document Verification',
-              approved: 'Approved',
-              completed: 'Completed',
-              rejected: 'Not Approved',
-              cancelled: 'Cancelled',
-            };
-            const displayStatus = statusLabels[status] || status;
-            if (profile?.phone) {
-              const { sendSms } = await import('../../services/sms');
-              sendSms(
-                reg.user_id,
-                profile.phone,
-                `MTN AFA: Your registration status has been updated to "${displayStatus}". Log in to your dashboard for details.`,
-                'transactional'
-              );
-            }
-            supabase.functions.invoke('send-push', {
-              body: {
-                user_id: reg.user_id,
-                title: 'Registration Status Update',
-                body: `Your AFA registration status has been updated to "${displayStatus}".`,
-                url: '/register-afa',
-                type: 'transactional',
-              },
-            }).catch(() => {});
-
-            if (status === 'completed') {
-              try {
-                const reward = await registrationApi.adminProcessReferralReward(id);
-                if (reward?.success) {
-                  await notificationApi.adminInsertNotification(
-                    reward.referrer_id,
-                    'Referral Reward Earned!',
-                    `You earned GH₵ ${reward.amount} from a successful registration referral.`,
-                    'success'
-                  );
-                }
-              } catch {
-                // reward processing is non-critical
-              }
-            }
-          } catch (e) {
-            // email, sms and push are non-critical
-          }
-      }
+      await registrationApi.adminUpdateStatus(id, status, adminNotes, userMessage || undefined);
       queryClient.invalidateQueries({ queryKey: ['admin_registrations'] });
       queryClient.invalidateQueries({ queryKey: ['admin_orders'] });
       setSelectedReg(null);
+      setToastMessage(`Registration ${status}`);
+      setShowToast(true);
     } catch (err: any) {
       console.error('Status update error:', err);
+      setToastMessage(err.message || 'Failed to update status');
+      setShowToast(true);
     } finally {
       setStatusLoading(false);
     }
@@ -200,6 +137,7 @@ const RegistrationsPage: React.FC = () => {
   const openDetail = (reg: any) => {
     setSelectedReg(reg);
     setAdminNotes(reg.admin_notes || '');
+    setUserMessage(reg.user_message || '');
   };
 
   const closeDetail = () => {
@@ -684,13 +622,27 @@ const RegistrationsPage: React.FC = () => {
                 <div className="detail-section">
                   <div className="detail-section-title">
                     <IonIcon icon={documentTextOutline} />
-                    <span>Admin Notes</span>
+                    <span>Admin Notes (internal only)</span>
                   </div>
                   <textarea
                     className="admin-notes-input"
-                    placeholder="Add notes about this registration..."
+                    placeholder="Internal notes — not shown to user..."
                     value={adminNotes}
                     onChange={(e) => setAdminNotes(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+
+                <div className="detail-section">
+                  <div className="detail-section-title">
+                    <IonIcon icon={documentTextOutline} />
+                    <span>Message to User (included in notification)</span>
+                  </div>
+                  <textarea
+                    className="admin-notes-input"
+                    placeholder="Optional message sent to the user with their status update notification..."
+                    value={userMessage}
+                    onChange={(e) => setUserMessage(e.target.value)}
                     rows={3}
                   />
                 </div>
