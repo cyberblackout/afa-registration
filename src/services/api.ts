@@ -410,16 +410,6 @@ export const adminConfigApi = {
     const j = await res.json();
     return j.data || [];
   },
-
-  getPaystackConfig: async (): Promise<any> => {
-    const t = await getToken();
-    const res = await fetch(`${FUNCTIONS_URL}/admin-config?action=paystack_config`, {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${t}` },
-    });
-    const j = await res.json();
-    return j.data;
-  },
 };
 
 // ============================================================

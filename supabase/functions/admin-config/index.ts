@@ -17,7 +17,6 @@ const actionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("get_announcements"), active_only: z.boolean().optional() }),
   z.object({ action: z.literal("create_announcement"), title: z.string().min(1), message: z.string().min(1), active: z.boolean().optional() }),
   z.object({ action: z.literal("get_system_settings") }),
-  z.object({ action: z.literal("get_paystack_config") }),
 ]);
 
 Deno.serve(async (req) => {
@@ -49,16 +48,6 @@ Deno.serve(async (req) => {
       const admin = getSupabaseAdmin();
       const { data, error } = await admin.from("system_settings").select("setting_name, setting_value");
       if (error) return errorResp("Failed to fetch system settings", 500, origin);
-      return successResp(data, origin);
-    }
-
-    // paystack_config (authenticated users)
-    if (action === "paystack_config") {
-      const auth = await verifyAuth(req);
-      if (auth.error) return auth.error;
-      const admin = getSupabaseAdmin();
-      const { data, error } = await admin.rpc("get_paystack_config");
-      if (error) return errorResp("Failed to fetch Paystack config", 500, origin);
       return successResp(data, origin);
     }
 
@@ -161,12 +150,6 @@ Deno.serve(async (req) => {
       const { data: settings, error } = await admin.from("system_settings").select("*");
       if (error) return errorResp("Failed to fetch system settings", 500, origin);
       return successResp(settings, origin);
-    }
-
-    case "get_paystack_config": {
-      const { data: config, error } = await admin.rpc("get_paystack_config");
-      if (error) return errorResp("Failed to fetch Paystack config", 500, origin);
-      return successResp(config, origin);
     }
 
     default:

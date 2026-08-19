@@ -43,8 +43,8 @@ Deno.serve(async (req) => {
   if (req.method === "GET") {
     const admin = getSupabaseAdmin();
     const [appRes, sysRes, pricingRes] = await Promise.all([
-      admin.from("app_settings").select("*"),
-      admin.from("system_settings").select("*"),
+      admin.from("app_settings").select("key, value, category, updated_at"),
+      admin.from("system_settings").select("setting_name, setting_value"),
       admin.from("pricing").select("key, amount").in("key", [
         "afa_registration",
         "wallet_max_topup",
@@ -53,9 +53,20 @@ Deno.serve(async (req) => {
       ]),
     ]);
 
+    // Filter out sensitive keys that must never be exposed via API
+    const SENSITIVE_KEYS = [
+      "paystack_secret_key",
+      "resend_api_key",
+      "sms_api_key",
+      "vapid_private_key",
+    ];
+    const safeAppSettings = (appRes.data || []).filter(
+      (s: any) => !SENSITIVE_KEYS.includes(s.key)
+    );
+
     return successResp(
       {
-        app_settings: appRes.data || [],
+        app_settings: safeAppSettings,
         system_settings: sysRes.data || [],
         pricing: pricingRes.data || [],
       },

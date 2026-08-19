@@ -18,7 +18,6 @@ import {
 import {
   settingsOutline,
   pricetagOutline,
-  keyOutline,
   chatbubbleOutline,
   mailOutline,
   notificationsCircleOutline,
@@ -248,42 +247,6 @@ const SettingsPage: React.FC = () => {
             </motion.div>
 
             <motion.div custom={2} variants={sectionVariants} initial="hidden" animate="visible">
-              <IonCard className="settings-card">
-                <IonCardContent>
-                  <div className="settings-card-header">
-                    <IonIcon icon={keyOutline} className="section-icon" />
-                    <h2>Paystack</h2>
-                  </div>
-                  <div className="settings-fields">
-                    <IonItem>
-                      <IonLabel position="stacked">Public Key</IonLabel>
-                      <IonInput value={get('paystack_public_key', 'pk_test_xxxxxxxxxxxx')} onIonChange={(e) => set('paystack_public_key', e.detail.value || '')} />
-                    </IonItem>
-                    <IonItem>
-                      <IonLabel position="stacked">Secret Key</IonLabel>
-                      <IonInput type="password" value={get('paystack_secret_key', 'sk_test_xxxxxxxxxxxx')} onIonChange={(e) => set('paystack_secret_key', e.detail.value || '')} />
-                    </IonItem>
-                    <IonItem>
-                      <IonLabel position="stacked">Currency</IonLabel>
-                      <IonSelect value={get('currency', 'GHS')} onIonChange={(e) => set('currency', e.detail.value)} interface="popover">
-                        <IonSelectOption value="GHS">GHS (Ghana Cedi)</IonSelectOption>
-                        <IonSelectOption value="NGN">NGN (Nigerian Naira)</IonSelectOption>
-                      </IonSelect>
-                    </IonItem>
-                    <IonItem>
-                      <IonLabel position="stacked">Live Mode</IonLabel>
-                      <IonToggle checked={get('paystack_live', 'false') === 'true'} onIonChange={(e) => set('paystack_live', e.detail.checked ? 'true' : 'false')} />
-                    </IonItem>
-                  </div>
-                  <IonButton expand="block" className="section-save-btn" onClick={() => saveSection('Paystack', ['paystack_public_key', 'paystack_secret_key', 'currency', 'paystack_live'])} disabled={saving === 'Paystack'}>
-                    <IonIcon icon={saveOutline} slot="start" />
-                    {saving === 'Paystack' ? 'Saving...' : 'Save Paystack'}
-                  </IonButton>
-                </IonCardContent>
-              </IonCard>
-            </motion.div>
-
-            <motion.div custom={3} variants={sectionVariants} initial="hidden" animate="visible">
               <IonCard className="settings-card">
                 <IonCardContent>
                   <div className="settings-card-header">

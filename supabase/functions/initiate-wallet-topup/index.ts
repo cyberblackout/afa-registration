@@ -54,12 +54,7 @@ Deno.serve(async (req) => {
     return errorResp(`Maximum top-up amount is GH₵${maxTopup.toFixed(2)}`, 400, origin);
   }
 
-  // Fetch Paystack config from app_settings
-  const { data: pubKeyRow } = await admin
-    .from("app_settings")
-    .select("value")
-    .eq("key", "paystack_public_key")
-    .single();
+  // Fetch currency from app_settings
   const { data: currRow } = await admin
     .from("app_settings")
     .select("value")

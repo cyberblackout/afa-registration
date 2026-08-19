@@ -159,16 +159,8 @@ const WalletPage: React.FC = () => {
     enabled: !!user?.id,
   });
 
-  // Fetch Paystack config from DB (public key + currency)
-  const { data: paystackConfig } = useQuery({
-    queryKey: ['paystack-config'],
-    queryFn: async () => {
-      const { adminConfigApi } = await import('../services/api');
-      const data = await adminConfigApi.getPaystackConfig();
-      return data as { public_key: string; currency: string };
-    },
-    staleTime: 5 * 60 * 1000,
-  });
+  // Paystack public key from build-time env var (never fetched from DB/API)
+  const paystackPublicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string;
 
   useEffect(() => {
     if (!user?.id) return;
@@ -262,7 +254,7 @@ const WalletPage: React.FC = () => {
       }
     }
 
-    const publicKey = paystackConfig?.public_key;
+    const publicKey = paystackPublicKey;
     if (!publicKey || publicKey.length < 10) {
       setTopUpError('Payment is not configured yet. Please contact support.');
       setTopUpStep('failed');
@@ -323,7 +315,7 @@ const WalletPage: React.FC = () => {
         key: publicKey,
         email: user!.email,
         amount: Math.round(amount * 100),
-        currency: paystackConfig?.currency || 'GHS',
+        currency: 'GHS',
         ref: reference,
         access_code,
         channels: ['mobile_money', 'card', 'bank'],
