@@ -289,18 +289,17 @@ const WalletPage: React.FC = () => {
         throw new Error('Payment system failed to initialize. Please refresh and try again.');
       }
 
-      // Define stable callback handlers — these are real functions passed directly,
-      // not references that could become undefined from closures or stale state
-      const handlePaymentCallback = async (response: any) => {
+      // Define stable callback handlers — use regular (non-async) functions
+      // because Paystack's SDK validates callbacks with {}.toString.call()
+      // which rejects async functions (returns "[object AsyncFunction]")
+      const handlePaymentCallback = (response: any) => {
         setTopUpStep('processing');
-        try {
-          await pollTransactionStatus(reference, amount);
-        } catch (err: any) {
-          setTopUpError(err.message || 'Payment verification failed. Contact support.');
-          setTopUpStep('failed');
-        } finally {
-          setTopUpLoading(false);
-        }
+        pollTransactionStatus(reference, amount)
+          .catch((err: any) => {
+            setTopUpError(err.message || 'Payment verification failed. Contact support.');
+            setTopUpStep('failed');
+          })
+          .finally(() => setTopUpLoading(false));
       };
 
       const handlePopupClose = () => {
