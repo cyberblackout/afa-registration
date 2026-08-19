@@ -10,7 +10,6 @@ import {
 import { z, validateBody } from "../_shared/validation.ts";
 
 const actionSchema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("apply") }),
   z.object({ action: z.literal("get_applications") }),
   z.object({ action: z.literal("get_application"), user_id: z.string().uuid().optional() }),
   z.object({ action: z.literal("get_transactions"), user_id: z.string().uuid().optional() }),
@@ -39,15 +38,6 @@ Deno.serve(async (req) => {
   const data = validation.data!;
 
   switch (data.action) {
-    case "apply": {
-      const { data: result, error } = await admin.rpc("apply_for_agent");
-      if (error) {
-        console.error("agent-apply error:", error);
-        return errorResp("Failed to apply", 500, origin);
-      }
-      return successResp(result, origin);
-    }
-
     case "get_applications": {
       const { data: apps, error } = await admin
         .from("agent_applications")

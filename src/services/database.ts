@@ -541,9 +541,9 @@ export const db = {
   },
 
   // AGENT SYSTEM
-  applyForAgent: async () => {
+  initiateAgentApplication: async () => {
     try {
-      const data = await agentApi.apply();
+      const data = await agentApi.initiateApplication();
       return { data, error: null };
     } catch (error: any) {
       return { data: null, error: { message: error.message } };

@@ -188,8 +188,11 @@ export const referralApi = {
 // AGENTS
 // ============================================================
 export const agentApi = {
-  apply: (): Promise<any> =>
-    invoke<any>('agent-apply', { action: 'apply' }),
+  initiateApplication: (): Promise<any> =>
+    invoke<any>('initiate-agent-application'),
+
+  verifyApplication: (reference: string): Promise<any> =>
+    invoke<any>('verify-agent-application', { reference }),
 
   getDashboard: (): Promise<any> =>
     invoke<any>('admin-agents', { action: 'get_dashboard' }),

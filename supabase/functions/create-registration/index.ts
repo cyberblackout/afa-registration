@@ -38,7 +38,70 @@ Deno.serve(async (req) => {
   const data = validation.data!;
   const admin = getSupabaseAdmin();
 
-  // Create registration
+  // ─── WALLET GATE: fetch pricing + check balance before creating registration ───
+
+  // Fetch AFA registration pricing
+  const { data: pricingRow } = await admin
+    .from("pricing")
+    .select("normal_price, agent_price, amount")
+    .eq("key", "afa_registration")
+    .eq("active", true)
+    .maybeSingle();
+
+  // Determine fee based on caller's role: agents get agent_price, users get normal_price
+  const userRole = auth.user!.role ?? "user";
+  const feeAmount = userRole === "agent"
+    ? Number(pricingRow?.agent_price ?? pricingRow?.amount ?? 0)
+    : Number(pricingRow?.normal_price ?? pricingRow?.amount ?? 0);
+
+  if (!feeAmount || feeAmount <= 0) {
+    return errorResp("Registration fee is not configured. Please contact support.", 500, origin);
+  }
+
+  // Fetch user's current wallet balance
+  const { data: profile, error: profileError } = await admin
+    .from("profiles")
+    .select("wallet_balance")
+    .eq("id", auth.user!.id)
+    .single();
+
+  if (profileError || !profile) {
+    return errorResp("Failed to verify wallet balance", 500, origin);
+  }
+
+  const currentBalance = Number(profile.wallet_balance ?? 0);
+
+  if (currentBalance < feeAmount) {
+    return errorResp(
+      `Insufficient wallet balance. Registration fee: GHS ${feeAmount.toFixed(2)}, Your balance: GHS ${currentBalance.toFixed(2)}. Please top up your wallet.`,
+      402,
+      origin
+    );
+  }
+
+  // ─── ATOMIC DEBIT: deduct fee from wallet ───
+  const { data: debitResult, error: debitError } = await admin.rpc("debit_wallet", {
+    p_user_id: auth.user!.id,
+    p_amount: feeAmount,
+    p_description: `AFA Registration Fee – ${data.full_name}`,
+  });
+
+  if (debitError) {
+    console.error("create-registration debit error:", debitError);
+    return errorResp("Failed to process payment. Please try again.", 500, origin);
+  }
+
+  const debit = debitResult as any;
+  if (!debit?.success) {
+    return errorResp(
+      debit?.error || "Insufficient wallet balance. Please top up your wallet.",
+      402,
+      origin
+    );
+  }
+
+  // ─── CREATE REGISTRATION (only after successful debit) ───
+
   const { data: regData, error: regError } = await admin
     .from("registrations")
     .insert({
@@ -56,8 +119,16 @@ Deno.serve(async (req) => {
     .single();
 
   if (regError) {
+    // Registration failed after debit — this is a critical error
+    // Refund the wallet immediately
     console.error("create-registration error:", regError);
-    return errorResp("Failed to create registration", 500, origin);
+    await admin.rpc("credit_wallet", {
+      p_user_id: auth.user!.id,
+      p_amount: feeAmount,
+      p_description: "Refund – AFA Registration failed",
+      p_reference: `REF-REG-FAIL-${Date.now()}`,
+    });
+    return errorResp("Failed to create registration. You have been refunded.", 500, origin);
   }
 
   // Add timeline entry
@@ -69,29 +140,28 @@ Deno.serve(async (req) => {
   });
 
   // Create a linked order so the registration appears in the user's Orders feed
-  const { data: pricingRow } = await admin
-    .from("pricing")
-    .select("amount")
-    .eq("key", "afa_registration")
-    .eq("active", true)
-    .maybeSingle();
-
-  const orderAmount = pricingRow?.amount ?? 150;
-
   const { error: orderError } = await admin.from("orders").insert({
     user_id: auth.user!.id,
-    amount: orderAmount,
+    amount: feeAmount,
     description: `AFA Registration – ${data.full_name}`,
     status: "pending",
-    payment_status: "pending",
+    payment_status: "paid",
     source_type: "afa_registration",
     source_id: regData.id,
   });
 
   if (orderError) {
     console.error("create-registration order insert error:", orderError);
-    // Order creation is non-critical; registration was saved successfully
+    // Order creation is non-critical; registration + debit succeeded
   }
 
-  return successResp({ id: regData.id, message: "Registration submitted" }, origin);
+  return successResp(
+    {
+      id: regData.id,
+      message: "Registration submitted successfully",
+      fee_charged: feeAmount,
+      new_balance: debit.new_balance,
+    },
+    origin
+  );
 });

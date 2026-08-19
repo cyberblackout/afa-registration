@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import {
   IonPage,
@@ -15,6 +15,46 @@ import { useAuthStore } from '../store/authStore';
 import DashboardLayout from '../layouts/DashboardLayout';
 import { useQuery } from '@tanstack/react-query';
 import './BecomeAgentPage.css';
+
+// Load Paystack Inline script (same pattern as WalletPage)
+let paystackScriptLoaded = false;
+const loadPaystackScript = (): Promise<void> => {
+  if (paystackScriptLoaded && (window as any).PaystackPop) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    if ((window as any).PaystackPop) {
+      paystackScriptLoaded = true;
+      resolve();
+      return;
+    }
+    const existingScript = document.querySelector('script[src*="paystack"]');
+    if (existingScript) {
+      const interval = setInterval(() => {
+        if ((window as any).PaystackPop) {
+          clearInterval(interval);
+          paystackScriptLoaded = true;
+          resolve();
+        }
+      }, 50);
+      setTimeout(() => { clearInterval(interval); reject(new Error('Paystack script timed out')); }, 10000);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://js.paystack.co/v1/inline.js';
+    script.async = true;
+    script.onload = () => {
+      const waitForPop = setInterval(() => {
+        if ((window as any).PaystackPop) {
+          clearInterval(waitForPop);
+          paystackScriptLoaded = true;
+          resolve();
+        }
+      }, 50);
+      setTimeout(() => { clearInterval(waitForPop); reject(new Error('Paystack script timed out')); }, 10000);
+    };
+    script.onerror = () => reject(new Error('Failed to load Paystack'));
+    document.head.appendChild(script);
+  });
+};
 
 const benefits = [
   { icon: Tag, title: 'Exclusive Agent Pricing', desc: 'Agents receive special registration prices lower than normal customer prices, helping you provide affordable services.' },
@@ -65,27 +105,92 @@ const BecomeAgentPage: React.FC = () => {
   const profitExampleCustomers = 100;
   const estimatedEarnings = profitPerRegistration * profitExampleCustomers;
 
+  // Load Paystack script on mount
+  useEffect(() => { loadPaystackScript().catch(() => {}); }, []);
+
   const handleApply = async () => {
     setLoading(true);
     try {
-      const data = await agentApi.apply() as any;
-      if (data?.success) {
-        if (data.auto_approved) {
-          setToast({ show: true, message: `Congratulations! You are now an agent! Your Agent ID: ${data.agent_id}`, color: 'success' });
-          if (user) {
-            useAuthStore.getState().setUser({ ...user, role: 'agent' }, 'agent');
-          }
-          setTimeout(() => history.push('/agent/dashboard'), 2000);
-        } else {
-          setToast({ show: true, message: 'Application submitted! Waiting for admin approval.', color: 'success' });
-          setTimeout(() => history.push('/dashboard'), 2000);
-        }
-      } else {
-        setToast({ show: true, message: data?.error || 'Application failed', color: 'danger' });
+      // Step 1: Initiate agent application server-side (creates pending record + Paystack transaction)
+      const initData = await agentApi.initiateApplication() as any;
+      if (!initData?.access_code || !initData?.reference) {
+        throw new Error(initData?.error || 'Failed to initiate payment');
       }
+
+      // Step 2: Load Paystack script and open popup
+      await loadPaystackScript();
+
+      const PaystackPop = (window as any).PaystackPop;
+      if (!PaystackPop || typeof PaystackPop.setup !== 'function') {
+        throw new Error('Payment system failed to initialize. Please refresh and try again.');
+      }
+
+      const reference = initData.reference;
+      const applicationId = initData.application_id;
+
+      // Poll for payment verification (max 30 seconds)
+      const pollPaymentStatus = async () => {
+        for (let i = 0; i < 15; i++) {
+          try {
+            const result = await agentApi.verifyApplication(reference) as any;
+            if (result?.payment_status === 'paid') {
+              return result;
+            }
+            if (result?.payment_status === 'failed') {
+              throw new Error('Payment was not successful. Please try again.');
+            }
+          } catch (err: any) {
+            if (err.message?.includes('not successful')) throw err;
+          }
+          await new Promise(r => setTimeout(r, 2000));
+        }
+        // Timeout — payment may still be processing via webhook
+        return { payment_status: 'paid', status: 'pending' };
+      };
+
+      const handler = PaystackPop.setup({
+        key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string,
+        email: user?.email || '',
+        amount: Math.round(initData.amount * 100),
+        currency: 'GHS',
+        ref: reference,
+        access_code: initData.access_code,
+        channels: ['mobile_money', 'card', 'bank'],
+        callback: () => {
+          setLoading(true);
+          setToast({ show: true, message: 'Payment received! Verifying...', color: 'success' });
+          pollPaymentStatus()
+            .then((result: any) => {
+              if (result?.status === 'approved') {
+                // Auto-approved — update local role
+                if (user) {
+                  useAuthStore.getState().setUser({ ...user, role: 'agent' }, 'agent');
+                }
+                setToast({ show: true, message: 'Congratulations! You are now an agent!', color: 'success' });
+                setTimeout(() => history.push('/agent/dashboard'), 2000);
+              } else {
+                // Pending admin approval
+                setToast({ show: true, message: 'Application submitted! Waiting for admin approval.', color: 'success' });
+                setTimeout(() => history.push('/dashboard'), 2000);
+              }
+            })
+            .catch((err: any) => {
+              setToast({ show: true, message: err.message || 'Payment verification failed', color: 'danger' });
+            })
+            .finally(() => setLoading(false));
+        },
+        onClose: () => {
+          setLoading(false);
+          setToast({ show: true, message: 'Payment cancelled. If you already paid, it will be processed shortly.', color: 'warning' });
+        },
+      });
+
+      if (!handler || typeof handler.openIframe !== 'function') {
+        throw new Error('Payment system failed to initialize the checkout. Please try again.');
+      }
+      handler.openIframe();
     } catch (err: any) {
       setToast({ show: true, message: err.message || 'Something went wrong', color: 'danger' });
-    } finally {
       setLoading(false);
     }
   };
