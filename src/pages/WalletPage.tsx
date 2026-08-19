@@ -38,20 +38,53 @@ interface DbTransaction {
 
 const ITEMS_PER_PAGE = 10;
 
-// Load Paystack Inline script once
+// Load Paystack Inline script — waits for window.PaystackPop to be fully available
 let paystackScriptLoaded = false;
 const loadPaystackScript = (): Promise<void> => {
-  if (paystackScriptLoaded) return Promise.resolve();
+  if (paystackScriptLoaded && (window as any).PaystackPop) return Promise.resolve();
   return new Promise((resolve, reject) => {
-    if (document.querySelector('script[src*="paystack"]')) {
+    // If PaystackPop already exists (script already loaded), resolve immediately
+    if ((window as any).PaystackPop) {
       paystackScriptLoaded = true;
       resolve();
+      return;
+    }
+    // If script tag already exists but PaystackPop isn't defined yet, wait for it
+    const existingScript = document.querySelector('script[src*="paystack"]');
+    if (existingScript) {
+      const checkReady = () => {
+        if ((window as any).PaystackPop) {
+          paystackScriptLoaded = true;
+          resolve();
+        }
+      };
+      existingScript.addEventListener('load', checkReady);
+      // Poll in case load already fired before listener was added
+      const interval = setInterval(() => {
+        if ((window as any).PaystackPop) {
+          clearInterval(interval);
+          paystackScriptLoaded = true;
+          resolve();
+        }
+      }, 50);
+      // Timeout after 10s
+      setTimeout(() => { clearInterval(interval); reject(new Error('Paystack script timed out')); }, 10000);
       return;
     }
     const script = document.createElement('script');
     script.src = 'https://js.paystack.co/v1/inline.js';
     script.async = true;
-    script.onload = () => { paystackScriptLoaded = true; resolve(); };
+    script.onload = () => {
+      // Wait for PaystackPop to actually be defined after script execution
+      const waitForPop = setInterval(() => {
+        if ((window as any).PaystackPop) {
+          clearInterval(waitForPop);
+          paystackScriptLoaded = true;
+          resolve();
+        }
+      }, 50);
+      setTimeout(() => { clearInterval(waitForPop); reject(new Error('Paystack script timed out')); }, 10000);
+    };
     script.onerror = () => reject(new Error('Failed to load Paystack'));
     document.head.appendChild(script);
   });
@@ -252,34 +285,28 @@ const WalletPage: React.FC = () => {
       await loadPaystackScript();
 
       const PaystackPop = (window as any).PaystackPop;
-      if (!PaystackPop) {
-        throw new Error('Payment system failed to initialize');
+      if (!PaystackPop || typeof PaystackPop.setup !== 'function') {
+        throw new Error('Payment system failed to initialize. Please refresh and try again.');
       }
 
-      const handler = PaystackPop.setup({
-        key: publicKey,
-        email: user!.email,
-        amount: Math.round(amount * 100),
-        currency: paystackConfig?.currency || 'GHS',
-        ref: reference,
-        access_code,
-        channels: ['mobile_money', 'card', 'bank'],
-        callback: async () => {
-          // Step 3: Payment popup closed — poll server to verify status
-          setTopUpStep('processing');
-          try {
-            await pollTransactionStatus(reference, amount);
-          } catch (err: any) {
-            setTopUpError(err.message || 'Payment verification failed. Contact support.');
-            setTopUpStep('failed');
-          } finally {
-            setTopUpLoading(false);
-          }
-        },
-        onClose: () => {
-          // User closed popup — try to verify anyway (webhook may have already processed)
-          if (topUpStep !== 'success' && topUpStep !== 'processing') {
-            setTopUpStep('processing');
+      // Define stable callback handlers — these are real functions passed directly,
+      // not references that could become undefined from closures or stale state
+      const handlePaymentCallback = async (response: any) => {
+        setTopUpStep('processing');
+        try {
+          await pollTransactionStatus(reference, amount);
+        } catch (err: any) {
+          setTopUpError(err.message || 'Payment verification failed. Contact support.');
+          setTopUpStep('failed');
+        } finally {
+          setTopUpLoading(false);
+        }
+      };
+
+      const handlePopupClose = () => {
+        // Use a ref-like check: only process if we're still on the form step
+        setTopUpStep((currentStep) => {
+          if (currentStep !== 'success' && currentStep !== 'processing') {
             pollTransactionStatus(reference, amount)
               .then(() => {})
               .catch(() => {
@@ -287,10 +314,33 @@ const WalletPage: React.FC = () => {
                 setTopUpStep('failed');
               })
               .finally(() => setTopUpLoading(false));
+            return 'processing';
           }
-        },
-      });
+          return currentStep;
+        });
+      };
 
+      const config = {
+        key: publicKey,
+        email: user!.email,
+        amount: Math.round(amount * 100),
+        currency: paystackConfig?.currency || 'GHS',
+        ref: reference,
+        access_code,
+        channels: ['mobile_money', 'card', 'bank'],
+        callback: handlePaymentCallback,
+        onClose: handlePopupClose,
+      };
+
+      // Defensive: ensure callback is always a function before passing to Paystack
+      if (typeof config.callback !== 'function') {
+        throw new Error('Payment configuration error. Please try again.');
+      }
+
+      const handler = PaystackPop.setup(config);
+      if (!handler || typeof handler.openIframe !== 'function') {
+        throw new Error('Payment system failed to initialize the checkout. Please try again.');
+      }
       handler.openIframe();
     } catch (err: any) {
       setTopUpError(err.message || 'Failed to start payment. Please try again.');
