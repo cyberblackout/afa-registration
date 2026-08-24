@@ -3,13 +3,21 @@ import { Link, useLocation } from 'react-router-dom';
 import { IonIcon } from '@ionic/react';
 import {
   gridOutline,
+  grid,
   walletOutline,
+  wallet,
   addCircleOutline,
+  addCircle,
   cartOutline,
+  cart,
   personOutline,
+  person,
   notificationsOutline,
+  notifications,
   giftOutline,
+  gift,
   ribbonOutline,
+  ribbon,
   logOutOutline,
   menuOutline,
   closeOutline,
@@ -28,12 +36,11 @@ interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
-interface MenuItem {
+interface NavItem {
   label: string;
   icon: string;
+  iconFilled: string;
   path: string;
-  card?: boolean;
-  desc?: string;
 }
 
 interface WhatsAppConfig {
@@ -44,24 +51,54 @@ interface WhatsAppConfig {
   agentMessage: string;
 }
 
-const sharedMenuItems: MenuItem[] = [
-  { label: 'Wallet', icon: walletOutline, path: '/wallet' },
-  { label: 'Register AFA', icon: addCircleOutline, path: '/register-afa' },
-  { label: 'Orders', icon: cartOutline, path: '/orders' },
-  { label: 'Referrals', icon: giftOutline, path: '/referrals' },
-  { label: 'Profile', icon: personOutline, path: '/profile' },
-  { label: 'Notifications', icon: notificationsOutline, path: '/notifications' },
+const userNavGroups = [
+  {
+    label: null,
+    items: [
+      { label: 'Dashboard', icon: gridOutline, iconFilled: grid, path: '/dashboard' },
+    ] as NavItem[],
+  },
+  {
+    label: 'Actions',
+    items: [
+      { label: 'Wallet', icon: walletOutline, iconFilled: wallet, path: '/wallet' },
+      { label: 'Register AFA', icon: addCircleOutline, iconFilled: addCircle, path: '/register-afa' },
+      { label: 'Orders', icon: cartOutline, iconFilled: cart, path: '/orders' },
+    ] as NavItem[],
+  },
+  {
+    label: 'Account',
+    items: [
+      { label: 'Referrals', icon: giftOutline, iconFilled: gift, path: '/referrals' },
+      { label: 'Profile', icon: personOutline, iconFilled: person, path: '/profile' },
+      { label: 'Notifications', icon: notificationsOutline, iconFilled: notifications, path: '/notifications' },
+    ] as NavItem[],
+  },
 ];
 
-const userMenuItems: MenuItem[] = [
-  { label: 'Dashboard', icon: gridOutline, path: '/dashboard' },
-  ...sharedMenuItems,
-  { label: 'Become an Agent', icon: shieldCheckmarkOutline, path: '/become-agent', card: true, desc: 'Start earning with MTN AFA' },
-];
-
-const agentMenuItems: MenuItem[] = [
-  { label: 'Agent Dashboard', icon: ribbonOutline, path: '/agent/dashboard' },
-  ...sharedMenuItems,
+const agentNavGroups = [
+  {
+    label: null,
+    items: [
+      { label: 'Agent Dashboard', icon: ribbonOutline, iconFilled: ribbon, path: '/agent/dashboard' },
+    ] as NavItem[],
+  },
+  {
+    label: 'Actions',
+    items: [
+      { label: 'Wallet', icon: walletOutline, iconFilled: wallet, path: '/wallet' },
+      { label: 'Register AFA', icon: addCircleOutline, iconFilled: addCircle, path: '/register-afa' },
+      { label: 'Orders', icon: cartOutline, iconFilled: cart, path: '/orders' },
+    ] as NavItem[],
+  },
+  {
+    label: 'Account',
+    items: [
+      { label: 'Referrals', icon: giftOutline, iconFilled: gift, path: '/referrals' },
+      { label: 'Profile', icon: personOutline, iconFilled: person, path: '/profile' },
+      { label: 'Notifications', icon: notificationsOutline, iconFilled: notifications, path: '/notifications' },
+    ] as NavItem[],
+  },
 ];
 
 const sidebarVariants = {
@@ -90,7 +127,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const activePath = location.pathname;
 
   const role = user?.role ?? 'user';
-  const mainMenuItems = role === 'agent' ? agentMenuItems : userMenuItems;
+  const navGroups = role === 'agent' ? agentNavGroups : userNavGroups;
 
   const [wa, setWa] = useState<WhatsAppConfig>(defaultConfig);
 
@@ -139,78 +176,81 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     <>
       <div className="sb-header">
         <div className="sb-brand">
-          <div className="sb-logo-circle">
+          <div className="sb-logo">
             <img src="/favicon.png" alt="MTN" className="sb-logo-img" />
           </div>
           <div className="sb-brand-text">
-            <span className="sb-brand-name">{isAgent ? 'MTN AFA Agent' : 'MTN AFA Portal'}</span>
+            <span className="sb-brand-name">MTN AFA</span>
             <span className="sb-brand-role">{isAgent ? 'Agent Account' : 'User Account'}</span>
+          </div>
+          <div className="sb-brand-signal">
+            <div className="sb-signal-dot sb-signal-dot--1"></div>
+            <div className="sb-signal-dot sb-signal-dot--2"></div>
+            <div className="sb-signal-dot sb-signal-dot--3"></div>
           </div>
         </div>
       </div>
 
       <nav className="sb-nav">
-        {mainMenuItems.filter(item => !item.card).map((item) => {
-          const isActive = activePath === item.path;
-          return (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`sb-nav-item ${isActive ? 'active' : ''}`}
-              onClick={close}
-            >
-              <span className="sb-nav-icon">
-                <IonIcon icon={item.icon} />
-              </span>
-              <span className="sb-nav-label">{item.label}</span>
-              {isActive && <span className="sb-nav-indicator" />}
-            </Link>
-          );
-        })}
+        {navGroups.map((group, gi) => (
+          <div key={gi} className={`sb-nav-group ${gi > 0 ? 'sb-nav-group--spaced' : ''}`}>
+            {group.label && (
+              <span className="sb-nav-group-label">{group.label}</span>
+            )}
+            {group.items.map((item) => {
+              const isActive = activePath === item.path;
+              const hasBadge = item.path === '/notifications' && unreadCount > 0;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className={`sb-nav-item ${isActive ? 'sb-nav-item--active' : ''}`}
+                  onClick={close}
+                >
+                  <span className="sb-nav-icon">
+                    <IonIcon icon={isActive ? item.iconFilled : item.icon} />
+                  </span>
+                  <span className="sb-nav-label">{item.label}</span>
+                  {hasBadge && <span className="sb-nav-badge">{unreadCount}</span>}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
-      <div className="sidebar-footer">
-        {mainMenuItems.filter(item => item.card).map((item) => (
-          <Link
-            key={item.path}
-            to={item.path}
-            className="sb-nav-card"
+      <div className="sb-footer-area">
+        <Link
+          to="/become-agent"
+          className="sb-promo-card sb-promo-card--agent"
+          onClick={close}
+        >
+          <div className="sb-promo-icon">
+            <IonIcon icon={shieldCheckmarkOutline} />
+          </div>
+          <div className="sb-promo-text">
+            <span className="sb-promo-title">Become an Agent</span>
+            <span className="sb-promo-desc">Start earning with MTN AFA</span>
+          </div>
+          <IonIcon icon={chevronForward} className="sb-promo-arrow" />
+        </Link>
+
+        {wa.enabled && (isAgent ? wa.agentNumber : wa.userNumber) && (
+          <a
+            href={isAgent ? agentWaLink : userWaLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="sb-promo-link"
             onClick={close}
           >
-            <div className="sb-nav-card-icon">
-              <IonIcon icon={item.icon} />
-            </div>
-            <div className="sb-nav-card-text">
-              <span className="sb-nav-card-title">{item.label}</span>
-              <span className="sb-nav-card-desc">{item.desc}</span>
-            </div>
-            <div className="sb-nav-card-btn">
-              <IonIcon icon={chevronForward} />
-            </div>
-          </Link>
-        ))}
-
-        {wa.enabled && (
-          <div className="sb-support">
-            <a
-              href={isAgent ? agentWaLink : userWaLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="sb-support-card"
-              onClick={close}
-            >
-              <div className="sb-support-icon">
-                <IonIcon icon={logoWhatsapp} />
-              </div>
-              <div className="sb-support-text">
-                <span className="sb-support-title">WhatsApp Support</span>
-                <span className="sb-support-desc">Chat with support</span>
-              </div>
-            </a>
-          </div>
+            <span className="sb-promo-link-icon">
+              <IonIcon icon={logoWhatsapp} />
+            </span>
+            <span className="sb-promo-link-label">WhatsApp Support</span>
+          </a>
         )}
 
-        <div className="sb-footer">
+        <div className="sb-logout-area">
           <button className="sb-logout-btn" onClick={handleLogout}>
             <IonIcon icon={logOutOutline} />
             <span>Logout</span>

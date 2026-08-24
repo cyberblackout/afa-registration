@@ -31,6 +31,8 @@ type ReportType = 'Revenue' | 'Registration' | 'Payment' | 'User';
 
 const dateRanges: DateRange[] = ['Today', 'This Week', 'This Month', 'This Year', 'Custom'];
 
+const num = (v: unknown): number => (typeof v === 'number' && isFinite(v) ? v : 0);
+
 const ReportsPage: React.FC = () => {
   const [dateRange, setDateRange] = useState<DateRange>('This Month');
   const [activeReport, setActiveReport] = useState<ReportType>('Revenue');
@@ -78,22 +80,21 @@ const ReportsPage: React.FC = () => {
   const handleDownload = (format: string) => {
     let csvContent = 'Metric,Value\n';
     if (activeReport === 'Revenue') {
-      csvContent += `Total Revenue,GH₵ ${(report?.revenue?.credits || 0).toLocaleString()}\n`;
-      csvContent += `Total Transactions,${(report?.revenue?.count || 0).toLocaleString()}\n`;
+      csvContent += `Total Revenue,GH₵ ${num(report?.revenue).toLocaleString()}\n`;
     } else if (activeReport === 'Registration') {
-      csvContent += `Total Registrations,${(report?.registration_stats?.total || 0).toLocaleString()}\n`;
-      csvContent += `Pending,${(report?.registration_stats?.pending || 0).toLocaleString()}\n`;
-      csvContent += `Approved,${(report?.registration_stats?.approved || 0).toLocaleString()}\n`;
-      csvContent += `Rejected,${(report?.registration_stats?.rejected || 0).toLocaleString()}\n`;
+      csvContent += `Total Registrations,${num(report?.registration_stats?.total).toLocaleString()}\n`;
+      csvContent += `Pending,${num(report?.registration_stats?.pending).toLocaleString()}\n`;
+      csvContent += `Approved,${num(report?.registration_stats?.approved).toLocaleString()}\n`;
+      csvContent += `Rejected,${num(report?.registration_stats?.rejected).toLocaleString()}\n`;
     } else if (activeReport === 'Payment') {
-      csvContent += `Total Payments,GH₵ ${(report?.payment_stats?.total || 0).toLocaleString()}\n`;
-      csvContent += `Mobile Money,GH₵ ${(report?.payment_stats?.momo || 0).toLocaleString()}\n`;
-      csvContent += `Card Payments,GH₵ ${(report?.payment_stats?.card || 0).toLocaleString()}\n`;
-      csvContent += `Bank Transfers,GH₵ ${(report?.payment_stats?.bank || 0).toLocaleString()}\n`;
-      csvContent += `Transactions,${(report?.payment_stats?.count || 0).toLocaleString()}\n`;
+      csvContent += `Total Payments,${num(report?.payment_stats?.total).toLocaleString()}\n`;
+      csvContent += `Total Amount,GH₵ ${num(report?.payment_stats?.total_amount).toLocaleString()}\n`;
+      csvContent += `Mobile Money,GH₵ ${num(report?.payment_stats?.by_method?.momo).toLocaleString()}\n`;
+      csvContent += `Card Payments,GH₵ ${num(report?.payment_stats?.by_method?.card).toLocaleString()}\n`;
+      csvContent += `Bank Transfers,GH₵ ${num(report?.payment_stats?.by_method?.bank).toLocaleString()}\n`;
     } else if (activeReport === 'User') {
-      csvContent += `New Users,${(report?.new_users || 0).toLocaleString()}\n`;
-      csvContent += `Total Users,${(report?.total_users || 0).toLocaleString()}\n`;
+      csvContent += `New Users,${num(report?.new_users).toLocaleString()}\n`;
+      csvContent += `Total Users,${num(report?.total_users).toLocaleString()}\n`;
     }
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -110,10 +111,10 @@ const ReportsPage: React.FC = () => {
   };
 
   const statCards = [
-    { label: 'Revenue', value: report ? `GH₵ ${report.revenue.credits.toLocaleString()}` : '...', icon: cashOutline, change: '' },
-    { label: 'Registrations', value: report ? report.registration_stats.total.toLocaleString() : '...', icon: documentTextOutline, change: '' },
-    { label: 'New Users', value: report ? report.new_users.toLocaleString() : '...', icon: peopleOutline, change: '' },
-    { label: 'Transactions', value: report ? report.payment_stats.count.toLocaleString() : '...', icon: walletOutline, change: '' },
+    { label: 'Revenue', value: report ? `GH₵ ${num(report.revenue).toLocaleString()}` : '...', icon: cashOutline, change: '' },
+    { label: 'Registrations', value: report ? num(report.registration_stats?.total).toLocaleString() : '...', icon: documentTextOutline, change: '' },
+    { label: 'New Users', value: report ? num(report.new_users).toLocaleString() : '...', icon: peopleOutline, change: '' },
+    { label: 'Transactions', value: report ? num(report.payment_stats?.total).toLocaleString() : '...', icon: walletOutline, change: '' },
   ];
 
 
@@ -130,34 +131,33 @@ const ReportsPage: React.FC = () => {
       case 'Revenue':
         return (
           <>
-            <div className="report-row"><span className="rtd rtd-label">Total Revenue</span><span className="rtd rtd-value">GH₵ {(report?.revenue?.credits || 0).toLocaleString()}</span></div>
-            <div className="report-row"><span className="rtd rtd-label">Total Transactions</span><span className="rtd rtd-value">{(report?.revenue?.count || 0).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Total Revenue</span><span className="rtd rtd-value">GH₵ {num(report?.revenue).toLocaleString()}</span></div>
           </>
         );
       case 'Registration':
         return (
           <>
-            <div className="report-row"><span className="rtd rtd-label">Total Registrations</span><span className="rtd rtd-value">{(report?.registration_stats?.total || 0).toLocaleString()}</span></div>
-            <div className="report-row"><span className="rtd rtd-label">Pending</span><span className="rtd rtd-value">{(report?.registration_stats?.pending || 0).toLocaleString()}</span></div>
-            <div className="report-row"><span className="rtd rtd-label">Approved</span><span className="rtd rtd-value">{(report?.registration_stats?.approved || 0).toLocaleString()}</span></div>
-            <div className="report-row"><span className="rtd rtd-label">Rejected</span><span className="rtd rtd-value">{(report?.registration_stats?.rejected || 0).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Total Registrations</span><span className="rtd rtd-value">{num(report?.registration_stats?.total).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Pending</span><span className="rtd rtd-value">{num(report?.registration_stats?.pending).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Approved</span><span className="rtd rtd-value">{num(report?.registration_stats?.approved).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Rejected</span><span className="rtd rtd-value">{num(report?.registration_stats?.rejected).toLocaleString()}</span></div>
           </>
         );
       case 'Payment':
         return (
           <>
-            <div className="report-row"><span className="rtd rtd-label">Total Payments</span><span className="rtd rtd-value">GH₵ {(report?.payment_stats?.total || 0).toLocaleString()}</span></div>
-            <div className="report-row"><span className="rtd rtd-label">Mobile Money</span><span className="rtd rtd-value">GH₵ {(report?.payment_stats?.momo || 0).toLocaleString()}</span></div>
-            <div className="report-row"><span className="rtd rtd-label">Card Payments</span><span className="rtd rtd-value">GH₵ {(report?.payment_stats?.card || 0).toLocaleString()}</span></div>
-            <div className="report-row"><span className="rtd rtd-label">Bank Transfers</span><span className="rtd rtd-value">GH₵ {(report?.payment_stats?.bank || 0).toLocaleString()}</span></div>
-            <div className="report-row"><span className="rtd rtd-label">Transactions</span><span className="rtd rtd-value">{(report?.payment_stats?.count || 0).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Total Payments</span><span className="rtd rtd-value">{num(report?.payment_stats?.total).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Total Amount</span><span className="rtd rtd-value">GH₵ {num(report?.payment_stats?.total_amount).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Mobile Money</span><span className="rtd rtd-value">GH₵ {num(report?.payment_stats?.by_method?.momo).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Card Payments</span><span className="rtd rtd-value">GH₵ {num(report?.payment_stats?.by_method?.card).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Bank Transfers</span><span className="rtd rtd-value">GH₵ {num(report?.payment_stats?.by_method?.bank).toLocaleString()}</span></div>
           </>
         );
       case 'User':
         return (
           <>
-            <div className="report-row"><span className="rtd rtd-label">New Users</span><span className="rtd rtd-value">{(report?.new_users || 0).toLocaleString()}</span></div>
-            <div className="report-row"><span className="rtd rtd-label">Total Users</span><span className="rtd rtd-value">{(report?.total_users || 0).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">New Users</span><span className="rtd rtd-value">{num(report?.new_users).toLocaleString()}</span></div>
+            <div className="report-row"><span className="rtd rtd-label">Total Users</span><span className="rtd rtd-value">{num(report?.total_users).toLocaleString()}</span></div>
           </>
         );
       default:
