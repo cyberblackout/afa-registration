@@ -6,7 +6,7 @@
   --text-primary: #1a1a2e;
   --text-secondary: #6b7280;
   --text-muted: #9ca3af;
-  --sidebar-width: 270px;
+  --sidebar-width: 260px;
   --sidebar-radius: 16px;
   --nav-radius: 10px;
   --sb-bg: #ffffff;
@@ -688,8 +688,8 @@
 
 @media (max-width: 412px) {
   .sidebar-mobile-drawer {
-    width: 100%;
-    max-width: 320px;
+    width: 82%;
+    max-width: 280px;
   }
 
   .sb-header {
@@ -712,7 +712,7 @@
 
 @media (max-width: 360px) {
   .sidebar-mobile-drawer {
-    max-width: 290px;
+    max-width: 260px;
   }
 
   .sb-header {
