@@ -32,12 +32,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const initialised = useRef(false);
 
   const fetchProfile = useCallback(async () => {
-    const { data: profileRows } = await withTimeout(
-      supabase.rpc('get_my_profile') as any,
+    const res = await withTimeout(
+      supabase.rpc('get_my_profile').then(r => ({ data: r.data, error: r.error })) as Promise<unknown>,
       RPC_TIMEOUT_MS,
       'get_my_profile',
-    );
-    const profile = profileRows?.[0] ?? null;
+    ) as { data: any[] | null };
+    const profile = res.data?.[0] ?? null;
     return profile;
   }, []);
 
@@ -47,11 +47,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       initialised.current = true;
 
       try {
-        const { data: { session } } = await withTimeout(
-          supabase.auth.getSession() as any,
+        const sessionRes = await withTimeout<unknown>(
+          supabase.auth.getSession(),
           AUTH_INIT_TIMEOUT_MS,
           'getSession',
-        );
+        ) as { data: { session: any } };
+        const { session } = sessionRes.data;
 
         if (session?.user) {
           const existing = useAuthStore.getState();
@@ -86,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     init();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const subRes = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_OUT') {
         setUser(null);
         setError(null);
@@ -125,7 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => subRes.data.subscription.unsubscribe();
   }, [fetchProfile, setUser, setLoading]);
 
   const signOut = async () => {
