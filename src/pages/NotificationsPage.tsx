@@ -186,10 +186,9 @@ const NotificationsPage: React.FC = () => {
 
   const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
 
-  const handleRefresh = useCallback(async (event: CustomEvent) => {
-    await refetch();
-    event.detail.complete();
-  }, [refetch]);
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
+  };
 
   const handleDelete = useCallback((e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -204,7 +203,7 @@ const NotificationsPage: React.FC = () => {
 
   return (
     <IonPage>
-      <DashboardLayout>
+      <DashboardLayout onRefresh={handleRefresh}>
         <motion.div
           className="notifications-page"
           initial={{ opacity: 0 }}

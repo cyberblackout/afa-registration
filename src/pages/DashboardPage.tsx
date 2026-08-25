@@ -1,7 +1,7 @@
 import React from 'react';
 import { IonPage, IonIcon } from '@ionic/react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
 import { profileApi, orderApi, referralApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -29,6 +29,14 @@ const quickActions = [
 
 const DashboardPage: React.FC = () => {
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
+
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+    await queryClient.invalidateQueries({ queryKey: ['orders-count', user?.id] });
+    await queryClient.invalidateQueries({ queryKey: ['registrations-count', user?.id] });
+    await queryClient.invalidateQueries({ queryKey: ['referral_stats_dash', user?.id] });
+  };
 
   const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
@@ -70,7 +78,7 @@ const DashboardPage: React.FC = () => {
 
   return (
     <IonPage>
-      <DashboardLayout>
+      <DashboardLayout onRefresh={handleRefresh}>
         <div className="dashboard-container">
           <MTNAFABanner
             userName={profile?.full_name || user?.full_name || 'User'}

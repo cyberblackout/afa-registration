@@ -193,8 +193,12 @@ const RegistrationsPage: React.FC = () => {
     },
   });
 
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['admin_registrations'] });
+  };
+
   return (
-    <AdminLayout>
+    <AdminLayout onRefresh={handleRefresh}>
       <div className="registrations-page">
         <motion.div
           className="page-header"

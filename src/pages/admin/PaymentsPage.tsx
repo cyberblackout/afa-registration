@@ -108,8 +108,12 @@ const PaymentsPage: React.FC = () => {
     return s.charAt(0).toUpperCase() + s.slice(1);
   };
 
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['admin_payments'] });
+  };
+
   return (
-    <AdminLayout>
+    <AdminLayout onRefresh={handleRefresh}>
       <div className="admin-payments-page">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
           <div className="page-title-row">

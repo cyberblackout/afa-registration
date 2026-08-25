@@ -13,7 +13,7 @@ import {
 import { settingsApi, pricingApi, agentApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import DashboardLayout from '../layouts/DashboardLayout';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import './BecomeAgentPage.css';
 
 // Load Paystack Inline script (same pattern as WalletPage)
@@ -82,6 +82,7 @@ const trustIndicators = [
 const BecomeAgentPage: React.FC = () => {
   const history = useHistory();
   const { user, setUser } = useAuthStore();
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', color: 'success' });
 
@@ -97,6 +98,11 @@ const BecomeAgentPage: React.FC = () => {
       return (allPricing as any[]).find((p) => p.key === 'afa_registration') || null;
     },
   });
+
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['agent_fee'] });
+    await queryClient.invalidateQueries({ queryKey: ['afa_registration_price'] });
+  };
 
   const agentFee = Number(agentFeeData ?? 100);
   const normalPrice = Number(afaPricingData?.normal_price ?? afaPricingData?.amount ?? 0);
@@ -197,7 +203,7 @@ const BecomeAgentPage: React.FC = () => {
 
   return (
     <IonPage>
-    <DashboardLayout>
+    <DashboardLayout onRefresh={handleRefresh}>
       <div className="ba-page">
         {/* ===== HERO ===== */}
         <section className="ba-hero">

@@ -16,7 +16,7 @@ import { motion } from 'framer-motion';
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../services/supabase';
 import { adminDashboardApi, type AdminDashboardStats } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
@@ -58,6 +58,13 @@ const Skeleton = ({ width, height }: { width?: string; height?: string }) => (
 );
 
 const DashboardPage: React.FC = () => {
+  const queryClient = useQueryClient();
+
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['admin_dashboard'] });
+    await queryClient.invalidateQueries({ queryKey: ['admin_weekly_data'] });
+  };
+
   const { data: stats, isLoading } = useQuery({
     queryKey: ['admin_dashboard'],
     queryFn: () => adminDashboardApi.getStats(),
@@ -88,7 +95,7 @@ const DashboardPage: React.FC = () => {
   ];
 
   return (
-    <AdminLayout>
+    <AdminLayout onRefresh={handleRefresh}>
       <div className="admin-dashboard">
         <motion.div
           className="dashboard-header"

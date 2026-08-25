@@ -122,8 +122,14 @@ const CustomersPage: React.FC = () => {
     return 'User';
   };
 
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['admin_customers'] });
+    await queryClient.invalidateQueries({ queryKey: ['admin_customer_transactions'] });
+    await queryClient.invalidateQueries({ queryKey: ['admin_customer_orders'] });
+  };
+
   return (
-    <AdminLayout>
+    <AdminLayout onRefresh={handleRefresh}>
       <div className="admin-customers-page">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
           <div className="page-title-row">

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { IonIcon } from '@ionic/react';
+import { IonIcon, IonContent, IonRefresher, IonRefresherContent } from '@ionic/react';
 import {
   gridOutline,
   peopleOutline,
@@ -27,6 +27,7 @@ import './AdminLayout.css';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
+  onRefresh?: () => Promise<void>;
 }
 
 const menuItems = [
@@ -48,7 +49,7 @@ const sidebarVariants = {
   closed: { x: '-100%', transition: { type: 'spring' as const, damping: 26, stiffness: 200 } },
 };
 
-const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
+const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
   const location = useLocation();
   const { isOpen, toggle, close } = useSidebarStore();
   const { user, logout } = useAuthStore();
@@ -175,7 +176,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         )}
       </AnimatePresence>
 
-      <main className="admin-main">{children}</main>
+      <IonContent className="admin-main">
+        <IonRefresher slot="fixed" onIonRefresh={async (e) => {
+          try { if (onRefresh) await onRefresh(); } finally { (e.target as any).complete(); }
+        }}>
+          <IonRefresherContent />
+        </IonRefresher>
+        {children}
+      </IonContent>
 
       {whatsappEnabled && whatsappNumber && (
         <a href={waLink} target="_blank" rel="noopener noreferrer" className="whatsapp-float" title="WhatsApp Support">

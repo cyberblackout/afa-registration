@@ -249,8 +249,12 @@ const NotificationsPage: React.FC = () => {
 
   const tabIcons: Record<string, string> = { mailOutline, chatbubbleOutline, phonePortraitOutline, eyeOutline };
 
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['notifications_log'] });
+  };
+
   return (
-    <AdminLayout>
+    <AdminLayout onRefresh={handleRefresh}>
       <div className="admin-notifications-page">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
           <div className="page-title-row">

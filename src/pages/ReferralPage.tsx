@@ -10,7 +10,7 @@ import {
   Star, ShieldCheck, Phone, Zap, Network,
   ChevronRight,
 } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
 import { referralApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -20,6 +20,7 @@ import './ReferralPage.css';
 
 const ReferralPage: React.FC = () => {
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
   const [toast, setToast] = useState({ show: false, msg: '' });
 
   const { data: profile } = useQuery({
@@ -48,6 +49,14 @@ const ReferralPage: React.FC = () => {
     queryFn: () => referralApi.getMyRewards() as Promise<any[]>,
     enabled: !!user?.id,
   });
+
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+    await queryClient.invalidateQueries({ queryKey: ['referral_stats', user?.id] });
+    await queryClient.invalidateQueries({ queryKey: ['my_referrals', user?.id] });
+    await queryClient.invalidateQueries({ queryKey: ['referral_rewards', user?.id] });
+    await queryClient.invalidateQueries({ queryKey: ['wallet-transactions', user?.id] });
+  };
 
   const pendingRewards = rewards
     .filter((r: any) => r.status === 'pending')
@@ -130,7 +139,7 @@ const ReferralPage: React.FC = () => {
 
   return (
     <IonPage>
-    <DashboardLayout>
+    <DashboardLayout onRefresh={handleRefresh}>
       <div className="rr-page">
 
         {/* ===== HEADER ===== */}

@@ -181,13 +181,20 @@
 }
 
 .admin-main {
+  --background: var(--admin-bg);
+  --padding-top: 1.5rem;
+  --padding-bottom: 1.5rem;
+  --padding-start: 1.5rem;
+  --padding-end: 1.5rem;
   flex: 1;
   margin-left: var(--admin-sidebar-width);
   margin-top: var(--admin-navbar-height);
-  padding: 1.5rem;
   height: calc(100vh - var(--admin-navbar-height));
-  overflow-y: auto;
   width: calc(100% - var(--admin-sidebar-width));
+}
+
+ion-refresher {
+  --color: var(--mtn-yellow);
 }
 
 .admin-overlay {
@@ -214,7 +221,10 @@
   .admin-main {
     margin-left: 0;
     width: 100%;
-    padding: 1rem;
+    --padding-top: 1rem;
+    --padding-bottom: 1rem;
+    --padding-start: 1rem;
+    --padding-end: 1rem;
   }
 
   .admin-overlay {

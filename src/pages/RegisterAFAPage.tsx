@@ -32,6 +32,11 @@ const RegisterAFAPage: React.FC = () => {
   const [toast, setToast] = useState({ show: false, message: '', color: '' as 'success' | 'danger' | '' });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['pricing'] });
+    await queryClient.invalidateQueries({ queryKey: ['orders', user?.id] });
+  };
+
   // Get AFA registration price from pricing table
   const afaPricing = pricing?.find(
     (p: any) => p.key === 'afa_registration' || p.label?.toLowerCase().includes('afa')
@@ -85,7 +90,7 @@ const RegisterAFAPage: React.FC = () => {
   if (submitted) {
     return (
       <IonPage>
-        <DashboardLayout>
+        <DashboardLayout onRefresh={handleRefresh}>
           <div className="afa-page">
             <motion.div
               className="afa-success"
@@ -105,7 +110,7 @@ const RegisterAFAPage: React.FC = () => {
 
   return (
     <IonPage>
-      <DashboardLayout>
+      <DashboardLayout onRefresh={handleRefresh}>
         <div className="afa-page">
           <div className="afa-card">
             {/* Header */}

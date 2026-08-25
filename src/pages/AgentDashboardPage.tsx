@@ -7,7 +7,7 @@ import {
   ribbonOutline, peopleOutline, cartOutline, cashOutline,
   walletOutline, addCircleOutline, documentTextOutline,
 } from 'ionicons/icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { agentApi, profileApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
@@ -17,6 +17,7 @@ import './AgentDashboardPage.css';
 
 const AgentDashboardPage: React.FC = () => {
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
 
   const { data: dashboard, isLoading } = useQuery({
     queryKey: ['agent_dashboard', user?.id],
@@ -30,6 +31,11 @@ const AgentDashboardPage: React.FC = () => {
     enabled: !!user?.id,
   });
 
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['agent_dashboard', user?.id] });
+    await queryClient.invalidateQueries({ queryKey: ['agent_profile', user?.id] });
+  };
+
   const statsCards = [
     { icon: peopleOutline, label: 'Registrations', value: dashboard?.registrations_count || 0, color: '#4CAF50' },
     { icon: cartOutline, label: 'Orders', value: dashboard?.orders_count || 0, color: '#2196F3' },
@@ -39,7 +45,7 @@ const AgentDashboardPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <DashboardLayout>
+      <DashboardLayout onRefresh={handleRefresh}>
         <div className="agent-loading">
           <IonSpinner name="crescent" />
           <p>Loading agent dashboard...</p>
@@ -49,7 +55,7 @@ const AgentDashboardPage: React.FC = () => {
   }
 
   return (
-    <DashboardLayout>
+    <DashboardLayout onRefresh={handleRefresh}>
       <div className="agent-dashboard-page">
         <MTNAFABanner
           userName={profile?.full_name || user?.full_name || 'Agent'}

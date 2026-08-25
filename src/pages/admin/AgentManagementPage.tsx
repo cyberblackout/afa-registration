@@ -109,8 +109,13 @@ const AgentManagementPage: React.FC = () => {
     a.user_phone?.includes(search)
   );
 
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['admin_agents'] });
+    await queryClient.invalidateQueries({ queryKey: ['admin_agent_applications'] });
+  };
+
   return (
-    <AdminLayout>
+    <AdminLayout onRefresh={handleRefresh}>
       <div className="agent-management-page">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="am-header">
           <div className="am-header-left">

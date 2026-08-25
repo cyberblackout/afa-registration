@@ -76,6 +76,10 @@ const OrdersPage: React.FC = () => {
     enabled: !!user?.id,
   });
 
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['orders', user?.id] });
+  };
+
   useEffect(() => {
     if (!user?.id) return;
     const channel = supabase.channel('user-orders')
@@ -133,7 +137,7 @@ const OrdersPage: React.FC = () => {
 
   return (
     <IonPage>
-        <DashboardLayout>
+        <DashboardLayout onRefresh={handleRefresh}>
           <div className="orders-page">
         <motion.div
           className="page-header"

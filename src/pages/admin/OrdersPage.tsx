@@ -72,8 +72,12 @@ const OrdersPage: React.FC = () => {
 
   const formatAmount = (amount: number) => `GH₵ ${Number(amount ?? 0).toFixed(2)}`;
 
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['admin_orders'] });
+  };
+
   return (
-    <AdminLayout>
+    <AdminLayout onRefresh={handleRefresh}>
       <div className="admin-orders-page">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
           <div className="page-title-row">

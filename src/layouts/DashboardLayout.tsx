@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { IonIcon } from '@ionic/react';
+import { IonIcon, IonContent, IonRefresher, IonRefresherContent } from '@ionic/react';
 import {
   gridOutline,
   grid,
@@ -34,6 +34,7 @@ import './DashboardLayout.css';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
+  onRefresh?: () => Promise<void>;
 }
 
 interface NavItem {
@@ -119,7 +120,7 @@ const defaultConfig: WhatsAppConfig = {
   agentMessage: 'Hello, I am an agent and I need assistance.',
 };
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh }) => {
   const location = useLocation();
   const { isOpen, toggle, close } = useSidebarStore();
   const { user, logout } = useAuthStore();
@@ -309,7 +310,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         )}
       </AnimatePresence>
 
-      <main className="main-content">{children}</main>
+      <IonContent className="main-content">
+        <IonRefresher slot="fixed" onIonRefresh={async (e) => {
+          try { if (onRefresh) await onRefresh(); } finally { (e.target as any).complete(); }
+        }}>
+          <IonRefresherContent />
+        </IonRefresher>
+        {children}
+      </IonContent>
 
       {wa.enabled && waNumberForFloat && (
         <a href={waLinkForFloat} target="_blank" rel="noopener noreferrer" className="whatsapp-float" title="WhatsApp Support">

@@ -52,8 +52,13 @@ const ReferralManagementPage: React.FC = () => {
     return <span className={`admin-status-badge ${map[s] || ''}`}>{labels[s] || s}</span>;
   };
 
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['admin_referral_analytics'] });
+    await queryClient.invalidateQueries({ queryKey: ['admin_all_referrals'] });
+  };
+
   return (
-    <AdminLayout>
+    <AdminLayout onRefresh={handleRefresh}>
       <div className="admin-referral-page">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
           <div className="page-title-row">

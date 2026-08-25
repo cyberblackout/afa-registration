@@ -92,6 +92,10 @@ const ProfilePage: React.FC = () => {
     enabled: !!user?.id,
   });
 
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
+  };
+
   const {
     register,
     handleSubmit,
@@ -208,7 +212,7 @@ const ProfilePage: React.FC = () => {
 
   return (
     <IonPage>
-      <DashboardLayout>
+      <DashboardLayout onRefresh={handleRefresh}>
         <motion.div
           className="profile-page"
           initial={{ opacity: 0, y: 12 }}

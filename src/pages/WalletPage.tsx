@@ -113,6 +113,12 @@ const WalletPage: React.FC = () => {
   const [topUpError, setTopUpError] = useState('');
   const [paidAmount, setPaidAmount] = useState(0);
 
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['topup-limits'] });
+    await queryClient.invalidateQueries({ queryKey: ['wallet', user?.id] });
+    await queryClient.invalidateQueries({ queryKey: ['wallet-transactions', user?.id] });
+  };
+
   const presetAmounts = [50, 100, 200, 500, 1000];
 
   // Load Paystack script on mount
@@ -448,7 +454,7 @@ const WalletPage: React.FC = () => {
 
   return (
     <IonPage>
-        <DashboardLayout>
+        <DashboardLayout onRefresh={handleRefresh}>
           <div className="wallet-page">
         <motion.div
           className="balance-card"

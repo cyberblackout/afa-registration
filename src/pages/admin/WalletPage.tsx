@@ -121,8 +121,13 @@ const WalletPage: React.FC = () => {
     setShowToast(true);
   };
 
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['admin_wallets'] });
+    await queryClient.invalidateQueries({ queryKey: ['admin_wallet_tx'] });
+  };
+
   return (
-    <AdminLayout>
+    <AdminLayout onRefresh={handleRefresh}>
       <div className="admin-wallet-page">
         <motion.div
           className="wallet-total-card"

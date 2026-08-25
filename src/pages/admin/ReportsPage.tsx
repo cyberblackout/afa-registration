@@ -21,7 +21,7 @@ import {
   checkmarkCircle,
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminReportsApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import './ReportsPage.css';
@@ -40,6 +40,11 @@ const ReportsPage: React.FC = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
+  const queryClient = useQueryClient();
+
+  const handleRefresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: ['reports', dateRange] });
+  };
 
   const { data: report, isLoading } = useQuery({
     queryKey: ['reports', dateRange],
@@ -168,7 +173,7 @@ const ReportsPage: React.FC = () => {
   const reportTypesList: ReportType[] = ['Revenue', 'Registration', 'Payment', 'User'];
 
   return (
-    <AdminLayout>
+    <AdminLayout onRefresh={handleRefresh}>
       <div className="admin-reports-page">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
           <div className="page-title-row">
