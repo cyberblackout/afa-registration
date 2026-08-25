@@ -32,6 +32,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { walletApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
+import { formatGhanaDate } from '../../utils/date';
 import './WalletPage.css';
 
 const WalletPage: React.FC = () => {
@@ -215,7 +216,7 @@ const WalletPage: React.FC = () => {
                                       </div>
                                       <div className="tx-info">
                                         <span className="tx-desc">{tx.description}</span>
-                                        <span className="tx-date">{new Date(tx.created_at).toLocaleDateString()}</span>
+                                        <span className="tx-date">{formatGhanaDate(tx.created_at)}</span>
                                       </div>
                                     </div>
                                     <span className={`tx-amount ${tx.type === 'credit' ? 'tx-amount-credit' : 'tx-amount-debit'}`}>

@@ -33,6 +33,7 @@ import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { usePushNotifications } from '../hooks/usePushNotifications';
 import { useHistory, Link } from 'react-router-dom';
+import { formatGhanaDate } from '../utils/date';
 import DashboardLayout from '../layouts/DashboardLayout';
 import './ProfilePage.css';
 
@@ -466,7 +467,7 @@ const ProfilePage: React.FC = () => {
                         {profile.agent_since && (
                           <div className="agent-since-display">
                             <span>Agent since:</span>
-                            <span>{new Date(profile.agent_since).toLocaleDateString()}</span>
+                            <span>{formatGhanaDate(profile.agent_since)}</span>
                           </div>
                         )}
                         <Link to="/agent/dashboard" className="agent-dashboard-link">

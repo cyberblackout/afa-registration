@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { referralApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
+import { formatGhanaDate } from '../../utils/date';
 import './ReferralManagementPage.css';
 
 const ReferralManagementPage: React.FC = () => {
@@ -115,7 +116,7 @@ const ReferralManagementPage: React.FC = () => {
                   <span className="ref-code">{r.referral_code}</span>
                   <span className="ref-amount">GH₵ {Number(r.reward_amount || 0).toFixed(2)}</span>
                   <span>{statusBadge(r.status)}</span>
-                  <span className="ref-date">{new Date(r.created_at).toLocaleDateString()}</span>
+                  <span className="ref-date">{formatGhanaDate(r.created_at)}</span>
                   <span className="ref-actions">
                     {r.status !== 'reward_granted' && r.status !== 'rejected' && (
                       <>

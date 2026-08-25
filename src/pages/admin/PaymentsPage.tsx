@@ -33,25 +33,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminPaymentApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
+import { formatGhanaDate, formatGhanaDateTime } from '../../utils/date';
 import './PaymentsPage.css';
 
 const PaymentsPage: React.FC = () => {
   const queryClient = useQueryClient();
-
-  // Ghana is UTC+0 — force Africa/Accra timezone instead of device local
-  const formatGhanaDate = (dateStr: string) =>
-    new Date(dateStr).toLocaleDateString('en-GB', { timeZone: 'Africa/Accra' });
-
-  const formatGhanaDateTime = (dateStr: string) =>
-    new Date(dateStr).toLocaleString('en-GB', {
-      timeZone: 'Africa/Accra',
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');

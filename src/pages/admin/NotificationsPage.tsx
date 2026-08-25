@@ -26,21 +26,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../services/supabase';
 import { notificationApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
+import { formatGhanaDateTime } from '../../utils/date';
 import './NotificationsPage.css';
 
 type Tab = 'email' | 'sms' | 'push' | 'log';
 type RecipientType = 'everyone' | 'specific';
-
-const formatGhanaDateTime = (dateStr: string) =>
-  new Date(dateStr).toLocaleString('en-GB', {
-    timeZone: 'Africa/Accra',
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  });
 
 const statusColors: Record<string, string> = {
   pending: '#f57f17',

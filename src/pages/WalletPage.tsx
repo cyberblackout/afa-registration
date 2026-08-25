@@ -22,6 +22,13 @@ import { supabase } from '../services/supabase';
 import { walletApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import DashboardLayout from '../layouts/DashboardLayout';
+import {
+  formatGhanaDate,
+  isGhanaSameDay,
+  isGhanaLastWeek,
+  isGhanaSameMonth,
+  getGhanaTodayISO,
+} from '../utils/date';
 import './WalletPage.css';
 
 interface DbTransaction {
@@ -193,15 +200,12 @@ const WalletPage: React.FC = () => {
 
     let matchesDate = true;
     if (dateFilter !== 'All') {
-      const txnDate = new Date(txn.created_at);
-      const now = new Date();
       if (dateFilter === 'Today') {
-        matchesDate = txnDate.toDateString() === now.toDateString();
+        matchesDate = isGhanaSameDay(txn.created_at);
       } else if (dateFilter === 'This Week') {
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        matchesDate = txnDate >= weekAgo;
+        matchesDate = isGhanaLastWeek(txn.created_at);
       } else if (dateFilter === 'This Month') {
-        matchesDate = txnDate.getMonth() === now.getMonth() && txnDate.getFullYear() === now.getFullYear();
+        matchesDate = isGhanaSameMonth(txn.created_at);
       }
     }
 
@@ -385,13 +389,14 @@ const WalletPage: React.FC = () => {
       const balance = profile?.wallet_balance ?? 0;
       if (profile?.email) {
         const { sendEmail, topUpEmailHtml } = await import('../services/email');
-        const now = new Date().toLocaleDateString('en-US', {
-          year: 'numeric', month: 'long', day: 'numeric',
+        const now = getGhanaTodayISO();
+        const dateDisplay = new Date().toLocaleDateString('en-US', {
+          year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Africa/Accra',
         });
         sendEmail(
           profile.email,
           'Wallet Top-Up Confirmed',
-          topUpEmailHtml(profile.full_name || 'User', amount, balance, now),
+          topUpEmailHtml(profile.full_name || 'User', amount, balance, dateDisplay),
           'transactional'
         );
       }
@@ -432,7 +437,7 @@ const WalletPage: React.FC = () => {
   const exportCSV = () => {
     const headers = 'Description,Amount,Date,Status,Payment Method\n';
     const rows = filteredTransactions.map((txn) =>
-      `${txn.description},${txn.type === 'credit' ? '+' : '-'}GH₵${txn.amount.toFixed(2)},${new Date(txn.created_at).toLocaleDateString()},${txn.status},${txn.payment_method || 'Wallet'}`
+      `${txn.description},${txn.type === 'credit' ? '+' : '-'}GH₵${txn.amount.toFixed(2)},${formatGhanaDate(txn.created_at)},${txn.status},${txn.payment_method || 'Wallet'}`
     ).join('\n');
     const blob = new Blob([headers + rows], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -589,7 +594,7 @@ const WalletPage: React.FC = () => {
                       </div>
                       <div className="txn-info">
                         <span className="txn-description">{txn.description}</span>
-                        <span className="txn-date">{new Date(txn.created_at).toLocaleDateString()}</span>
+                        <span className="txn-date">{formatGhanaDate(txn.created_at)}</span>
                       </div>
                       <div className="txn-right">
                         <span className={`txn-amount ${txn.type === 'credit' ? 'amount-credit' : 'amount-debit'}`}>

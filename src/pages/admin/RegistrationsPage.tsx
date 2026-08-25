@@ -23,6 +23,12 @@ import { supabase } from '../../services/supabase';
 import { registrationApi } from '../../services/api';
 import { useAuthStore } from '../../store/authStore';
 import AdminLayout from '../../layouts/AdminLayout';
+import {
+  formatGhanaDate,
+  formatGhanaDateUS,
+  formatGhanaDateTime,
+  getGhanaTodayISO,
+} from '../../utils/date';
 import './RegistrationsPage.css';
 
 const statusColors: Record<string, string> = {
@@ -162,13 +168,11 @@ const RegistrationsPage: React.FC = () => {
   };
 
   const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return formatGhanaDateUS(dateStr);
   };
 
   const formatDateTime = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true }) + ' UTC';
+    return formatGhanaDateTime(dateStr);
   };
 
   const bulkUpdateMutation = useMutation({
@@ -219,13 +223,13 @@ const RegistrationsPage: React.FC = () => {
             <button className="export-btn" onClick={() => {
               const headers = 'Reg Number,Customer Name,Phone,Email,Network,SIM Number,Status,Date\n';
               const rows = filteredRegs.map((r: any) =>
-                `${r.reg_number || r.id?.slice(0, 6)},"${r.full_name || ''}","${r.phone || ''}","${r.email || ''}",${r.network || ''},${r.sim_number || ''},${r.status || ''},${new Date(r.created_at).toLocaleDateString()}`
+                `${r.reg_number || r.id?.slice(0, 6)},"${r.full_name || ''}","${r.phone || ''}","${r.email || ''}",${r.network || ''},${r.sim_number || ''},${r.status || ''},${formatGhanaDate(r.created_at)}`
               ).join('\n');
               const blob = new Blob([headers + rows], { type: 'text/csv' });
               const url = URL.createObjectURL(blob);
               const a = document.createElement('a');
               a.href = url;
-              a.download = `registrations-${new Date().toISOString().split('T')[0]}.csv`;
+              a.download = `registrations-${getGhanaTodayISO()}.csv`;
               document.body.appendChild(a);
               a.click();
               document.body.removeChild(a);
@@ -609,7 +613,7 @@ const RegistrationsPage: React.FC = () => {
                           <div className="timeline-content">
                             <div className="timeline-header">
                               <span className="timeline-status">{entry.status}</span>
-                              <span className="timeline-date">{new Date(entry.created_at || entry.date).toLocaleString()}</span>
+                              <span className="timeline-date">{formatGhanaDateTime(entry.created_at || entry.date)}</span>
                             </div>
                             <p className="timeline-note">{entry.note}</p>
                           </div>

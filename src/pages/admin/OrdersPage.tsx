@@ -18,6 +18,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../services/supabase';
 import { orderApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
+import { formatGhanaDate, formatGhanaDateTime } from '../../utils/date';
 import './OrdersPage.css';
 
 const statusColors: Record<string, string> = {
@@ -33,22 +34,6 @@ const statusBgColors: Record<string, string> = {
   rejected: '#fce4ec',
   cancelled: '#f5f5f5',
 };
-
-// Ghana is UTC+0, so all timestamps from Supabase are already correct
-// but toLocaleString() uses the DEVICE timezone — force Africa/Accra
-const formatGhanaDate = (dateStr: string) =>
-  new Date(dateStr).toLocaleDateString('en-GB', { timeZone: 'Africa/Accra' });
-
-const formatGhanaDateTime = (dateStr: string) =>
-  new Date(dateStr).toLocaleString('en-GB', {
-    timeZone: 'Africa/Accra',
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  });
 
 const OrdersPage: React.FC = () => {
   const queryClient = useQueryClient();

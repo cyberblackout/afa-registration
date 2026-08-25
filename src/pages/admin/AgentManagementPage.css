@@ -195,10 +195,23 @@
 .am-empty ion-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.4; }
 .am-empty p { font-size: 14px; margin: 0; }
 
+ion-modal {
+  --width: 90vw;
+  --height: 85vh;
+  --max-width: 500px;
+  --max-height: 85vh;
+  --border-radius: 16px;
+}
+
+ion-modal .sc-ion-modal-md-h {
+  border-radius: 16px;
+}
+
 .am-modal {
   padding: 24px;
-  max-width: 500px;
-  margin: 0 auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .am-modal h2 {
@@ -206,12 +219,17 @@
   font-weight: 700;
   margin: 0 0 20px;
   color: var(--text-primary);
+  flex-shrink: 0;
 }
 
 .am-modal-body {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  flex: 1;
+  min-height: 0;
 }
 
 .am-modal-info {
@@ -229,3 +247,23 @@
 }
 
 .am-modal-actions ion-button { flex: 1; }
+
+@media (max-width: 767px) {
+  ion-modal {
+    --width: 100vw;
+    --height: 100vh;
+    --max-width: 100vw;
+    --max-height: 100vh;
+    --border-radius: 0;
+    --background: white;
+  }
+
+  ion-modal .sc-ion-modal-md-h {
+    border-radius: 0;
+  }
+
+  .am-modal {
+    padding: 1rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+  }
+}

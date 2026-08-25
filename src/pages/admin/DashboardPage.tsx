@@ -20,6 +20,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../../services/supabase';
 import { adminDashboardApi, type AdminDashboardStats } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
+import { formatGhanaDate } from '../../utils/date';
 import './DashboardPage.css';
 
 const statusConfig = {
@@ -212,7 +213,7 @@ const DashboardPage: React.FC = () => {
                         </div>
                       </div>
                       <div className="recent-row-mid">
-                        <span className="recent-date">{new Date(reg.created_at).toLocaleDateString()}</span>
+                        <span className="recent-date">{formatGhanaDate(reg.created_at)}</span>
                         <span className={`recent-status ${status.className}`}>
                           <IonIcon icon={status.icon} />
                           {status.label}

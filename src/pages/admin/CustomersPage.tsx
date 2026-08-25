@@ -34,11 +34,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../services/supabase';
 import { adminCustomerApi, walletApi, orderApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
+import { formatGhanaDate } from '../../utils/date';
 import './CustomersPage.css';
-
-// Ghana is UTC+0 — force Africa/Accra timezone instead of device local
-const formatGhanaDate = (dateStr: string) =>
-  new Date(dateStr).toLocaleDateString('en-GB', { timeZone: 'Africa/Accra' });
 
 const CustomersPage: React.FC = () => {
   const queryClient = useQueryClient();

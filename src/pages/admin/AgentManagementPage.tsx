@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { agentApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
+import { formatGhanaDate, formatGhanaDateTime } from '../../utils/date';
 import './AgentManagementPage.css';
 
 const AgentManagementPage: React.FC = () => {
@@ -206,7 +207,7 @@ const AgentManagementPage: React.FC = () => {
                       </td>
                       <td>{agent.registrations_count || 0}</td>
                       <td>GHS {Number(agent.earnings || 0).toFixed(2)}</td>
-                      <td>{agent.agent_since ? new Date(agent.agent_since).toLocaleDateString() : '—'}</td>
+                      <td>{agent.agent_since ? formatGhanaDate(agent.agent_since) : '—'}</td>
                       <td>
                         <div className="am-actions">
                           {agent.agent_status === 'active' ? (
@@ -268,7 +269,7 @@ const AgentManagementPage: React.FC = () => {
                           {app.status === 'pending' ? 'Pending' : app.status === 'approved' ? 'Approved' : 'Rejected'}
                         </span>
                       </td>
-                      <td>{new Date(app.created_at).toLocaleDateString()}</td>
+                      <td>{formatGhanaDate(app.created_at)}</td>
                       <td>
                         {app.status === 'pending' && (
                           <div className="am-actions">
@@ -299,7 +300,7 @@ const AgentManagementPage: React.FC = () => {
                   <div><strong>Email:</strong> {selectedApp.user_email}</div>
                   <div><strong>Phone:</strong> {selectedApp.user_phone}</div>
                   <div><strong>Amount Paid:</strong> GHS {Number(selectedApp.amount_paid).toFixed(2)}</div>
-                  <div><strong>Applied:</strong> {new Date(selectedApp.created_at).toLocaleString()}</div>
+                  <div><strong>Applied:</strong> {formatGhanaDateTime(selectedApp.created_at)}</div>
                 </div>
                 <IonItem>
                   <IonTextarea

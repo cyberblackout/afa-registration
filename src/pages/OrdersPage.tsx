@@ -24,6 +24,14 @@ import { useAuthStore } from '../store/authStore';
 import { orderApi } from '../services/api';
 import { Order } from '../types';
 import DashboardLayout from '../layouts/DashboardLayout';
+import {
+  formatGhanaDate,
+  formatGhanaDateTime,
+  isGhanaSameDay,
+  isGhanaLastWeek,
+  isGhanaSameMonth,
+  getGhanaTodayISO,
+} from '../utils/date';
 import './OrdersPage.css';
 
 const ITEMS_PER_PAGE = 6;
@@ -89,15 +97,12 @@ const OrdersPage: React.FC = () => {
 
     let matchesDate = true;
     if (dateFilter !== 'All') {
-      const orderDate = new Date(order.created_at);
-      const now = new Date();
       if (dateFilter === 'Today') {
-        matchesDate = orderDate.toDateString() === now.toDateString();
+        matchesDate = isGhanaSameDay(order.created_at);
       } else if (dateFilter === 'This Week') {
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        matchesDate = orderDate >= weekAgo;
+        matchesDate = isGhanaLastWeek(order.created_at);
       } else if (dateFilter === 'This Month') {
-        matchesDate = orderDate.getMonth() === now.getMonth() && orderDate.getFullYear() === now.getFullYear();
+        matchesDate = isGhanaSameMonth(order.created_at);
       }
     }
 
@@ -288,7 +293,7 @@ const OrdersPage: React.FC = () => {
                     <div className="order-card-row">
                       <div className="order-card-field">
                         <span className="field-label">Date</span>
-                        <span className="field-value">{new Date(order.created_at).toLocaleDateString()}</span>
+                        <span className="field-value">{formatGhanaDate(order.created_at)}</span>
                       </div>
                       <div className="order-card-field">
                         <span className="field-label">Amount</span>
@@ -320,7 +325,7 @@ const OrdersPage: React.FC = () => {
                       <span className="td td-id">{order.id}</span>
                       <span className="td td-customer">{order.profiles?.full_name || '—'}</span>
                       <span className="td td-phone">{order.profiles?.phone || '—'}</span>
-                      <span className="td td-date">{new Date(order.created_at).toLocaleDateString()}</span>
+                      <span className="td td-date">{formatGhanaDate(order.created_at)}</span>
                       <span className="td td-status">
                         <span
                           className="status-badge"
@@ -426,7 +431,7 @@ const OrdersPage: React.FC = () => {
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Date Placed</span>
-                      <span className="detail-value">{new Date(selectedOrder.created_at).toLocaleString()}</span>
+                      <span className="detail-value">{formatGhanaDateTime(selectedOrder.created_at)}</span>
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Status</span>
@@ -528,7 +533,7 @@ const OrdersPage: React.FC = () => {
                             `Customer: ${selectedOrder.profiles?.full_name || 'N/A'}`,
                             `Amount: GH₵ ${selectedOrder.amount.toFixed(2)}`,
                             `Status: ${selectedOrder.status}`,
-                            `Date: ${new Date(selectedOrder.created_at).toLocaleString()}`,
+                            `Date: ${formatGhanaDateTime(selectedOrder.created_at)}`,
                           ].join('\n');
                           const blob = new Blob([content], { type: 'text/plain' });
                           const url = URL.createObjectURL(blob);

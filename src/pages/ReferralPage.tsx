@@ -15,6 +15,7 @@ import { supabase } from '../services/supabase';
 import { referralApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import DashboardLayout from '../layouts/DashboardLayout';
+import { formatGhanaDate } from '../utils/date';
 import './ReferralPage.css';
 
 const ReferralPage: React.FC = () => {
@@ -312,7 +313,7 @@ const ReferralPage: React.FC = () => {
                   {referrals.map((r: any) => (
                     <div key={r.id} className="rr-table-row">
                       <span className="rr-table-customer">{r.referred_profile?.full_name || r.referred_id?.slice(0, 8) || 'Pending'}</span>
-                      <span className="rr-table-date">{new Date(r.created_at).toLocaleDateString()}</span>
+                      <span className="rr-table-date">{formatGhanaDate(r.created_at)}</span>
                       <span>{statusBadge(r.status)}</span>
                       <span className="rr-table-amount">GHS {Number(r.reward_amount || 0).toFixed(2)}</span>
                     </div>
@@ -347,7 +348,7 @@ const ReferralPage: React.FC = () => {
                     <div key={t.id} className="rr-table-row">
                       <span className="rr-table-customer">{t.description}</span>
                       <span className="rr-table-amount rr-table-credit">+GHS {Number(t.amount).toFixed(2)}</span>
-                      <span className="rr-table-date">{new Date(t.created_at).toLocaleDateString()}</span>
+                      <span className="rr-table-date">{formatGhanaDate(t.created_at)}</span>
                       <span className="rr-table-date">{t.reference || '---'}</span>
                     </div>
                   ))}
