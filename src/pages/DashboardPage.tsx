@@ -39,7 +39,7 @@ const DashboardPage: React.FC = () => {
     queryKey: ['wallet', user?.id],
     queryFn: async () => {
       const data = await profileApi.get(user!.id);
-      return (data as any)?.wallet_balance ?? 0;
+      return Number((data as any)?.wallet_balance ?? 0);
     },
     enabled: !!user?.id,
   });

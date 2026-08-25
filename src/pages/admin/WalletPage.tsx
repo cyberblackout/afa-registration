@@ -62,7 +62,7 @@ const WalletPage: React.FC = () => {
     enabled: !!expandedId,
   });
 
-  const totalBalance = profiles.reduce((sum: number, p: any) => sum + (p.wallet_balance || 0), 0);
+  const totalBalance = profiles.reduce((sum: number, p: any) => sum + Number(p.wallet_balance || 0), 0);
 
   const filtered = profiles.filter((p: any) =>
     p.full_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -170,7 +170,7 @@ const WalletPage: React.FC = () => {
                           <span className="wallet-email">{profile.email}</span>
                         </div>
                         <div className="wallet-meta">
-                          <span className="wallet-balance">GH₵ {(profile.wallet_balance || 0).toFixed(2)}</span>
+                          <span className="wallet-balance">GH₵ {Number(profile.wallet_balance || 0).toFixed(2)}</span>
                           <span className={`wallet-status ${profile.wallet_status !== 'frozen' ? 'ws-active' : 'ws-frozen'}`}>
                             {profile.wallet_status === 'frozen' ? 'Frozen' : 'Active'}
                           </span>
@@ -256,7 +256,7 @@ const WalletPage: React.FC = () => {
             <div className="tx-user-avatar">{(selectedWallet?.full_name || 'U').charAt(0)}</div>
             <div>
               <span className="tx-user-name">{selectedWallet?.full_name}</span>
-              <span className="tx-user-balance">Current Balance: GH₵ {(selectedWallet?.wallet_balance || 0).toFixed(2)}</span>
+              <span className="tx-user-balance">Current Balance: GH₵ {Number(selectedWallet?.wallet_balance || 0).toFixed(2)}</span>
             </div>
           </div>
           <IonItem>

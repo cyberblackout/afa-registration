@@ -387,7 +387,7 @@ const WalletPage: React.FC = () => {
         .select('full_name, email, phone, wallet_balance')
         .eq('id', user!.id)
         .single();
-      const balance = profile?.wallet_balance ?? 0;
+      const balance = Number(profile?.wallet_balance ?? 0);
       if (profile?.email) {
         const { sendEmail, topUpEmailHtml } = await import('../services/email');
         const now = getGhanaTodayISO();
@@ -466,7 +466,7 @@ const WalletPage: React.FC = () => {
             <span className="balance-label">Wallet Balance</span>
           </div>
           <div className="balance-amount">
-            {balanceLoading ? '...' : `GH₵ ${(balanceData?.wallet_balance ?? 0).toFixed(2)}`}
+            {balanceLoading ? '...' : `GH₵ ${Number(balanceData?.wallet_balance ?? 0).toFixed(2)}`}
           </div>
           <IonButton
             expand="block"

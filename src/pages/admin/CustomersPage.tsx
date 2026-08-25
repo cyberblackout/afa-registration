@@ -195,7 +195,7 @@ const CustomersPage: React.FC = () => {
                                 <IonIcon icon={walletOutline} className="detail-icon" />
                                 <div>
                                   <span className="detail-label">Wallet Balance</span>
-                                  <span className="detail-value">GH₵ {(customer.wallet_balance || 0).toFixed(2)}</span>
+                                  <span className="detail-value">GH₵ {Number(customer.wallet_balance || 0).toFixed(2)}</span>
                                 </div>
                               </div>
                               <div className="detail-item">

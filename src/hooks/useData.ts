@@ -91,7 +91,7 @@ export function useWalletBalance() {
     queryKey: ['walletBalance', user?.id],
     queryFn: async () => {
       const r = await db.getWalletBalance(user!.id);
-      return r.data?.wallet_balance ?? 0;
+      return Number(r.data?.wallet_balance ?? 0);
     },
     enabled: !!user,
   });
