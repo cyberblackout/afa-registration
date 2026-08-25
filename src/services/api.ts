@@ -41,14 +41,10 @@ async function invoke<T = unknown>(
 // PROFILE
 // ============================================================
 export const profileApi = {
-  get: (userId?: string): Promise<any> =>
-    invoke<any>('get-profile', undefined, 'GET')
-      .then((d: any) => {
-        if (userId && d && d.id !== userId) {
-          return invoke<any>('get-profile', undefined, 'GET');
-        }
-        return d;
-      }),
+  get: (userId?: string): Promise<any> => {
+    const qs = userId ? `?user_id=${userId}` : '';
+    return invoke<any>(`get-profile${qs}`, undefined, 'GET');
+  },
 
   update: (data: Record<string, unknown>): Promise<any> =>
     invoke<any>('update-profile', data),
@@ -497,16 +493,6 @@ export const rolePermissionsApi = {
 export const whatsappConfigApi = {
   get: async () => {
     const { data } = await supabase.from('whatsapp_config').select('*');
-    return data || [];
-  },
-};
-
-// ============================================================
-// PAYMENT CONFIG (public read)
-// ============================================================
-export const paymentConfigApi = {
-  get: async () => {
-    const { data } = await supabase.from('payment_config').select('*');
     return data || [];
   },
 };

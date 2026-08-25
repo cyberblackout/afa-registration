@@ -1,10 +1,11 @@
 import React from 'react';
-import { IonPage, IonIcon, IonToast } from '@ionic/react';
+import { IonPage, IonIcon } from '@ionic/react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
 import { profileApi, orderApi, referralApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import { formatCurrency } from '../utils/number';
 import DashboardLayout from '../layouts/DashboardLayout';
 import MTNAFABanner from '../components/MTNAFABanner';
 import { motion } from 'framer-motion';
@@ -29,18 +30,9 @@ const quickActions = [
 const DashboardPage: React.FC = () => {
   const { user } = useAuthStore();
 
-  const { data: profile, isLoading: profileLoading } = useQuery({
+  const { data: profile } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: () => profileApi.get(user!.id),
-    enabled: !!user?.id,
-  });
-
-  const { data: walletData } = useQuery({
-    queryKey: ['wallet', user?.id],
-    queryFn: async () => {
-      const data = await profileApi.get(user!.id);
-      return Number((data as any)?.wallet_balance ?? 0);
-    },
     enabled: !!user?.id,
   });
 
@@ -66,7 +58,7 @@ const DashboardPage: React.FC = () => {
     enabled: !!user?.id,
   });
 
-  const balance = walletData ?? 0;
+  const balance = Number((profile as any)?.wallet_balance ?? 0);
   const orders = ordersData ?? [];
   const recentOrdersCount = orders.length;
 
@@ -98,7 +90,7 @@ const DashboardPage: React.FC = () => {
                 <IonIcon icon={walletOutline} className="stat-icon wallet-icon" />
                 <span className="stat-label">Wallet Balance</span>
               </div>
-              <p className="stat-value">GH₵ {Number(balance ?? 0).toFixed(2)}</p>
+              <p className="stat-value">{formatCurrency(balance)}</p>
               <a href="/wallet" className="stat-btn wallet-btn">Top Up Wallet</a>
             </motion.div>
 
@@ -140,7 +132,7 @@ const DashboardPage: React.FC = () => {
                 <IonIcon icon={giftOutline} className="stat-icon" style={{ color: '#8b5cf6' }} />
                 <span className="stat-label">Referral Earnings</span>
               </div>
-              <p className="stat-value" style={{ fontSize: 22 }}>GH₵ {Number((referralStats as any)?.total_earned || 0).toFixed(2)}</p>
+              <p className="stat-value" style={{ fontSize: 22 }}>{formatCurrency((referralStats as any)?.total_earned)}</p>
               <p className="stat-sub" style={{ fontSize: 12, color: '#6b7280', margin: '0 0 10px' }}>
                 {(referralStats as any)?.successful || 0} successful · {(referralStats as any)?.pending || 0} pending
               </p>
