@@ -262,7 +262,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh }
   );
 
   return (
-    <div className="dashboard-layout">
+    <>
       <nav className="dashboard-navbar">
         <div className="navbar-left">
           <Link to="/notifications" className="notification-btn" aria-label="Notifications">
@@ -324,7 +324,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh }
           <IonIcon icon={logoWhatsapp} />
         </a>
       )}
-    </div>
+    </>
   );
 };
 

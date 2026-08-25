@@ -89,7 +89,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
   };
 
   return (
-    <div className="admin-layout">
+    <>
       <nav className="admin-navbar">
         <div className="admin-navbar-left">
           <button className="admin-hamburger" onClick={toggle}>
@@ -190,7 +190,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
           <IonIcon icon={logoWhatsapp} />
         </a>
       )}
-    </div>
+    </>
   );
 };
 

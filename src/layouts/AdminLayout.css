@@ -16,13 +16,6 @@
   --admin-info: #3b82f6;
 }
 
-.admin-layout {
-  display: flex;
-  height: 100vh;
-  overflow: hidden;
-  background: var(--admin-bg);
-}
-
 .admin-navbar {
   position: fixed;
   top: 0;
@@ -182,15 +175,10 @@
 
 .admin-main {
   --background: var(--admin-bg);
-  --padding-top: 1.5rem;
+  --padding-top: calc(var(--admin-navbar-height) + 1.5rem);
   --padding-bottom: 1.5rem;
-  --padding-start: 1.5rem;
+  --padding-start: calc(var(--admin-sidebar-width) + 1.5rem);
   --padding-end: 1.5rem;
-  flex: 1;
-  margin-left: var(--admin-sidebar-width);
-  margin-top: var(--admin-navbar-height);
-  height: calc(100vh - var(--admin-navbar-height));
-  width: calc(100% - var(--admin-sidebar-width));
 }
 
 ion-refresher {
@@ -219,9 +207,7 @@ ion-refresher {
   }
 
   .admin-main {
-    margin-left: 0;
-    width: 100%;
-    --padding-top: 1rem;
+    --padding-top: calc(var(--admin-navbar-height) + 1rem);
     --padding-bottom: 1rem;
     --padding-start: 1rem;
     --padding-end: 1rem;
