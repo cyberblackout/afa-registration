@@ -4,6 +4,13 @@ import { verifyAuth, getSupabaseAdmin, jsonResp, errorResp, successResp, getCors
 const PAYSTACK_SECRET = Deno.env.get("PAYSTACK_SECRET_KEY") ?? "";
 const PAYSTACK_BASE = "https://api.paystack.co";
 
+// Fail early if secret key is missing or still in test mode
+if (!PAYSTACK_SECRET) {
+  console.error("CRITICAL: PAYSTACK_SECRET_KEY env var is not set");
+} else if (PAYSTACK_SECRET.startsWith("sk_test_")) {
+  console.warn("WARNING: PAYSTACK_SECRET_KEY is a TEST key. Frontend must use pk_test_ or update to sk_live_");
+}
+
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") {
@@ -13,6 +20,10 @@ Deno.serve(async (req) => {
 
   if (!PAYSTACK_SECRET) {
     return errorResp("Payment system not configured", 500, origin);
+  }
+
+  if (PAYSTACK_SECRET.startsWith("sk_test_")) {
+    console.warn("PAYSTACK_SECRET_KEY is a test key. Frontend must use pk_test_ to match.");
   }
 
   const auth = await verifyAuth(req, ["user", "agent", "admin"]);

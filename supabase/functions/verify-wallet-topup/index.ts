@@ -3,6 +3,10 @@ import { verifyAuth, getSupabaseAdmin, jsonResp, errorResp, successResp, getCors
 const PAYSTACK_SECRET = Deno.env.get("PAYSTACK_SECRET_KEY") ?? "";
 const PAYSTACK_BASE = "https://api.paystack.co";
 
+if (PAYSTACK_SECRET && PAYSTACK_SECRET.startsWith("sk_test_")) {
+  console.warn("WARNING: PAYSTACK_SECRET_KEY is a TEST key — verify transactions will fail against live keys");
+}
+
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") {

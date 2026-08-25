@@ -255,7 +255,6 @@ const ReferralPage: React.FC = () => {
                 <span className="rr-earnings-label">Total Rewards Earned</span>
                 <span className="rr-earnings-value">GHS {Number(statsData.total_earned).toFixed(2)}</span>
               </div>
-              <div className="rr-earnings-divider" />
               <div className="rr-earnings-item">
                 <div className="rr-earnings-icon">
                   <Clock size={20} />
@@ -263,7 +262,6 @@ const ReferralPage: React.FC = () => {
                 <span className="rr-earnings-label">Pending Rewards</span>
                 <span className="rr-earnings-value rr-earnings-pending">GHS {Number(pendingRewards).toFixed(2)}</span>
               </div>
-              <div className="rr-earnings-divider" />
               <div className="rr-earnings-item">
                 <div className="rr-earnings-icon">
                   <TrendingUp size={20} />
@@ -290,9 +288,10 @@ const ReferralPage: React.FC = () => {
                   <div className="rr-step-icon">
                     <IconEl size={24} />
                   </div>
-                  <h3>{s.title}</h3>
-                  <p>{s.desc}</p>
-                  {i < steps.length - 1 && <div className="rr-step-arrow"><ChevronRight size={20} /></div>}
+                  <div className="rr-step-content">
+                    <h3>{s.title}</h3>
+                    <p>{s.desc}</p>
+                  </div>
                 </div>
               );
             })}
@@ -311,6 +310,7 @@ const ReferralPage: React.FC = () => {
                 <p>No referrals yet. Share your link to start earning!</p>
               </div>
             ) : (
+              <>
               <div className="rr-table-wrap">
                 <div className="rr-table">
                   <div className="rr-table-header">
@@ -329,6 +329,21 @@ const ReferralPage: React.FC = () => {
                   ))}
                 </div>
               </div>
+              <div className="rr-mobile-list">
+                {referrals.map((r: any) => (
+                  <div key={r.id} className="rr-mobile-card">
+                    <div className="rr-mobile-card-top">
+                      <span className="rr-mobile-card-name">{r.referred_profile?.full_name || r.referred_id?.slice(0, 12) || 'Pending'}</span>
+                      {statusBadge(r.status)}
+                    </div>
+                    <div className="rr-mobile-card-bottom">
+                      <span className="rr-mobile-card-date">{formatGhanaDate(r.created_at)}</span>
+                      <span className="rr-mobile-card-amount">GHS {Number(r.reward_amount || 0).toFixed(2)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              </>
             )}
           </div>
         </div>
@@ -345,6 +360,7 @@ const ReferralPage: React.FC = () => {
                 <p>No reward transactions yet.</p>
               </div>
             ) : (
+              <>
               <div className="rr-table-wrap">
                 <div className="rr-table">
                   <div className="rr-table-header">
@@ -363,6 +379,21 @@ const ReferralPage: React.FC = () => {
                   ))}
                 </div>
               </div>
+              <div className="rr-mobile-list">
+                {transactions.map((t: any) => (
+                  <div key={t.id} className="rr-mobile-card">
+                    <div className="rr-mobile-card-top">
+                      <span className="rr-mobile-card-name">{t.description}</span>
+                      <span className="rr-mobile-card-amount rr-table-credit">+GHS {Number(t.amount).toFixed(2)}</span>
+                    </div>
+                    <div className="rr-mobile-card-bottom">
+                      <span className="rr-mobile-card-date">{formatGhanaDate(t.created_at)}</span>
+                      <span className="rr-mobile-card-ref">{t.reference || '---'}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              </>
             )}
           </div>
         </div>

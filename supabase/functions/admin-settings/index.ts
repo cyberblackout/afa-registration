@@ -55,7 +55,6 @@ Deno.serve(async (req) => {
 
     // Filter out sensitive keys that must never be exposed via API
     const SENSITIVE_KEYS = [
-      "paystack_secret_key",
       "resend_api_key",
       "sms_api_key",
       "vapid_private_key",

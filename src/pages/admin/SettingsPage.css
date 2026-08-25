@@ -1,11 +1,11 @@
 .admin-settings-page {
-  max-width: 800px;
+  max-width: 860px;
   margin: 0 auto;
   padding: 1.5rem;
 }
 
 .page-header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.75rem;
 }
 
 .page-title-row {
@@ -16,30 +16,55 @@
 
 .page-icon {
   font-size: 1.75rem;
-  color: #FFCB05;
+  color: var(--mtn-yellow);
 }
 
 .page-title-row h1 {
   margin: 0;
   font-size: 1.5rem;
   font-weight: 800;
-  color: #1a1a2e;
+  color: var(--admin-text);
+}
+
+.unsaved-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-left: 0.75rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 100px;
+  background: var(--mtn-yellow-light, #FFF3CD);
+  color: var(--admin-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+  animation: pulse-unsaved 2s ease-in-out infinite;
+}
+
+.unsaved-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mtn-yellow);
+}
+
+@keyframes pulse-unsaved {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
 }
 
 .settings-sections {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .settings-card {
   border-radius: 16px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   margin: 0;
-}
-
-.settings-card ion-card-content {
+  border-left: 4px solid var(--mtn-yellow);
   padding: 1.5rem;
+  background: var(--admin-card-bg);
 }
 
 .settings-card-header {
@@ -48,52 +73,234 @@
   gap: 0.75rem;
   margin-bottom: 1.25rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--admin-border);
+}
+
+.section-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--mtn-yellow-light, #FFF3CD);
+  flex-shrink: 0;
 }
 
 .section-icon {
-  font-size: 1.3rem;
-  color: #FFCB05;
+  font-size: 1.15rem;
+  color: var(--mtn-yellow);
 }
 
 .settings-card-header h2 {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--admin-text);
 }
 
 .settings-fields {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1rem;
   margin-bottom: 1.25rem;
 }
 
-.settings-fields ion-item {
-  --background: #fafafa;
-  --border-radius: 10px;
-  --padding-start: 1rem;
-  --padding-end: 1rem;
-  --inner-padding-end: 0;
-  border-radius: 10px;
-  font-size: 0.9rem;
+.settings-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
 }
 
-.settings-fields ion-item ion-label {
+.settings-field label {
+  font-size: 0.8125rem;
   font-weight: 600;
-  font-size: 0.75rem;
-  color: #666;
-  margin-bottom: 0.25rem;
+  color: var(--admin-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
-.settings-fields ion-item ion-input,
-.settings-fields ion-item ion-textarea,
-.settings-fields ion-item ion-select {
-  font-size: 0.9rem;
-  --color: #000000;
-  --padding-top: 0.5rem;
-  --padding-bottom: 0.5rem;
+.settings-field .field-input-wrapper {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--admin-border);
+  border-radius: 10px;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  overflow: hidden;
+}
+
+.settings-field .field-input-wrapper:focus-within {
+  border-color: var(--mtn-yellow);
+  box-shadow: 0 0 0 3px rgba(255, 203, 5, 0.15);
+}
+
+.settings-field .field-input-wrapper.field-error {
+  border-color: var(--admin-danger);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.field-currency-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--admin-text-secondary);
+  background: var(--admin-bg);
+  border-right: 1.5px solid var(--admin-border);
+  height: 100%;
+  min-height: 44px;
+  user-select: none;
+}
+
+.settings-field .field-input-wrapper input,
+.settings-field .field-input-wrapper textarea {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.9375rem;
+  color: var(--admin-text);
+  padding: 0.65rem 0.85rem;
+  font-family: inherit;
+  min-height: 44px;
+  width: 100%;
+}
+
+.settings-field .field-input-wrapper textarea {
+  min-height: 72px;
+  resize: vertical;
+}
+
+.settings-field .field-input-wrapper input::placeholder,
+.settings-field .field-input-wrapper textarea::placeholder {
+  color: var(--admin-text-secondary);
+  opacity: 0.6;
+}
+
+.field-helper {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  font-size: 0.8125rem;
+  color: var(--admin-text-secondary);
+  margin-top: 0.15rem;
+  line-height: 1.4;
+}
+
+.field-helper ion-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+  color: var(--admin-info);
+}
+
+.field-helper code {
+  background: var(--admin-bg);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+
+.field-error-text {
+  font-size: 0.8125rem;
+  color: var(--admin-danger);
+  margin-top: 0.15rem;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid var(--admin-border);
+  border-radius: 10px;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.settings-toggle-row:focus-within {
+  border-color: var(--mtn-yellow);
+  box-shadow: 0 0 0 3px rgba(255, 203, 5, 0.15);
+}
+
+.settings-toggle-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.settings-toggle-label span:first-child {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--admin-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.settings-toggle-label span:last-child {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--admin-text);
+}
+
+.settings-toggle-row ion-toggle {
+  --background: var(--admin-border);
+  --background-checked: var(--mtn-yellow);
+  --handle-background: #fff;
+  --handle-background-checked: #fff;
+}
+
+.settings-subsection {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--admin-border);
+}
+
+.settings-subsection-title {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--admin-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.75rem;
+}
+
+.section-save-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.section-save-btn {
+  --background: var(--mtn-yellow);
+  --color: var(--admin-text);
+  --border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.875rem;
+  height: 40px;
+  --padding-start: 1.25rem;
+  --padding-end: 1.25rem;
+  --box-shadow: 0 2px 8px rgba(255, 203, 5, 0.3);
+  text-transform: none;
+}
+
+.section-save-btn:disabled {
+  opacity: 0.6;
+  --box-shadow: none;
+}
+
+.loading-text {
+  font-size: 0.8125rem;
+  color: var(--admin-text-secondary);
+  font-style: italic;
 }
 
 .env-toggle {
@@ -106,27 +313,60 @@
 .env-label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #999;
+  color: var(--admin-text-secondary);
   transition: color 0.2s;
 }
 
 .env-active {
-  color: #1a1a2e;
+  color: var(--admin-text);
 }
 
 .env-toggle ion-toggle {
-  --background: #ddd;
-  --background-checked: #FFCB05;
-  --handle-background: white;
-  --handle-background-checked: white;
+  --background: var(--admin-border);
+  --background-checked: var(--mtn-yellow);
+  --handle-background: #fff;
+  --handle-background-checked: #fff;
 }
 
-.section-save-btn {
-  --background: #FFCB05;
-  --color: #000;
-  --border-radius: 12px;
-  font-weight: 700;
-  font-size: 0.9rem;
-  height: 44px;
-  --box-shadow: 0 4px 12px rgba(255, 203, 5, 0.3);
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  gap: 1rem;
+  color: var(--admin-text-secondary);
+  font-size: 0.9375rem;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--admin-border);
+  border-top-color: var(--mtn-yellow);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .admin-settings-page {
+    padding: 1rem;
+  }
+
+  .settings-card {
+    padding: 1.25rem;
+  }
+
+  .settings-field .field-input-wrapper input,
+  .settings-field .field-input-wrapper textarea {
+    font-size: 16px;
+  }
+
+  .section-save-btn {
+    height: 44px;
+  }
 }

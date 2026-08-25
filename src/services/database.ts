@@ -20,7 +20,6 @@ import {
   auditApi,
   rolePermissionsApi,
   whatsappConfigApi,
-  paymentConfigApi,
   announcementsApi,
 } from './api';
 import { Profile } from '../types';
@@ -396,25 +395,6 @@ export const db = {
   updateWhatsAppConfig: async (key: string, value: string) => {
     try {
       await adminConfigApi.updateWhatsApp({ [key]: value });
-      return { data: null, error: null };
-    } catch (error: any) {
-      return { data: null, error: { message: error.message } };
-    }
-  },
-
-  // PAYMENT CONFIG
-  getPaymentConfig: async () => {
-    try {
-      const data = await paymentConfigApi.get();
-      return { data, error: null };
-    } catch (error: any) {
-      return { data: null, error: { message: error.message } };
-    }
-  },
-
-  updatePaymentConfig: async (key: string, value: string) => {
-    try {
-      await adminConfigApi.updatePayment({ [key]: value });
       return { data: null, error: null };
     } catch (error: any) {
       return { data: null, error: { message: error.message } };
