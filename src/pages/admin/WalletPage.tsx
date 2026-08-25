@@ -51,7 +51,7 @@ const WalletPage: React.FC = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const { data: profiles = [], isLoading } = useQuery({
+  const { data: profiles = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_wallets'],
     queryFn: () => walletApi.adminListUsers() as any,
   });
@@ -149,6 +149,12 @@ const WalletPage: React.FC = () => {
               <div className="empty-state">
                 <IonIcon icon={walletOutline} />
                 <p>Loading wallets...</p>
+              </div>
+            ) : isError ? (
+              <div className="empty-state">
+                <IonIcon icon={walletOutline} />
+                <p>Failed to load wallets. Please try again.</p>
+                <IonButton fill="clear" onClick={() => refetch()}>Retry</IonButton>
               </div>
             ) : (
               <AnimatePresence>

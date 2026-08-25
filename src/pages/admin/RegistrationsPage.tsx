@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   IonIcon,
   IonToast,
+  IonButton,
 } from '@ionic/react';
 import {
   searchOutline,
@@ -76,7 +77,7 @@ const RegistrationsPage: React.FC = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
-  const { data: registrations = [], isLoading } = useQuery({
+  const { data: registrations = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_registrations'],
     queryFn: () => registrationApi.adminList() as any,
   });
@@ -293,6 +294,18 @@ const RegistrationsPage: React.FC = () => {
             >
               <IonIcon icon={documentTextOutline} className="empty-icon" />
               <h3>Loading registrations...</h3>
+            </motion.div>
+          ) : isError ? (
+            <motion.div
+              className="empty-state"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <IonIcon icon={documentTextOutline} className="empty-icon" />
+              <h3>Failed to load registrations</h3>
+              <p>Please try again.</p>
+              <IonButton fill="clear" onClick={() => refetch()}>Retry</IonButton>
             </motion.div>
           ) : paginatedRegs.length === 0 ? (
             <motion.div

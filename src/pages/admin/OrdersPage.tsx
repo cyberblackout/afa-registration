@@ -3,6 +3,7 @@ import {
   IonIcon,
   IonModal,
   IonToast,
+  IonButton,
 } from '@ionic/react';
 import {
   cartOutline,
@@ -44,7 +45,7 @@ const OrdersPage: React.FC = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
-  const { data: orders = [], isLoading } = useQuery({
+  const { data: orders = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_orders'],
     queryFn: () => orderApi.list() as any,
   });
@@ -116,6 +117,12 @@ const OrdersPage: React.FC = () => {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="empty-state">
                 <IonIcon icon={cartOutline} className="empty-icon" />
                 <p>Loading orders...</p>
+              </motion.div>
+            ) : isError ? (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="empty-state">
+                <IonIcon icon={cartOutline} className="empty-icon" />
+                <p>Failed to load orders. Please try again.</p>
+                <IonButton fill="clear" onClick={() => refetch()}>Retry</IonButton>
               </motion.div>
             ) : filtered.length === 0 ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="empty-state">

@@ -155,12 +155,7 @@ const WalletPage: React.FC = () => {
   } = useQuery({
     queryKey: ['wallet-transactions', user?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('wallet_transactions')
-        .select('*')
-        .eq('user_id', user!.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
+      const data = await walletApi.getTransactions();
       return (data || []) as DbTransaction[];
     },
     enabled: !!user?.id,

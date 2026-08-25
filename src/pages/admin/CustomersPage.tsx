@@ -51,7 +51,7 @@ const CustomersPage: React.FC = () => {
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
 
-  const { data: customers = [], isLoading } = useQuery({
+  const { data: customers = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_customers'],
     queryFn: () => adminCustomerApi.list() as any,
   });
@@ -142,6 +142,12 @@ const CustomersPage: React.FC = () => {
             <div className="empty-state">
               <IonIcon icon={peopleOutline} />
               <p>Loading customers...</p>
+            </div>
+          ) : isError ? (
+            <div className="empty-state">
+              <IonIcon icon={peopleOutline} />
+              <p>Failed to load customers. Please try again.</p>
+              <IonButton fill="clear" onClick={() => refetch()}>Retry</IonButton>
             </div>
           ) : (
             <AnimatePresence>
