@@ -69,7 +69,7 @@ const OrdersPage: React.FC = () => {
     setShowModal(true);
   };
 
-  const formatAmount = (amount: number) => `GH₵ ${amount.toFixed(2)}`;
+  const formatAmount = (amount: number) => `GH₵ ${Number(amount ?? 0).toFixed(2)}`;
 
   return (
     <AdminLayout>

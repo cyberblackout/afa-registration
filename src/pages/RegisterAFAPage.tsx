@@ -209,7 +209,7 @@ const RegisterAFAPage: React.FC = () => {
                 </div>
                 <div className="afa-pricing-total">
                   <span className="afa-pricing-badge">TOTAL</span>
-                  <span className="afa-pricing-amount">GH₵ {registrationPrice.toFixed(2)}</span>
+                  <span className="afa-pricing-amount">GH₵ {Number(registrationPrice ?? 0).toFixed(2)}</span>
                 </div>
               </div>
 

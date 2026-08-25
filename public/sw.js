@@ -1,3 +1,23 @@
+const CACHE_VERSION = 'v2';
+
+self.addEventListener('install', function (event) {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', function (event) {
+  event.waitUntil(
+    caches.keys().then(function (names) {
+      return Promise.all(
+        names
+          .filter(function (name) { return name !== CACHE_VERSION; })
+          .map(function (name) { return caches.delete(name); })
+      );
+    }).then(function () {
+      return self.clients.claim();
+    })
+  );
+});
+
 self.addEventListener('push', function (event) {
   const data = event.data?.json() || { title: 'MTN AFA Portal', body: '' };
   const options = {

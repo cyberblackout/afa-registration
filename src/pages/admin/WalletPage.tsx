@@ -94,7 +94,7 @@ const WalletPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['admin_wallets'] });
       queryClient.invalidateQueries({ queryKey: ['admin_wallet_tx'] });
       setShowTxModal(false);
-      setToastMessage(`${txType === 'credit' ? 'Credited' : 'Debited'} GH₵ ${amount.toFixed(2)} ${txType === 'credit' ? 'to' : 'from'} ${selectedWallet.full_name}`);
+      setToastMessage(`${txType === 'credit' ? 'Credited' : 'Debited'} GH₵ ${Number(amount ?? 0).toFixed(2)} ${txType === 'credit' ? 'to' : 'from'} ${selectedWallet.full_name}`);
       setShowToast(true);
     } catch (err: any) {
       setToastMessage(err.message || 'Transaction failed');

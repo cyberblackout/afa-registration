@@ -38,9 +38,9 @@ export function topUpEmailHtml(name: string, amount: number, balance: number, da
             <p style="color:#6b7280;margin:0 0 20px;font-size:14px;line-height:1.5">Your MTN AFA wallet has been successfully credited.</p>
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa;border-radius:10px;padding:20px;margin:0 0 20px">
               <tr><td style="padding:0 0 4px;color:#6b7280;font-size:13px">Amount Credited</td></tr>
-              <tr><td style="padding:0 0 16px;color:#059669;font-size:26px;font-weight:800">GH₵ ${amount.toFixed(2)}</td></tr>
+              <tr><td style="padding:0 0 16px;color:#059669;font-size:26px;font-weight:800">GH₵ ${Number(amount ?? 0).toFixed(2)}</td></tr>
               <tr><td style="padding:0 0 4px;color:#6b7280;font-size:13px">New Wallet Balance</td></tr>
-              <tr><td style="padding:0;color:#1a1a2e;font-size:18px;font-weight:700">GH₵ ${balance.toFixed(2)}</td></tr>
+              <tr><td style="padding:0;color:#1a1a2e;font-size:18px;font-weight:700">GH₵ ${Number(balance ?? 0).toFixed(2)}</td></tr>
             </table>
             <p style="color:#9ca3af;margin:0 0 4px;font-size:12px">Transaction date: ${date}</p>
             <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0">

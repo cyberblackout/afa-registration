@@ -10,7 +10,6 @@ import {
   IonText,
   IonIcon,
   IonToast,
-  IonLoading,
   IonCheckbox,
 } from '@ionic/react';
 import {
@@ -233,11 +232,17 @@ const Login: React.FC = () => {
                 <IonButton
                   type="submit"
                   expand="block"
-                  className="login-button"
+                  className={`login-button ${loading ? 'button-loading' : ''}`}
                   disabled={loading}
                 >
-                  {loading ? 'Signing in...' : 'Sign In'}
-                  {!loading && <IonIcon icon={arrowForward} slot="end" />}
+                  {loading ? (
+                    <span className="btn-spinner" />
+                  ) : (
+                    <>
+                      Sign In
+                      <IonIcon icon={arrowForward} slot="end" />
+                    </>
+                  )}
                 </IonButton>
               </form>
 
@@ -255,7 +260,6 @@ const Login: React.FC = () => {
           </div>
         </div>
 
-        <IonLoading isOpen={loading} message="Signing in..." />
         <IonToast
           isOpen={toast.show}
           message={toast.message}

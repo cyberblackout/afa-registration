@@ -98,7 +98,7 @@ const DashboardPage: React.FC = () => {
                 <IonIcon icon={walletOutline} className="stat-icon wallet-icon" />
                 <span className="stat-label">Wallet Balance</span>
               </div>
-              <p className="stat-value">GH₵ {balance.toFixed(2)}</p>
+              <p className="stat-value">GH₵ {Number(balance ?? 0).toFixed(2)}</p>
               <a href="/wallet" className="stat-btn wallet-btn">Top Up Wallet</a>
             </motion.div>
 

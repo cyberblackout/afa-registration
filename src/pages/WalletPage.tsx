@@ -219,8 +219,9 @@ const WalletPage: React.FC = () => {
   );
 
   const getStatusClass = (status: string) => {
-    if (status === 'Completed') return 'status-completed';
-    if (status === 'Pending') return 'status-pending';
+    const s = (status || '').toLowerCase();
+    if (s === 'completed') return 'status-completed';
+    if (s === 'pending') return 'status-pending';
     return 'status-failed';
   };
 
@@ -247,12 +248,12 @@ const WalletPage: React.FC = () => {
     // Client-side min/max validation (defense in depth — server also validates)
     if (topUpLimits) {
       if (amount < topUpLimits.min) {
-        setTopUpError(`Minimum top-up amount is GH₵${topUpLimits.min.toFixed(2)}`);
+        setTopUpError(`Minimum top-up amount is GH₵${Number(topUpLimits.min ?? 0).toFixed(2)}`);
         setTopUpStep('failed');
         return;
       }
       if (amount > topUpLimits.max) {
-        setTopUpError(`Maximum top-up amount is GH₵${topUpLimits.max.toFixed(2)}`);
+        setTopUpError(`Maximum top-up amount is GH₵${Number(topUpLimits.max ?? 0).toFixed(2)}`);
         setTopUpStep('failed');
         return;
       }
@@ -437,7 +438,7 @@ const WalletPage: React.FC = () => {
   const exportCSV = () => {
     const headers = 'Description,Amount,Date,Status,Payment Method\n';
     const rows = filteredTransactions.map((txn) =>
-      `${txn.description},${txn.type === 'credit' ? '+' : '-'}GH₵${txn.amount.toFixed(2)},${formatGhanaDate(txn.created_at)},${txn.status},${txn.payment_method || 'Wallet'}`
+      `${txn.description},${txn.type === 'credit' ? '+' : '-'}GH₵${Number(txn.amount ?? 0).toFixed(2)},${formatGhanaDate(txn.created_at)},${txn.status},${txn.payment_method || 'Wallet'}`
     ).join('\n');
     const blob = new Blob([headers + rows], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -598,7 +599,7 @@ const WalletPage: React.FC = () => {
                       </div>
                       <div className="txn-right">
                         <span className={`txn-amount ${txn.type === 'credit' ? 'amount-credit' : 'amount-debit'}`}>
-                          {txn.type === 'credit' ? '+' : '-'}GH₵{txn.amount.toFixed(2)}
+                          {txn.type === 'credit' ? '+' : '-'}GH₵{Number(txn.amount ?? 0).toFixed(2)}
                         </span>
                         <span className={`txn-status ${getStatusClass(txn.status)}`}>{txn.status}</span>
                       </div>
@@ -710,7 +711,7 @@ const WalletPage: React.FC = () => {
                     onClick={handleProceed}
                     disabled={getDisplayAmount() <= 0 || topUpLoading}
                   >
-                    {topUpLoading ? 'Opening Paystack...' : `Pay GH₵${getDisplayAmount().toFixed(2)}`}
+                    {topUpLoading ? 'Opening Paystack...' : `Pay GH₵${Number(getDisplayAmount() ?? 0).toFixed(2)}`}
                   </IonButton>
                 </div>
               )}
@@ -727,7 +728,7 @@ const WalletPage: React.FC = () => {
                 <div className="top-up-result result-success">
                   <IonIcon icon={checkmarkCircle} className="result-icon" />
                   <h3>Payment Successful!</h3>
-                  <p>GH₵{paidAmount.toFixed(2)} has been added to your wallet.</p>
+                  <p>GH₵{Number(paidAmount ?? 0).toFixed(2)} has been added to your wallet.</p>
                   <IonButton expand="block" className="proceed-btn" onClick={resetTopUp}>
                     Done
                   </IonButton>

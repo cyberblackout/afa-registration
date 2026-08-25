@@ -364,12 +364,12 @@ const BecomeAgentPage: React.FC = () => {
               <div className="ba-profit-divider" />
               <div className="ba-profit-item">
                 <span className="ba-profit-label">Profit per registration</span>
-                <span className="ba-profit-value ba-profit-accent">GHS {profitPerRegistration.toFixed(2)}</span>
+                <span className="ba-profit-value ba-profit-accent">GHS {Number(profitPerRegistration ?? 0).toFixed(2)}</span>
               </div>
               <div className="ba-profit-divider" />
               <div className="ba-profit-item">
                 <span className="ba-profit-label">Estimated earnings</span>
-                <span className="ba-profit-value ba-profit-highlight">GHS {estimatedEarnings.toFixed(2)}</span>
+                <span className="ba-profit-value ba-profit-highlight">GHS {Number(estimatedEarnings ?? 0).toFixed(2)}</span>
               </div>
             </div>
             <p className="ba-profit-note">The more customers you register, the more you earn.</p>
@@ -408,7 +408,7 @@ const BecomeAgentPage: React.FC = () => {
               <p>Join MTN AFA Agents today and start building your customer network.</p>
               <div className="ba-cta-price-row">
                 <span className="ba-cta-price-label">Registration Fee</span>
-                <span className="ba-cta-price-amount">GHS {agentFee.toFixed(2)}</span>
+                <span className="ba-cta-price-amount">GHS {Number(agentFee ?? 0).toFixed(2)}</span>
                 <span className="ba-cta-price-note">One-time payment, non-refundable</span>
               </div>
               <div className="ba-cta-includes">

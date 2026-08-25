@@ -297,7 +297,7 @@ const OrdersPage: React.FC = () => {
                       </div>
                       <div className="order-card-field">
                         <span className="field-label">Amount</span>
-                        <span className="field-value amount-value">GH₵ {order.amount.toFixed(2)}</span>
+                        <span className="field-value amount-value">GH₵ {Number(order.amount ?? 0).toFixed(2)}</span>
                       </div>
                     </div>
                     <div className="order-card-row">
@@ -348,7 +348,7 @@ const OrdersPage: React.FC = () => {
                           {order.payment_status || 'Unpaid'}
                         </span>
                       </span>
-                      <span className="td td-amount">GH₵ {order.amount.toFixed(2)}</span>
+                      <span className="td td-amount">GH₵ {Number(order.amount ?? 0).toFixed(2)}</span>
                       <span className="td td-action">
                         <button className="view-btn-icon" onClick={(e) => { e.stopPropagation(); openDetail(order); }}>
                           <IonIcon icon={eyeOutline} />
@@ -479,11 +479,11 @@ const OrdersPage: React.FC = () => {
                       <div className="item-info">
                         <span className="item-name">{selectedOrder.description || 'Order'}</span>
                       </div>
-                      <span className="item-price">GH₵ {selectedOrder.amount.toFixed(2)}</span>
+                      <span className="item-price">GH₵ {Number(selectedOrder.amount ?? 0).toFixed(2)}</span>
                     </div>
                     <div className="item-row item-total">
                       <span>Total</span>
-                      <span>GH₵ {selectedOrder.amount.toFixed(2)}</span>
+                      <span>GH₵ {Number(selectedOrder.amount ?? 0).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -508,7 +508,7 @@ const OrdersPage: React.FC = () => {
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Total Amount</span>
-                      <span className="detail-value amount-value">GH₵ {selectedOrder.amount.toFixed(2)}</span>
+                      <span className="detail-value amount-value">GH₵ {Number(selectedOrder.amount ?? 0).toFixed(2)}</span>
                     </div>
                     {selectedOrder.payment_method && (
                       <div className="detail-item">
@@ -531,7 +531,7 @@ const OrdersPage: React.FC = () => {
                             '-----------',
                             `Order ID: ${selectedOrder.id}`,
                             `Customer: ${selectedOrder.profiles?.full_name || 'N/A'}`,
-                            `Amount: GH₵ ${selectedOrder.amount.toFixed(2)}`,
+                            `Amount: GH₵ ${Number(selectedOrder.amount ?? 0).toFixed(2)}`,
                             `Status: ${selectedOrder.status}`,
                             `Date: ${formatGhanaDateTime(selectedOrder.created_at)}`,
                           ].join('\n');

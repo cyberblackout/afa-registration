@@ -94,7 +94,7 @@ const PaymentsPage: React.FC = () => {
     }
   };
 
-  const formatAmount = (amount: number) => `GH₵ ${amount.toFixed(2)}`;
+  const formatAmount = (amount: number) => `GH₵ ${Number(amount ?? 0).toFixed(2)}`;
 
   const statCards = [
     { label: 'Total Collected', value: formatAmount(totalCollected), icon: cashOutline, color: '#2e7d32' },

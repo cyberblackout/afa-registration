@@ -68,7 +68,7 @@ const ReferralManagementPage: React.FC = () => {
             { icon: checkmarkCircle, label: 'Successful', value: analyticsData.successful, color: '#059669' },
             { icon: timeOutline, label: 'Pending', value: analyticsData.pending, color: '#f59e0b' },
             { icon: closeCircle, label: 'Rejected', value: analyticsData.rejected, color: '#dc2626' },
-            { icon: cashOutline, label: 'Rewards Paid', value: `GH₵ ${Number(analyticsData.total_rewards_paid).toFixed(2)}`, color: '#059669' },
+            { icon: cashOutline, label: 'Rewards Paid', value: `GH₵ ${Number(analyticsData.total_rewards_paid ?? 0).toFixed(2)}`, color: '#059669' },
             { icon: trendingUpOutline, label: 'Unique Referrers', value: analyticsData.unique_referrers, color: '#6366f1' },
           ].map((s, i) => (
             <motion.div key={s.label} className="analytics-card" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>

@@ -239,6 +239,25 @@
   --box-shadow: none;
 }
 
+.login-button.button-loading {
+  --background: linear-gradient(135deg, #e6b008, #cc8800);
+  pointer-events: none;
+}
+
+.btn-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2.5px solid rgba(15, 15, 26, 0.25);
+  border-top-color: #0f0f1a;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .forgot-modal {
   background: #1a1a2e;
   border: 1px solid rgba(255, 255, 255, 0.1);

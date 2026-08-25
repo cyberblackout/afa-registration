@@ -10,6 +10,23 @@ interface State {
   error: Error | null;
 }
 
+const CHUNK_LOAD_KEYWORDS = [
+  'ChunkLoadError',
+  'Loading chunk',
+  'Loading CSS chunk',
+  'Failed to fetch dynamically imported module',
+  'Unable to preload CSS',
+  'dynamically imported module',
+  'importing a module failed',
+];
+
+function isChunkLoadError(error: Error): boolean {
+  const msg = (error.message || error.name || '').toLowerCase();
+  return CHUNK_LOAD_KEYWORDS.some((kw) => msg.includes(kw.toLowerCase()));
+}
+
+let hasAutoRetried = false;
+
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
@@ -22,6 +39,11 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught:', error, errorInfo);
+
+    if (isChunkLoadError(error) && !hasAutoRetried) {
+      hasAutoRetried = true;
+      setTimeout(() => window.location.reload(), 300);
+    }
   }
 
   handleRetry = () => {
@@ -37,6 +59,8 @@ export class ErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) {
         return this.props.fallback;
       }
+
+      const isChunk = this.state.error && isChunkLoadError(this.state.error);
 
       return (
         <div
@@ -68,7 +92,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 width: 56,
                 height: 56,
                 borderRadius: '50%',
-                background: 'rgba(239, 68, 68, 0.15)',
+                background: isChunk ? 'rgba(255, 196, 9, 0.15)' : 'rgba(239, 68, 68, 0.15)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -76,7 +100,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 fontSize: 28,
               }}
             >
-              !
+              {isChunk ? '↻' : '!'}
             </div>
             <h2
               style={{
@@ -86,7 +110,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 color: '#ffffff',
               }}
             >
-              Something went wrong
+              {isChunk ? 'Updating app...' : 'Something went wrong'}
             </h2>
             <p
               style={{
@@ -96,9 +120,11 @@ export class ErrorBoundary extends Component<Props, State> {
                 lineHeight: 1.5,
               }}
             >
-              The app encountered an unexpected error. You can try again or reload the page.
+              {isChunk
+                ? 'A new version is available. Reloading to apply updates...'
+                : 'The app encountered an unexpected error. You can try again or reload the page.'}
             </p>
-            {this.state.error && (
+            {this.state.error && !isChunk && (
               <details
                 style={{
                   marginBottom: '1.5rem',
@@ -136,21 +162,23 @@ export class ErrorBoundary extends Component<Props, State> {
               </details>
             )}
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-              <button
-                onClick={this.handleRetry}
-                style={{
-                  padding: '0.625rem 1.25rem',
-                  borderRadius: 10,
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  background: 'transparent',
-                  color: '#e0e0e0',
-                  fontSize: '0.875rem',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                }}
-              >
-                Try Again
-              </button>
+              {!isChunk && (
+                <button
+                  onClick={this.handleRetry}
+                  style={{
+                    padding: '0.625rem 1.25rem',
+                    borderRadius: 10,
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: 'transparent',
+                    color: '#e0e0e0',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Try Again
+                </button>
+              )}
               <button
                 onClick={this.handleReload}
                 style={{
@@ -164,7 +192,7 @@ export class ErrorBoundary extends Component<Props, State> {
                   cursor: 'pointer',
                 }}
               >
-                Reload Page
+                {isChunk ? 'Reload Now' : 'Reload Page'}
               </button>
             </div>
           </div>

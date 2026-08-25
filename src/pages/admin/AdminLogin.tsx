@@ -10,7 +10,6 @@ import {
   IonText,
   IonIcon,
   IonToast,
-  IonLoading,
 } from '@ionic/react';
 import { shieldCheckmarkOutline, eyeOutline, eyeOffOutline, arrowForward } from 'ionicons/icons';
 import { motion } from 'framer-motion';
@@ -153,9 +152,15 @@ const AdminLogin: React.FC = () => {
                 </IonItem>
               </div>
 
-              <IonButton type="submit" expand="block" className="admin-login-btn" disabled={loading}>
-                {loading ? 'Signing in...' : 'Sign In'}
-                {!loading && <IonIcon icon={arrowForward} slot="end" />}
+              <IonButton type="submit" expand="block" className={`admin-login-btn ${loading ? 'button-loading' : ''}`} disabled={loading}>
+                {loading ? (
+                  <span className="btn-spinner" />
+                ) : (
+                  <>
+                    Sign In
+                    <IonIcon icon={arrowForward} slot="end" />
+                  </>
+                )}
               </IonButton>
             </form>
 
@@ -165,7 +170,6 @@ const AdminLogin: React.FC = () => {
           </motion.div>
         </div>
 
-        <IonLoading isOpen={loading} message="Authenticating..." />
         <IonToast isOpen={toast.show} message={toast.message} duration={3000} onDidDismiss={() => setToast({ show: false, message: '' })} color="danger" />
       </IonContent>
     </IonPage>
