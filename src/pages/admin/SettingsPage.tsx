@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   IonButton,
   IonIcon,
+  IonPage,
   IonToast,
   IonToggle,
 } from '@ionic/react';
@@ -273,12 +274,13 @@ const SettingsPage: React.FC = () => {
   );
 
   return (
-    <AdminLayout onRefresh={async () => {
-      await queryClient.invalidateQueries({ queryKey: ['admin_settings'] });
-      await queryClient.invalidateQueries({ queryKey: ['admin_settings_fees'] });
-      await queryClient.invalidateQueries({ queryKey: ['pricing'] });
-    }}>
-      <div className="admin-settings-page">
+    <IonPage>
+      <AdminLayout onRefresh={async () => {
+        await queryClient.invalidateQueries({ queryKey: ['admin_settings'] });
+        await queryClient.invalidateQueries({ queryKey: ['admin_settings_fees'] });
+        await queryClient.invalidateQueries({ queryKey: ['pricing'] });
+      }}>
+        <div className="admin-settings-page">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
           <div className="page-title-row">
             <IonIcon icon={settingsOutline} className="page-icon" />
@@ -545,7 +547,8 @@ const SettingsPage: React.FC = () => {
         position="top"
         color={toastColor}
       />
-    </AdminLayout>
+      </AdminLayout>
+    </IonPage>
   );
 };
 

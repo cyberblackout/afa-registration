@@ -129,8 +129,9 @@ const CustomersPage: React.FC = () => {
   };
 
   return (
-    <AdminLayout onRefresh={handleRefresh}>
-      <div className="admin-customers-page">
+    <IonPage>
+      <AdminLayout onRefresh={handleRefresh}>
+        <div className="admin-customers-page">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
           <div className="page-title-row">
             <IonIcon icon={peopleOutline} className="page-icon" />
@@ -316,6 +317,7 @@ const CustomersPage: React.FC = () => {
         color="success"
       />
     </AdminLayout>
+    </IonPage>
   );
 };
 

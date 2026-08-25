@@ -127,8 +127,9 @@ const WalletPage: React.FC = () => {
   };
 
   return (
-    <AdminLayout onRefresh={handleRefresh}>
-      <div className="admin-wallet-page">
+    <IonPage>
+      <AdminLayout onRefresh={handleRefresh}>
+        <div className="admin-wallet-page">
         <motion.div
           className="wallet-total-card"
           initial={{ opacity: 0, y: -20 }}
@@ -304,6 +305,7 @@ const WalletPage: React.FC = () => {
         color="success"
       />
     </AdminLayout>
+    </IonPage>
   );
 };
 

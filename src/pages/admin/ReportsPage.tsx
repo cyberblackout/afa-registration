@@ -173,8 +173,9 @@ const ReportsPage: React.FC = () => {
   const reportTypesList: ReportType[] = ['Revenue', 'Registration', 'Payment', 'User'];
 
   return (
-    <AdminLayout onRefresh={handleRefresh}>
-      <div className="admin-reports-page">
+    <IonPage>
+      <AdminLayout onRefresh={handleRefresh}>
+        <div className="admin-reports-page">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
           <div className="page-title-row">
             <IonIcon icon={barChartOutline} className="page-icon" />
@@ -262,6 +263,7 @@ const ReportsPage: React.FC = () => {
 
       <IonToast isOpen={showToast} onDidDismiss={() => setShowToast(false)} message={toastMessage} duration={3000} position="top" color="success" />
     </AdminLayout>
+    </IonPage>
   );
 };
 

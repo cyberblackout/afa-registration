@@ -1,5 +1,5 @@
 import React from 'react';
-import { IonIcon } from '@ionic/react';
+import { IonIcon, IonPage } from '@ionic/react';
 import {
   peopleOutline,
   documentTextOutline,
@@ -95,8 +95,9 @@ const DashboardPage: React.FC = () => {
   ];
 
   return (
-    <AdminLayout onRefresh={handleRefresh}>
-      <div className="admin-dashboard">
+    <IonPage>
+      <AdminLayout onRefresh={handleRefresh}>
+        <div className="admin-dashboard">
         <motion.div
           className="dashboard-header"
           initial={{ opacity: 0, y: -10 }}
@@ -256,6 +257,7 @@ const DashboardPage: React.FC = () => {
         </div>
       </div>
     </AdminLayout>
+    </IonPage>
   );
 };
 

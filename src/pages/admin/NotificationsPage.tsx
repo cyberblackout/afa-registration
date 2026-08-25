@@ -5,6 +5,7 @@ import {
   IonInput,
   IonItem,
   IonLabel,
+  IonPage,
   IonToast,
   IonTextarea,
 } from '@ionic/react';
@@ -254,8 +255,9 @@ const NotificationsPage: React.FC = () => {
   };
 
   return (
-    <AdminLayout onRefresh={handleRefresh}>
-      <div className="admin-notifications-page">
+    <IonPage>
+      <AdminLayout onRefresh={handleRefresh}>
+        <div className="admin-notifications-page">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
           <div className="page-title-row">
             <IonIcon icon={notificationsOutline} className="page-icon" />
@@ -395,6 +397,7 @@ const NotificationsPage: React.FC = () => {
 
       <IonToast isOpen={showToast} onDidDismiss={() => setShowToast(false)} message={toastMessage} duration={4000} position="top" color={toastColor as any} />
     </AdminLayout>
+    </IonPage>
   );
 };
 

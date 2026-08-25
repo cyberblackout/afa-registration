@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   IonIcon,
+  IonPage,
   IonToast,
   IonButton,
 } from '@ionic/react';
@@ -198,8 +199,9 @@ const RegistrationsPage: React.FC = () => {
   };
 
   return (
-    <AdminLayout onRefresh={handleRefresh}>
-      <div className="registrations-page">
+    <IonPage>
+      <AdminLayout onRefresh={handleRefresh}>
+        <div className="registrations-page">
         <motion.div
           className="page-header"
           initial={{ opacity: 0, y: -20 }}
@@ -728,6 +730,7 @@ const RegistrationsPage: React.FC = () => {
 
       <IonToast isOpen={showToast} onDidDismiss={() => setShowToast(false)} message={toastMessage} duration={3000} position="top" color="success" />
     </AdminLayout>
+    </IonPage>
   );
 };
 

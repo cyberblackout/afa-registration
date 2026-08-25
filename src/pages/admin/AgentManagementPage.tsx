@@ -115,8 +115,9 @@ const AgentManagementPage: React.FC = () => {
   };
 
   return (
-    <AdminLayout onRefresh={handleRefresh}>
-      <div className="agent-management-page">
+    <IonPage>
+      <AdminLayout onRefresh={handleRefresh}>
+        <div className="agent-management-page">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="am-header">
           <div className="am-header-left">
             <IonIcon icon={ribbonOutline} className="am-header-icon" />
@@ -345,6 +346,7 @@ const AgentManagementPage: React.FC = () => {
         />
       </div>
     </AdminLayout>
+    </IonPage>
   );
 };
 

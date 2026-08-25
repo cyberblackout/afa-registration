@@ -113,8 +113,9 @@ const PaymentsPage: React.FC = () => {
   };
 
   return (
-    <AdminLayout onRefresh={handleRefresh}>
-      <div className="admin-payments-page">
+    <IonPage>
+      <AdminLayout onRefresh={handleRefresh}>
+        <div className="admin-payments-page">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
           <div className="page-title-row">
             <IonIcon icon={cardOutline} className="page-icon" />
@@ -301,6 +302,7 @@ const PaymentsPage: React.FC = () => {
 
       <IonToast isOpen={showToast} onDidDismiss={() => setShowToast(false)} message={toastMessage} duration={3000} position="top" color="success" />
     </AdminLayout>
+    </IonPage>
   );
 };
 

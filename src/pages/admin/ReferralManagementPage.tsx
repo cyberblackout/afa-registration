@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { IonContent, IonIcon, IonToast, IonButton } from '@ionic/react';
+import { IonContent, IonIcon, IonPage, IonToast, IonButton } from '@ionic/react';
 import {
   peopleOutline, checkmarkCircle, timeOutline, closeCircle,
   cashOutline, trendingUpOutline, refreshOutline,
@@ -58,8 +58,9 @@ const ReferralManagementPage: React.FC = () => {
   };
 
   return (
-    <AdminLayout onRefresh={handleRefresh}>
-      <div className="admin-referral-page">
+    <IonPage>
+      <AdminLayout onRefresh={handleRefresh}>
+        <div className="admin-referral-page">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
           <div className="page-title-row">
             <IonIcon icon={peopleOutline} className="page-icon" />
@@ -140,6 +141,7 @@ const ReferralManagementPage: React.FC = () => {
       </div>
       <IonToast isOpen={toast.show} onDidDismiss={() => setToast({ show: false, msg: '' })} message={toast.msg} duration={2000} position="top" color="success" />
     </AdminLayout>
+    </IonPage>
   );
 };
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   IonIcon,
   IonModal,
+  IonPage,
   IonToast,
   IonButton,
 } from '@ionic/react';
@@ -77,8 +78,9 @@ const OrdersPage: React.FC = () => {
   };
 
   return (
-    <AdminLayout onRefresh={handleRefresh}>
-      <div className="admin-orders-page">
+    <IonPage>
+      <AdminLayout onRefresh={handleRefresh}>
+        <div className="admin-orders-page">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
           <div className="page-title-row">
             <IonIcon icon={cartOutline} className="page-icon" />
@@ -264,6 +266,7 @@ const OrdersPage: React.FC = () => {
 
       <IonToast isOpen={showToast} onDidDismiss={() => setShowToast(false)} message={toastMessage} duration={3000} position="top" color="success" />
     </AdminLayout>
+    </IonPage>
   );
 };
 
