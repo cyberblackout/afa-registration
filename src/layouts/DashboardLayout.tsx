@@ -284,7 +284,10 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh, 
         </div>
         <div className="navbar-brand">
           <img src="/favicon.png" alt="MTN" className="navbar-logo" />
-          <span className="navbar-title">{isAgent ? 'MTN AFA AGENT' : 'MTN AFA PORTAL'}</span>
+          <div className="navbar-title">
+            <span>{isAgent ? 'MTN AFA' : 'MTN AFA'}</span>
+            <span>{isAgent ? 'AGENT' : 'PORTAL'}</span>
+          </div>
         </div>
         <div className="navbar-right">
           <Link

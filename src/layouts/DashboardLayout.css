@@ -76,12 +76,18 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 22px;
+  justify-self: center;
+}
+
+.navbar-title {
+  display: flex;
+  flex-direction: column;
+  font-size: 18px;
   font-weight: 800;
   color: var(--mtn-yellow);
-  letter-spacing: 3px;
+  letter-spacing: 2px;
   text-transform: uppercase;
-  justify-self: center;
+  line-height: 1.15;
   text-shadow: 0 0 20px rgba(255, 203, 5, 0.15);
 }
 
@@ -835,15 +841,15 @@ ion-refresher {
   }
 
   .navbar-title {
-    font-size: clamp(18px, 5.5vw, 24px);
+    display: flex;
+    flex-direction: column;
+    font-size: clamp(14px, 4vw, 18px);
     font-weight: 800;
     color: var(--mtn-yellow);
     letter-spacing: 0.3px;
     text-transform: uppercase;
-    line-height: 1.2;
+    line-height: 1.15;
     text-shadow: 0 0 16px rgba(255, 203, 5, 0.12);
-    overflow-wrap: break-word;
-    word-break: break-word;
   }
 
   .navbar-right {
@@ -953,7 +959,7 @@ ion-refresher {
   }
 
   .navbar-title {
-    font-size: clamp(17px, 5vw, 22px);
+    font-size: clamp(13px, 3.5vw, 16px);
   }
 
   .hamburger-btn {
@@ -1036,7 +1042,7 @@ ion-refresher {
   }
 
   .navbar-title {
-    font-size: clamp(15px, 4.5vw, 19px);
+    font-size: clamp(12px, 3vw, 15px);
   }
 
   .hamburger-btn {
