@@ -47,11 +47,6 @@
 }
 
 .stat-card {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 1.25rem 1.25rem 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  border-left: 4px solid #3b82f6;
   display: flex;
   flex-direction: column;
 }
@@ -105,10 +100,6 @@
 }
 
 .chart-card {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 1.25rem 1.25rem 0.75rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .chart-card-header {
@@ -161,10 +152,6 @@
 }
 
 .recent-registrations-card {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 1.25rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .card-header-row {
@@ -321,10 +308,6 @@
 }
 
 .quick-stats-card {
-  background: #ffffff;
-  border-radius: 16px;
-  padding: 1.25rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .quick-stats-card h3 {
@@ -383,6 +366,11 @@
 }
 
 @media (max-width: 768px) {
+  .admin-dashboard {
+    max-width: none;
+    margin: 0;
+  }
+
   .dashboard-header {
     flex-direction: column;
     align-items: flex-start;

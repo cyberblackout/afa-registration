@@ -56,6 +56,7 @@ const Register: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '' });
+  const [referralFailed, setReferralFailed] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,7 +90,7 @@ const Register: React.FC = () => {
         }
         throw error;
       }
-      if (data.user) {
+        if (data.user) {
         const deviceFingerprint = getDeviceFingerprint();
 
         await profileApi.update({
@@ -100,34 +101,15 @@ const Register: React.FC = () => {
         });
 
         if (refCode) {
-          const refData = await referralApi.validateCode(refCode) as any;
-          if (refData?.valid) {
-            await supabase.from('referrals').insert({
-              referrer_id: refData.referrer_id,
-              referred_id: data.user.id,
-              referral_code: refCode,
-              status: 'registered',
-            });
-          }
-        }
-
-        // Update registration record with device fingerprint
-        const { data: registration } = await supabase
-          .from('registrations')
-          .select('id')
-          .eq('user_id', data.user.id)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (registration?.id) {
-          await supabase
-            .from('registrations')
-            .update({ device_fingerprint: deviceFingerprint })
-            .eq('id', registration.id);
+          await referralApi.createReferral(refCode, deviceFingerprint).catch(() => {
+            setReferralFailed(true);
+          });
         }
       }
-      setToast({ show: true, message: 'Account created successfully! You can now sign in.' });
+      const successMsg = referralFailed
+        ? 'Account created! Your referral link could not be applied, but you can still sign in.'
+        : 'Account created successfully! You can now sign in.';
+      setToast({ show: true, message: successMsg });
       setTimeout(() => history.push('/login'), 2000);
     } catch (error: any) {
       setToast({ show: true, message: error.message || 'Registration failed' });

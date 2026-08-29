@@ -16,6 +16,7 @@ import {
   closeOutline,
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
+import Card from '../../components/Card';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../services/supabase';
 import { orderApi } from '../../services/api';
@@ -90,7 +91,7 @@ const OrdersPage: React.FC = () => {
         </motion.div>
 
         <div className="orders-section">
-          <div className="filter-bar">
+          <Card noPadding className="filter-bar">
             <div className="search-wrapper">
               <IonIcon icon={searchOutline} className="search-icon" />
               <input type="text" placeholder="Search by order ID or customer..." value={search} onChange={(e) => setSearch(e.target.value)} className="search-input" />
@@ -106,7 +107,7 @@ const OrdersPage: React.FC = () => {
                 </select>
               </div>
             </div>
-          </div>
+          </Card>
 
           <div className="orders-table-header">
             <span className="oth oth-id">Order ID</span>
@@ -138,7 +139,7 @@ const OrdersPage: React.FC = () => {
             ) : (
               <motion.div className="orders-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                 {filtered.map((order: any, index: number) => (
-                  <motion.div key={order.id} className="order-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.03 }}>
+                  <Card key={order.id} className="order-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.03 }}>
                     <div className="order-card-row">
                       <span className="order-id">{order.id?.slice(0, 8)}</span>
                       <span className="order-status-badge" style={{ background: statusBgColors[order.status] || '#f5f5f5', color: statusColors[order.status] || '#333' }}>
@@ -177,7 +178,7 @@ const OrdersPage: React.FC = () => {
                         </button>
                       </span>
                     </div>
-                  </motion.div>
+                  </Card>
                 ))}
               </motion.div>
             )}
@@ -195,7 +196,7 @@ const OrdersPage: React.FC = () => {
               </button>
             </div>
             <div className="modal-body">
-              <div className="detail-card">
+              <Card variant="bordered" className="detail-card">
                 <div className="detail-card-title"><IonIcon icon={cartOutline} /> Order Info</div>
                 <div className="detail-grid">
                   <div className="detail-item">
@@ -217,9 +218,9 @@ const OrdersPage: React.FC = () => {
                     <span className="detail-value">{formatGhanaDateTime(selectedOrder.created_at)}</span>
                   </div>
                 </div>
-              </div>
+              </Card>
 
-              <div className="detail-card">
+              <Card variant="bordered" className="detail-card">
                 <div className="detail-card-title"><IonIcon icon={personOutline} /> Customer Info</div>
                 <div className="detail-grid">
                   <div className="detail-item">
@@ -235,9 +236,9 @@ const OrdersPage: React.FC = () => {
                     <span className="detail-value">{selectedOrder.profiles?.phone || ''}</span>
                   </div>
                 </div>
-              </div>
+              </Card>
 
-              <div className="detail-card">
+              <Card variant="bordered" className="detail-card">
                 <div className="detail-card-title"><IonIcon icon={cardOutline} /> Order Details</div>
                 <div className="order-items-list">
                   <div className="order-item-row">
@@ -251,14 +252,14 @@ const OrdersPage: React.FC = () => {
                   <span>Total</span>
                   <span className="order-total-amount">{formatAmount(selectedOrder.amount || 0)}</span>
                 </div>
-              </div>
+              </Card>
 
-              <div className="detail-card">
+              <Card variant="bordered" className="detail-card">
                 <div className="detail-card-title"><IonIcon icon={walletOutline} /> Payment Status</div>
                 <span className={`payment-status-badge ${(selectedOrder.payment_status || 'unpaid').toLowerCase()}`}>
                   {selectedOrder.payment_status || 'Unpaid'}
                 </span>
-              </div>
+              </Card>
             </div>
           </div>
         )}

@@ -11,10 +11,7 @@
   gap: 14px;
   margin-bottom: 20px;
 }
-.analytics-card {
-  background: #fff; border-radius: 12px; padding: 18px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-}
-.dark .analytics-card { background: #1e1e2e; }
+.analytics-card {}
 .analytics-icon {
   width: 36px; height: 36px; border-radius: 10px; display: flex;
   align-items: center; justify-content: center; font-size: 18px; margin-bottom: 10px;
@@ -30,10 +27,7 @@
 }
 .dark .fraud-alert { background: #450a0a; border-color: #7f1d1d; color: #fca5a5; }
 
-.referrals-table-card {
-  background: #fff; border-radius: 14px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-}
-.dark .referrals-table-card { background: #1e1e2e; }
+.referrals-table-card {}
 .table-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .table-header h3 { margin: 0; font-size: 16px; font-weight: 600; color: #1a1a2e; }
 .dark .table-header h3 { color: #e5e7eb; }

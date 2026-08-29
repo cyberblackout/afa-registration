@@ -20,6 +20,9 @@ import {
   ribbonOutline,
   arrowForward,
   shieldCheckmarkOutline,
+  sunnyOutline,
+  keyOutline,
+  alertCircleOutline,
 } from 'ionicons/icons';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
@@ -84,7 +87,7 @@ const ProfilePage: React.FC = () => {
 
   usePushNotifications(pushNotifications);
 
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading, isError } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: async () => {
       return await profileApi.get(user!.id);
@@ -137,15 +140,13 @@ const ProfilePage: React.FC = () => {
   const updateMutation = useMutation({
     mutationFn: async (data: ProfileFormData) => {
       if (avatarFile) {
-        const { error: uploadError } = await db.uploadAvatar(user!.id, avatarFile);
-        if (uploadError) throw uploadError;
+        await db.uploadAvatar(user!.id, avatarFile);
       }
 
-      const { error } = await db.updateProfile(user!.id, {
+      await db.updateProfile(user!.id, {
         full_name: data.fullName,
         phone: data.phone,
       });
-      if (error) throw error;
 
       const notifPrefs = {
         email: emailNotifications,
@@ -219,35 +220,34 @@ const ProfilePage: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: 'easeOut' }}
         >
-            {isLoading ? (
-              <div className="loading-state">
-                <p>Loading profile...</p>
-              </div>
-            ) : (
-              <>
-                <div className="profile-header">
-                  <h1>Personal Information</h1>
-                  <p>Manage your account details and preferences</p>
-                </div>
-
-                <div className="profile-card">
-                  <div className="avatar-section">
-                    <div className="avatar-wrapper">
-                      <div className="avatar-circle" onClick={handleAvatarClick}>
-                        {avatarPreview ? (
-                          <img src={avatarPreview} alt="Profile" />
-                        ) : (
-                          <IonIcon icon={personOutline} className="avatar-placeholder-icon" />
-                        )}
-                      </div>
-                      <button type="button" className="avatar-edit-btn" onClick={handleAvatarClick}>
-                        <IonIcon icon={cameraOutline} />
-                      </button>
+          {isLoading ? (
+            <div className="profile-loading">
+              <div className="profile-loading-spinner" />
+              <span>Loading profile...</span>
+            </div>
+          ) : isError ? (
+            <div className="profile-error">
+              <IonIcon icon={alertCircleOutline} />
+              <p>Failed to load profile.</p>
+              <button onClick={handleRefresh}>Retry</button>
+            </div>
+          ) : (
+            <div className="profile-layout">
+              {/* ── LEFT COLUMN ── */}
+              <div className="profile-col-main">
+                {/* ── PROFILE HEADER ── */}
+                <div className="pf-header">
+                  <div className="pf-avatar-area">
+                    <div className="pf-avatar" onClick={handleAvatarClick} role="button" tabIndex={0} aria-label="Change profile photo">
+                      {avatarPreview ? (
+                        <img src={avatarPreview} alt="Profile" />
+                      ) : (
+                        <IonIcon icon={personOutline} className="pf-avatar-icon" />
+                      )}
                     </div>
-                    <div className="avatar-info">
-                      <h3>{profile?.full_name || user?.email?.split('@')[0] || 'User'}</h3>
-                      <p>{user?.email || ''}</p>
-                    </div>
+                    <button type="button" className="pf-avatar-edit" onClick={handleAvatarClick} aria-label="Upload photo">
+                      <IonIcon icon={cameraOutline} />
+                    </button>
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -256,237 +256,339 @@ const ProfilePage: React.FC = () => {
                       hidden
                     />
                   </div>
-
-                  <form onSubmit={handleSubmit(onSubmit)}>
-                    <div className="form-grid">
-                      <div className="form-group">
-                        <label className="form-label">Full Name</label>
-                        <div className="input-wrapper">
-                          <IonIcon icon={personOutline} className="input-icon" />
-                          <input
-                            {...register('fullName')}
-                            className={`profile-input ${errors.fullName ? 'error' : ''}`}
-                            placeholder="Enter your full name"
-                          />
-                        </div>
-                        {errors.fullName && <span className="error-text">{errors.fullName.message}</span>}
-                      </div>
-
-                      <div className="form-group">
-                        <label className="form-label">Phone Number</label>
-                        <div className="input-wrapper">
-                          <IonIcon icon={callOutline} className="input-icon" />
-                          <input
-                            {...register('phone')}
-                            className={`profile-input ${errors.phone ? 'error' : ''}`}
-                            placeholder="Enter your phone number"
-                            type="tel"
-                          />
-                        </div>
-                        {errors.phone && <span className="error-text">{errors.phone.message}</span>}
-                      </div>
-
-                      <div className="form-group">
-                        <label className="form-label">Email Address</label>
-                        <div className="input-wrapper">
-                          <IonIcon icon={mailOutline} className="input-icon" />
-                          <input
-                            className="profile-input"
-                            value={user?.email || ''}
-                            disabled
-                          />
-                        </div>
-                      </div>
-
-                      <div className="form-group">
-                        <label className="form-label">Address</label>
-                        <div className="input-wrapper">
-                          <IonIcon icon={locationOutline} className="input-icon" />
-                          <textarea
-                            {...register('address')}
-                            className={`profile-input textarea ${errors.address ? 'error' : ''}`}
-                            placeholder="Enter your address"
-                            rows={3}
-                          />
-                        </div>
-                        {errors.address && <span className="error-text">{errors.address.message}</span>}
-                      </div>
-                    </div>
-
-                    <div className="password-section">
-                      <h3>Change Password</h3>
-                      <div className="password-row">
-                        <div className="form-group">
-                          <label className="form-label">Current Password</label>
-                          <div className="input-wrapper">
-                            <IonIcon icon={lockClosedOutline} className="input-icon" />
-                            <input
-                              {...register('currentPassword')}
-                              className={`profile-input ${errors.currentPassword ? 'error' : ''}`}
-                              placeholder="Current password"
-                              type={showCurrentPassword ? 'text' : 'password'}
-                            />
-                            <button
-                              type="button"
-                              className="input-suffix-btn"
-                              onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                              tabIndex={-1}
-                            >
-                              <IonIcon icon={showCurrentPassword ? eyeOffOutline : eyeOutline} />
-                            </button>
-                          </div>
-                          {errors.currentPassword && <span className="error-text">{errors.currentPassword.message}</span>}
-                        </div>
-
-                        <div className="form-group">
-                          <label className="form-label">New Password</label>
-                          <div className="input-wrapper">
-                            <IonIcon icon={lockClosedOutline} className="input-icon" />
-                            <input
-                              {...register('newPassword')}
-                              className={`profile-input ${errors.newPassword ? 'error' : ''}`}
-                              placeholder="New password"
-                              type={showNewPassword ? 'text' : 'password'}
-                            />
-                            <button
-                              type="button"
-                              className="input-suffix-btn"
-                              onClick={() => setShowNewPassword(!showNewPassword)}
-                              tabIndex={-1}
-                            >
-                              <IonIcon icon={showNewPassword ? eyeOffOutline : eyeOutline} />
-                            </button>
-                          </div>
-                          {errors.newPassword && <span className="error-text">{errors.newPassword.message}</span>}
-                        </div>
-
-                        <div className="form-group">
-                          <label className="form-label">Confirm Password</label>
-                          <div className="input-wrapper">
-                            <IonIcon icon={lockClosedOutline} className="input-icon" />
-                            <input
-                              {...register('confirmPassword')}
-                              className={`profile-input ${errors.confirmPassword ? 'error' : ''}`}
-                              placeholder="Confirm password"
-                              type={showConfirmPassword ? 'text' : 'password'}
-                            />
-                            <button
-                              type="button"
-                              className="input-suffix-btn"
-                              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                              tabIndex={-1}
-                            >
-                              <IonIcon icon={showConfirmPassword ? eyeOffOutline : eyeOutline} />
-                            </button>
-                          </div>
-                          {errors.confirmPassword && <span className="error-text">{errors.confirmPassword.message}</span>}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="action-bar">
-                      <button type="button" className="btn-cancel" onClick={handleCancel}>
-                        <IonIcon icon={closeOutline} />
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="btn-save"
-                        disabled={updateMutation.isPending}
-                      >
-                        <IonIcon icon={checkmarkOutline} />
-                        {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
-                      </button>
-                    </div>
-                  </form>
+                  <div className="pf-identity">
+                    <h1 className="pf-name">{profile?.full_name || user?.email?.split('@')[0] || 'User'}</h1>
+                    <p className="pf-email">{user?.email || ''}</p>
+                    {profile?.role && (
+                      <span className={`pf-role-badge pf-role-badge--${profile.role}`}>
+                        <IonIcon icon={ribbonOutline} />
+                        {profile.role === 'agent' ? 'Agent' : 'Member'}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                <div className="profile-card second-card">
-                  <div className="notif-prefs-header">
-                    <IonIcon icon={notificationsOutline} className="notif-prefs-icon" />
-                    <div className="avatar-info">
-                      <h3 style={{ margin: 0 }}>Notification Preferences</h3>
-                      <p style={{ margin: '2px 0 0' }}>Choose how you receive updates</p>
+                {/* ── PERSONAL INFORMATION ── */}
+                <form onSubmit={handleSubmit(onSubmit)}>
+                  <div className="pf-section">
+                    <div className="pf-section-header">
+                      <IonIcon icon={personOutline} />
+                      <div>
+                        <h2>Personal Information</h2>
+                        <p>Your account details</p>
+                      </div>
+                    </div>
+
+                    <div className="pf-fields">
+                      <div className="pf-field">
+                        <label className="pf-label" htmlFor="fullName">
+                          <IonIcon icon={personOutline} />
+                          Full Name
+                        </label>
+                        <input
+                          id="fullName"
+                          {...register('fullName')}
+                          className={`pf-input ${errors.fullName ? 'pf-input--error' : ''}`}
+                          placeholder="Enter your full name"
+                        />
+                        {errors.fullName && <span className="pf-error">{errors.fullName.message}</span>}
+                      </div>
+
+                      <div className="pf-field">
+                        <label className="pf-label" htmlFor="phone">
+                          <IonIcon icon={callOutline} />
+                          Phone Number
+                        </label>
+                        <input
+                          id="phone"
+                          {...register('phone')}
+                          className={`pf-input ${errors.phone ? 'pf-input--error' : ''}`}
+                          placeholder="Enter your phone number"
+                          type="tel"
+                          inputMode="numeric"
+                        />
+                        {errors.phone && <span className="pf-error">{errors.phone.message}</span>}
+                      </div>
+
+                      <div className="pf-field">
+                        <label className="pf-label" htmlFor="email">
+                          <IonIcon icon={mailOutline} />
+                          Email Address
+                        </label>
+                        <input
+                          id="email"
+                          className="pf-input pf-input--disabled"
+                          value={user?.email || ''}
+                          disabled
+                          readOnly
+                        />
+                      </div>
+
+                      <div className="pf-field pf-field--full">
+                        <label className="pf-label" htmlFor="address">
+                          <IonIcon icon={locationOutline} />
+                          Address
+                        </label>
+                        <textarea
+                          id="address"
+                          {...register('address')}
+                          className={`pf-input pf-textarea ${errors.address ? 'pf-input--error' : ''}`}
+                          placeholder="Enter your address"
+                          rows={3}
+                        />
+                        {errors.address && <span className="pf-error">{errors.address.message}</span>}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="notif-toggle-list">
+                  {/* ── SECURITY ── */}
+                  <div className="pf-section">
+                    <div className="pf-section-header">
+                      <IonIcon icon={shieldCheckmarkOutline} />
+                      <div>
+                        <h2>Security</h2>
+                        <p>Update your password to keep your account secure</p>
+                      </div>
+                    </div>
+
+                    <div className="pf-fields">
+                      <div className="pf-field">
+                        <label className="pf-label" htmlFor="currentPassword">
+                          <IonIcon icon={lockClosedOutline} />
+                          Current Password
+                        </label>
+                        <div className="pf-input-wrap">
+                          <input
+                            id="currentPassword"
+                            {...register('currentPassword')}
+                            className={`pf-input pf-input--password ${errors.currentPassword ? 'pf-input--error' : ''}`}
+                            placeholder="Enter current password"
+                            type={showCurrentPassword ? 'text' : 'password'}
+                            autoComplete="current-password"
+                          />
+                          <button
+                            type="button"
+                            className="pf-eye-btn"
+                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                            aria-label={showCurrentPassword ? 'Hide password' : 'Show password'}
+                          >
+                            <IonIcon icon={showCurrentPassword ? eyeOffOutline : eyeOutline} />
+                          </button>
+                        </div>
+                        {errors.currentPassword && <span className="pf-error">{errors.currentPassword.message}</span>}
+                      </div>
+
+                      <div className="pf-field">
+                        <label className="pf-label" htmlFor="newPassword">
+                          <IonIcon icon={keyOutline} />
+                          New Password
+                        </label>
+                        <div className="pf-input-wrap">
+                          <input
+                            id="newPassword"
+                            {...register('newPassword')}
+                            className={`pf-input pf-input--password ${errors.newPassword ? 'pf-input--error' : ''}`}
+                            placeholder="Enter new password"
+                            type={showNewPassword ? 'text' : 'password'}
+                            autoComplete="new-password"
+                          />
+                          <button
+                            type="button"
+                            className="pf-eye-btn"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                            aria-label={showNewPassword ? 'Hide password' : 'Show password'}
+                          >
+                            <IonIcon icon={showNewPassword ? eyeOffOutline : eyeOutline} />
+                          </button>
+                        </div>
+                        {errors.newPassword && <span className="pf-error">{errors.newPassword.message}</span>}
+                      </div>
+
+                      <div className="pf-field">
+                        <label className="pf-label" htmlFor="confirmPassword">
+                          <IonIcon icon={lockClosedOutline} />
+                          Confirm Password
+                        </label>
+                        <div className="pf-input-wrap">
+                          <input
+                            id="confirmPassword"
+                            {...register('confirmPassword')}
+                            className={`pf-input pf-input--password ${errors.confirmPassword ? 'pf-input--error' : ''}`}
+                            placeholder="Confirm new password"
+                            type={showConfirmPassword ? 'text' : 'password'}
+                            autoComplete="new-password"
+                          />
+                          <button
+                            type="button"
+                            className="pf-eye-btn"
+                            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                            aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                          >
+                            <IonIcon icon={showConfirmPassword ? eyeOffOutline : eyeOutline} />
+                          </button>
+                        </div>
+                        {errors.confirmPassword && <span className="pf-error">{errors.confirmPassword.message}</span>}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── ACTIONS ── */}
+                  <div className="pf-actions">
+                    <button type="button" className="pf-btn pf-btn--cancel" onClick={handleCancel}>
+                      <IonIcon icon={closeOutline} />
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="pf-btn pf-btn--save"
+                      disabled={updateMutation.isPending}
+                    >
+                      <IonIcon icon={checkmarkOutline} />
+                      {updateMutation.isPending ? 'Saving...' : 'Save Changes'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* ── RIGHT COLUMN ── */}
+              <div className="pf-col-side">
+                {/* ── NOTIFICATION PREFERENCES ── */}
+                <div className="pf-section">
+                  <div className="pf-section-header">
+                    <IonIcon icon={notificationsOutline} />
+                    <div>
+                      <h2>Notifications</h2>
+                      <p>Choose how you receive updates</p>
+                    </div>
+                  </div>
+
+                  <div className="pf-prefs">
                     {[
-                      { label: 'Email Notifications', value: emailNotifications, set: setEmailNotifications },
-                      { label: 'SMS Notifications', value: smsNotifications, set: setSmsNotifications },
-                      { label: `Push Notifications`, value: pushNotifications, set: setPushNotifications },
-                      { label: 'Marketing Emails', value: marketingEmails, set: setMarketingEmails },
+                      { icon: mailOutline, label: 'Email Notifications', desc: 'Receive updates via email', value: emailNotifications, set: setEmailNotifications },
+                      { icon: notificationsOutline, label: 'SMS Notifications', desc: 'Get text message alerts', value: smsNotifications, set: setSmsNotifications },
+                      { icon: notificationsOutline, label: 'Push Notifications', desc: 'In-app push alerts', value: pushNotifications, set: setPushNotifications },
+                      { icon: mailOutline, label: 'Marketing Emails', desc: 'Promotional content', value: marketingEmails, set: setMarketingEmails },
                     ].map((item) => (
-                      <div key={item.label} className="toggle-row">
-                        <span className="toggle-label">{item.label}</span>
-                        <label className="toggle-switch">
+                      <div key={item.label} className="pf-pref-row">
+                        <div className="pf-pref-left">
+                          <div className="pf-pref-icon">
+                            <IonIcon icon={item.icon} />
+                          </div>
+                          <div className="pf-pref-text">
+                            <span className="pf-pref-label">{item.label}</span>
+                            <span className="pf-pref-desc">{item.desc}</span>
+                          </div>
+                        </div>
+                        <label className="pf-toggle" aria-label={item.label}>
                           <input
                             type="checkbox"
                             checked={item.value}
                             onChange={(e) => item.set(e.target.checked)}
                           />
-                          <span className="toggle-slider" />
+                          <span className="pf-toggle-track">
+                            <span className="pf-toggle-thumb" />
+                          </span>
                         </label>
                       </div>
                     ))}
                   </div>
+                </div>
 
-                  <div className="dark-mode-section">
-                    <div className="toggle-row">
-                      <div className="dark-mode-left">
-                        <IonIcon icon={moonOutline} className="dark-mode-icon" />
-                        <span className="toggle-label">Dark Mode</span>
+                {/* ── APPEARANCE ── */}
+                <div className="pf-section">
+                  <div className="pf-section-header">
+                    <IonIcon icon={isDark ? moonOutline : sunnyOutline} />
+                    <div>
+                      <h2>Appearance</h2>
+                      <p>Switch between light and dark mode</p>
+                    </div>
+                  </div>
+
+                  <div className="pf-prefs">
+                    <div className="pf-pref-row">
+                      <div className="pf-pref-left">
+                        <div className="pf-pref-icon">
+                          <IonIcon icon={isDark ? moonOutline : sunnyOutline} />
+                        </div>
+                        <div className="pf-pref-text">
+                          <span className="pf-pref-label">{isDark ? 'Dark Mode' : 'Light Mode'}</span>
+                          <span className="pf-pref-desc">{isDark ? 'Night theme active' : 'Day theme active'}</span>
+                        </div>
                       </div>
-                      <label className="toggle-switch">
+                      <label className="pf-toggle" aria-label="Toggle dark mode">
                         <input
                           type="checkbox"
                           checked={isDark}
                           onChange={toggleDark}
                         />
-                        <span className="toggle-slider" />
+                        <span className="pf-toggle-track">
+                          <span className="pf-toggle-thumb" />
+                        </span>
                       </label>
                     </div>
                   </div>
+                </div>
 
-                  {/* Agent section */}
-                  <div className="agent-profile-section">
-                    <div className="agent-profile-header">
-                      <IonIcon icon={ribbonOutline} className="agent-profile-icon" />
-                      <h3>Agent Program</h3>
-                    </div>
-                    {profile?.role === 'agent' ? (
-                      <div className="agent-profile-info">
-                        <div className="agent-badge-row">
-                          <span className={`agent-status-badge ${profile.agent_status}`}>
+                {/* ── AGENT PROGRAM ── */}
+                <div className="pf-section">
+                  {profile?.role === 'agent' ? (
+                    <>
+                      <div className="pf-section-header">
+                        <IonIcon icon={ribbonOutline} />
+                        <div>
+                          <h2>Agent Program</h2>
+                          <p>Your agent account</p>
+                        </div>
+                      </div>
+                      <div className="pf-agent-info">
+                        <div className="pf-agent-badges">
+                          <span className={`pf-badge pf-badge--${profile.agent_status}`}>
                             {profile.agent_status === 'active' ? 'Active' : profile.agent_status === 'suspended' ? 'Suspended' : 'Inactive'}
                           </span>
-                          {profile.agent_verified && <span className="agent-verified-badge">✓ Verified</span>}
+                          {profile.agent_verified && (
+                            <span className="pf-badge pf-badge--verified">
+                              <IonIcon icon={checkmarkOutline} /> Verified
+                            </span>
+                          )}
                         </div>
                         {profile.agent_id && (
-                          <div className="agent-id-display">
-                            <span>Agent ID:</span>
+                          <div className="pf-agent-detail">
+                            <span>Agent ID</span>
                             <code>{profile.agent_id}</code>
                           </div>
                         )}
                         {profile.agent_since && (
-                          <div className="agent-since-display">
-                            <span>Agent since:</span>
+                          <div className="pf-agent-detail">
+                            <span>Member since</span>
                             <span>{formatGhanaDate(profile.agent_since)}</span>
                           </div>
                         )}
-                        <Link to="/agent/dashboard" className="agent-dashboard-link">
+                        <Link to="/agent/dashboard" className="pf-btn pf-btn--agent">
                           Go to Agent Dashboard <IonIcon icon={arrowForward} />
                         </Link>
                       </div>
-                    ) : (
-                      <div className="agent-profile-cta">
-                        <p>Become an agent and unlock discounted pricing, earn commissions, and grow your business.</p>
+                    </>
+                  ) : (
+                    <>
+                      <div className="pf-section-header">
+                        <IonIcon icon={ribbonOutline} />
+                        <div>
+                          <h2>Agent Program</h2>
+                          <p>Grow your business with MTN AFA</p>
+                        </div>
                       </div>
-                    )}
-                  </div>
+                      <div className="pf-agent-cta">
+                        <p>Become an agent and unlock discounted pricing, earn commissions, and grow your business.</p>
+                        <Link to="/become-agent" className="pf-btn pf-btn--agent">
+                          Become an Agent <IonIcon icon={arrowForward} />
+                        </Link>
+                      </div>
+                    </>
+                  )}
                 </div>
-              </>
-            )}
+              </div>
+            </div>
+          )}
         </motion.div>
 
         <IonToast

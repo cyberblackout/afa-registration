@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { referralApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
+import Card from '../../components/Card';
 import { formatGhanaDate } from '../../utils/date';
 import './ReferralManagementPage.css';
 
@@ -27,10 +28,29 @@ const ReferralManagementPage: React.FC = () => {
   });
 
   const updateStatus = async (id: string, status: string) => {
-    await referralApi.adminUpdateStatus(id, status);
-    queryClient.invalidateQueries({ queryKey: ['admin_all_referrals'] });
-    queryClient.invalidateQueries({ queryKey: ['admin_referral_analytics'] });
-    setToast({ show: true, msg: `Referral ${status}` });
+    try {
+      await referralApi.adminUpdateStatus(id, status);
+      queryClient.invalidateQueries({ queryKey: ['admin_all_referrals'] });
+      queryClient.invalidateQueries({ queryKey: ['admin_referral_analytics'] });
+      setToast({ show: true, msg: `Referral ${status}` });
+    } catch (err: any) {
+      setToast({ show: true, msg: err.message || `Failed to ${status} referral` });
+    }
+  };
+
+  const retryReward = async (referralId: string) => {
+    try {
+      const result = await referralApi.adminRetryReward(referralId) as any;
+      if (result?.success) {
+        setToast({ show: true, msg: `Reward granted: GH₵ ${Number(result.amount).toFixed(2)}` });
+      } else {
+        setToast({ show: true, msg: result?.error || 'Retry failed' });
+      }
+      queryClient.invalidateQueries({ queryKey: ['admin_all_referrals'] });
+      queryClient.invalidateQueries({ queryKey: ['admin_referral_analytics'] });
+    } catch (err: any) {
+      setToast({ show: true, msg: err.message || 'Retry failed' });
+    }
   };
 
   const analyticsData = analytics || {
@@ -77,11 +97,11 @@ const ReferralManagementPage: React.FC = () => {
             { icon: cashOutline, label: 'Rewards Paid', value: `GH₵ ${Number(analyticsData.total_rewards_paid ?? 0).toFixed(2)}`, color: '#059669' },
             { icon: trendingUpOutline, label: 'Unique Referrers', value: analyticsData.unique_referrers, color: '#6366f1' },
           ].map((s, i) => (
-            <motion.div key={s.label} className="analytics-card" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
+            <Card key={s.label} className="analytics-card" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
               <div className="analytics-icon" style={{ background: `${s.color}15`, color: s.color }}><IonIcon icon={s.icon} /></div>
               <div className="analytics-value">{typeof s.value === 'number' ? s.value.toLocaleString() : s.value}</div>
               <div className="analytics-label">{s.label}</div>
-            </motion.div>
+            </Card>
           ))}
         </div>
 
@@ -92,7 +112,7 @@ const ReferralManagementPage: React.FC = () => {
           </div>
         )}
 
-        <div className="referrals-table-card">
+        <Card noPadding className="referrals-table-card">
           <div className="table-header">
             <h3>All Referrals</h3>
             <IonButton fill="clear" onClick={() => queryClient.invalidateQueries({ queryKey: ['admin_all_referrals'] })}>
@@ -126,7 +146,7 @@ const ReferralManagementPage: React.FC = () => {
                   <span className="ref-actions">
                     {r.status !== 'reward_granted' && r.status !== 'rejected' && (
                       <>
-                        <button className="action-btn action-approve" onClick={() => updateStatus(r.id, 'reward_granted')}>Approve</button>
+                        <button className="action-btn action-retry" onClick={() => retryReward(r.id)}>Retry</button>
                         <button className="action-btn action-reject" onClick={() => updateStatus(r.id, 'rejected')}>Reject</button>
                       </>
                     )}
@@ -137,7 +157,7 @@ const ReferralManagementPage: React.FC = () => {
               ))}
             </div>
           )}
-        </div>
+        </Card>
       </div>
       <IonToast isOpen={toast.show} onDidDismiss={() => setToast({ show: false, msg: '' })} message={toast.msg} duration={2000} position="top" color="success" />
     </AdminLayout>

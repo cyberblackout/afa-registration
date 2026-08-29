@@ -18,6 +18,7 @@ import {
   alertCircle,
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
+import Card from '../components/Card';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
 import { useAuthStore } from '../store/authStore';
@@ -32,6 +33,7 @@ import {
   isGhanaSameMonth,
   getGhanaTodayISO,
 } from '../utils/date';
+import AmountDisplay from '../components/AmountDisplay';
 import './OrdersPage.css';
 
 const ITEMS_PER_PAGE = 6;
@@ -152,7 +154,7 @@ const OrdersPage: React.FC = () => {
           <span className="page-header-count">{orders.length} total</span>
         </motion.div>
 
-        <div className="filter-bar">
+        <Card noPadding className="filter-bar">
           <div className="search-wrapper">
             <IonIcon icon={searchOutline} className="search-icon" />
             <input
@@ -206,7 +208,7 @@ const OrdersPage: React.FC = () => {
               </select>
             </div>
           </div>
-        </div>
+        </Card>
 
         <div className="orders-table-header">
           <span className="th th-id">Order ID</span>
@@ -260,8 +262,8 @@ const OrdersPage: React.FC = () => {
                 exit={{ opacity: 0 }}
               >
                 {paginatedOrders.map((order, index) => (
-                  <motion.div
-                    key={order.id}
+                  <Card
+                    hover
                     className="order-card"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -301,7 +303,7 @@ const OrdersPage: React.FC = () => {
                       </div>
                       <div className="order-card-field">
                         <span className="field-label">Amount</span>
-                        <span className="field-value amount-value">GH₵ {Number(order.amount ?? 0).toFixed(2)}</span>
+                        <span className="field-value amount-value"><AmountDisplay value={Number(order.amount ?? 0)} showToggle={false} /></span>
                       </div>
                     </div>
                     <div className="order-card-row">
@@ -352,14 +354,14 @@ const OrdersPage: React.FC = () => {
                           {order.payment_status || 'Unpaid'}
                         </span>
                       </span>
-                      <span className="td td-amount">GH₵ {Number(order.amount ?? 0).toFixed(2)}</span>
+                      <span className="td td-amount"><AmountDisplay value={Number(order.amount ?? 0)} showToggle={false} /></span>
                       <span className="td td-action">
                         <button className="view-btn-icon" onClick={(e) => { e.stopPropagation(); openDetail(order); }}>
                           <IonIcon icon={eyeOutline} />
                         </button>
                       </span>
                     </div>
-                  </motion.div>
+                  </Card>
                 ))}
               </motion.div>
             )}
@@ -483,11 +485,11 @@ const OrdersPage: React.FC = () => {
                       <div className="item-info">
                         <span className="item-name">{selectedOrder.description || 'Order'}</span>
                       </div>
-                      <span className="item-price">GH₵ {Number(selectedOrder.amount ?? 0).toFixed(2)}</span>
+                      <span className="item-price"><AmountDisplay value={Number(selectedOrder.amount ?? 0)} showToggle={false} /></span>
                     </div>
                     <div className="item-row item-total">
                       <span>Total</span>
-                      <span>GH₵ {Number(selectedOrder.amount ?? 0).toFixed(2)}</span>
+                      <span><AmountDisplay value={Number(selectedOrder.amount ?? 0)} showToggle={false} /></span>
                     </div>
                   </div>
                 </div>
@@ -512,7 +514,7 @@ const OrdersPage: React.FC = () => {
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Total Amount</span>
-                      <span className="detail-value amount-value">GH₵ {Number(selectedOrder.amount ?? 0).toFixed(2)}</span>
+                      <span className="detail-value amount-value"><AmountDisplay value={Number(selectedOrder.amount ?? 0)} showToggle={false} /></span>
                     </div>
                     {selectedOrder.payment_method && (
                       <div className="detail-item">

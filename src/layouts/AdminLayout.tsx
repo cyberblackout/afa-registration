@@ -18,10 +18,12 @@ import {
   giftOutline,
   ribbonOutline,
   logoWhatsapp,
+  sunnyOutline,
+  moonOutline,
 } from 'ionicons/icons';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useSidebarStore } from '../store/sidebarStore';
 import { useAuthStore } from '../store/authStore';
+import { useThemeStore } from '../store/themeStore';
 import { supabase } from '../services/supabase';
 import './AdminLayout.css';
 
@@ -44,15 +46,11 @@ const menuItems = [
   { label: 'Settings', icon: settingsOutline, path: '/cyberin/settings' },
 ];
 
-const sidebarVariants = {
-  open: { x: 0, transition: { type: 'spring' as const, damping: 26, stiffness: 200 } },
-  closed: { x: '-100%', transition: { type: 'spring' as const, damping: 26, stiffness: 200 } },
-};
-
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
   const location = useLocation();
   const { isOpen, toggle, close } = useSidebarStore();
   const { user, logout } = useAuthStore();
+  const { isDark, toggle: toggleTheme } = useThemeStore();
   const activePath = location.pathname;
 
   const [whatsappNumber, setWhatsappNumber] = useState('');
@@ -101,6 +99,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
           </div>
         </div>
         <div className="admin-navbar-right">
+          <button
+            className="theme-toggle-btn"
+            onClick={toggleTheme}
+            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            <IonIcon icon={isDark ? moonOutline : sunnyOutline} />
+          </button>
           <span className="admin-user-name">{user?.full_name || 'Admin'}</span>
           <div className="admin-avatar">{user?.full_name?.charAt(0) || 'A'}</div>
         </div>
@@ -134,47 +140,30 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
         </div>
       </aside>
 
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            className="admin-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={close}
-          />
-        )}
-      </AnimatePresence>
+      <div
+        className={`admin-overlay ${isOpen ? 'admin-overlay--open' : ''}`}
+        onClick={close}
+      />
 
-      <AnimatePresence>
-        {isOpen && (
-          <motion.aside
-            className="admin-mobile-drawer"
-            variants={sidebarVariants}
-            initial="closed"
-            animate="open"
-            exit="closed"
-          >
-            <div className="admin-sidebar-header">
-              <span>MTN AFA Admin</span>
-            </div>
-            <div className="admin-sidebar-menu">
-              {menuItems.map((item) => (
-                <Link key={item.path} to={item.path} className="admin-menu-item" onClick={close}>
-                  <IonIcon icon={item.icon} />
-                  <span>{item.label}</span>
-                </Link>
-              ))}
-            </div>
-            <div className="admin-sidebar-footer">
-              <button className="admin-menu-item logout" onClick={handleLogout}>
-                <IonIcon icon={logOutOutline} />
-                <span>Logout</span>
-              </button>
-            </div>
-          </motion.aside>
-        )}
-      </AnimatePresence>
+      <aside className={`admin-mobile-drawer ${isOpen ? 'admin-mobile-drawer--open' : ''}`}>
+        <div className="admin-sidebar-header">
+          <span>MTN AFA Admin</span>
+        </div>
+        <div className="admin-sidebar-menu">
+          {menuItems.map((item) => (
+            <Link key={item.path} to={item.path} className="admin-menu-item" onClick={close}>
+              <IonIcon icon={item.icon} />
+              <span>{item.label}</span>
+            </Link>
+          ))}
+        </div>
+        <div className="admin-sidebar-footer">
+          <button className="admin-menu-item logout" onClick={handleLogout}>
+            <IonIcon icon={logOutOutline} />
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
 
       <IonContent className="admin-main">
         <IonRefresher slot="fixed" onIonRefresh={async (e) => {

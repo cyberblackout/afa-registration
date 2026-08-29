@@ -66,11 +66,14 @@ const AdminLogin: React.FC = () => {
       }
 
       // Check admin role - uses SECURITY DEFINER function (bypasses RLS)
-      const { data: adminCheck, error: adminError } = await db.isAdmin();
-      if (adminError) {
-        console.error('Admin check error:', adminError);
+      let adminCheck = false;
+      try {
+        const result = await db.isAdmin();
+        adminCheck = result.data;
+      } catch (err: any) {
+        console.error('Admin check error:', err);
         await supabase.auth.signOut();
-        setToast({ show: true, message: `Admin check failed: ${adminError.message}` });
+        setToast({ show: true, message: `Admin check failed: ${err.message}` });
         setLoading(false);
         return;
       }

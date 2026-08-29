@@ -170,6 +170,12 @@ export const referralApi = {
   validateCode: (code: string): Promise<any> =>
     invoke<any>('referrals', { action: 'validate_code', code }),
 
+  createReferral: (referralCode: string, deviceFingerprint?: string): Promise<any> =>
+    invoke<any>('referrals', { action: 'create_referral', referral_code: referralCode, device_fingerprint: deviceFingerprint }),
+
+  getMyReferralTransactions: (): Promise<any[]> =>
+    invoke<any[]>('referrals', { action: 'get_my_referral_transactions' }),
+
   adminAnalytics: (): Promise<any> =>
     invoke<any>('admin-referrals', { action: 'analytics' }),
 
@@ -178,6 +184,9 @@ export const referralApi = {
 
   adminUpdateStatus: (id: string, status: string): Promise<any> =>
     invoke<any>('admin-referrals', { action: 'update_status', id, status }),
+
+  adminRetryReward: (referralId: string): Promise<any> =>
+    invoke<any>('admin-referrals', { action: 'retry_reward', referral_id: referralId }),
 };
 
 // ============================================================
@@ -400,15 +409,8 @@ export const adminConfigApi = {
   createAnnouncement: (title: string, message: string, active?: boolean): Promise<any> =>
     invoke<any>('admin-config', { action: 'create_announcement', title, message, active }),
 
-  getSystemSettings: async (): Promise<any[]> => {
-    const t = await getToken();
-    const res = await fetch(`${FUNCTIONS_URL}/admin-config?action=system_settings`, {
-      method: 'GET',
-      headers: { Authorization: `Bearer ${t}` },
-    });
-    const j = await res.json();
-    return j.data || [];
-  },
+  getSystemSettings: (): Promise<any[]> =>
+    invoke<any[]>('admin-config?action=system_settings', undefined, 'GET'),
 };
 
 // ============================================================

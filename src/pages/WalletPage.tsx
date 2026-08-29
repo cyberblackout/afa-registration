@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   IonButton,
   IonIcon,
@@ -9,21 +9,25 @@ import {
   arrowUp,
   arrowDown,
   searchOutline,
-  filterOutline,
   downloadOutline,
   addOutline,
   checkmarkCircle,
   closeCircle,
   shieldCheckmarkOutline,
+  timeOutline,
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
-import { walletApi } from '../services/api';
+import { walletApi, pricingApi, profileApi, notificationApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import DashboardLayout from '../layouts/DashboardLayout';
+import AmountDisplay from '../components/AmountDisplay';
+import Card from '../components/Card';
 import {
   formatGhanaDate,
+  formatGhanaTimeAgo,
+  getGhanaDateLabel,
   isGhanaSameDay,
   isGhanaLastWeek,
   isGhanaSameMonth,
@@ -45,18 +49,21 @@ interface DbTransaction {
 
 const ITEMS_PER_PAGE = 10;
 
-// Load Paystack Inline script — waits for window.PaystackPop to be fully available
+const formatCurrency = (val: number): string => {
+  const num = Number(val ?? 0);
+  if (isNaN(num)) return '0.00';
+  return num.toFixed(2);
+};
+
 let paystackScriptLoaded = false;
 const loadPaystackScript = (): Promise<void> => {
   if (paystackScriptLoaded && (window as any).PaystackPop) return Promise.resolve();
   return new Promise((resolve, reject) => {
-    // If PaystackPop already exists (script already loaded), resolve immediately
     if ((window as any).PaystackPop) {
       paystackScriptLoaded = true;
       resolve();
       return;
     }
-    // If script tag already exists but PaystackPop isn't defined yet, wait for it
     const existingScript = document.querySelector('script[src*="paystack"]');
     if (existingScript) {
       const checkReady = () => {
@@ -66,7 +73,6 @@ const loadPaystackScript = (): Promise<void> => {
         }
       };
       existingScript.addEventListener('load', checkReady);
-      // Poll in case load already fired before listener was added
       const interval = setInterval(() => {
         if ((window as any).PaystackPop) {
           clearInterval(interval);
@@ -74,7 +80,6 @@ const loadPaystackScript = (): Promise<void> => {
           resolve();
         }
       }, 50);
-      // Timeout after 10s
       setTimeout(() => { clearInterval(interval); reject(new Error('Paystack script timed out')); }, 10000);
       return;
     }
@@ -82,7 +87,6 @@ const loadPaystackScript = (): Promise<void> => {
     script.src = 'https://js.paystack.co/v1/inline.js';
     script.async = true;
     script.onload = () => {
-      // Wait for PaystackPop to actually be defined after script execution
       const waitForPop = setInterval(() => {
         if ((window as any).PaystackPop) {
           clearInterval(waitForPop);
@@ -121,19 +125,14 @@ const WalletPage: React.FC = () => {
 
   const presetAmounts = [50, 100, 200, 500, 1000];
 
-  // Load Paystack script on mount
   useEffect(() => { loadPaystackScript().catch(() => {}); }, []);
 
-  // Fetch min/max top-up limits from pricing table
   const { data: topUpLimits } = useQuery({
     queryKey: ['topup-limits'],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('pricing')
-        .select('key, amount')
-        .in('key', ['wallet_min_topup', 'wallet_max_topup']);
-      const min = data?.find((r) => r.key === 'wallet_min_topup')?.amount ?? 10;
-      const max = data?.find((r) => r.key === 'wallet_max_topup')?.amount ?? 10000;
+      const allPricing = await pricingApi.get();
+      const min = allPricing.find((r: any) => r.key === 'wallet_min_topup')?.amount ?? 10;
+      const max = allPricing.find((r: any) => r.key === 'wallet_max_topup')?.amount ?? 10000;
       return { min: Number(min), max: Number(max) };
     },
     staleTime: 5 * 60 * 1000,
@@ -141,15 +140,7 @@ const WalletPage: React.FC = () => {
 
   const { data: balanceData, isLoading: balanceLoading } = useQuery({
     queryKey: ['wallet', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('wallet_balance')
-        .eq('id', user!.id)
-        .single();
-      if (error) throw error;
-      return data;
-    },
+    queryFn: () => profileApi.getWalletBalance(user!.id),
     enabled: !!user?.id,
   });
 
@@ -167,7 +158,6 @@ const WalletPage: React.FC = () => {
     enabled: !!user?.id,
   });
 
-  // Paystack public key from build-time env var (never fetched from DB/API)
   const paystackPublicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string;
 
   useEffect(() => {
@@ -176,40 +166,26 @@ const WalletPage: React.FC = () => {
       .channel('wallet-changes')
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'wallet_transactions',
-          filter: `user_id=eq.${user.id}`,
-        },
+        { event: '*', schema: 'public', table: 'wallet_transactions', filter: `user_id=eq.${user.id}` },
         () => {
           queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
           queryClient.invalidateQueries({ queryKey: ['wallet'] });
         }
       )
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [user?.id, queryClient]);
 
   const filteredTransactions = transactions.filter((txn) => {
     const matchesSearch = txn.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'All' || txn.status === statusFilter;
     const matchesPayment = paymentFilter === 'All' || (txn.payment_method || 'Wallet') === paymentFilter;
-
     let matchesDate = true;
     if (dateFilter !== 'All') {
-      if (dateFilter === 'Today') {
-        matchesDate = isGhanaSameDay(txn.created_at);
-      } else if (dateFilter === 'This Week') {
-        matchesDate = isGhanaLastWeek(txn.created_at);
-      } else if (dateFilter === 'This Month') {
-        matchesDate = isGhanaSameMonth(txn.created_at);
-      }
+      if (dateFilter === 'Today') matchesDate = isGhanaSameDay(txn.created_at);
+      else if (dateFilter === 'This Week') matchesDate = isGhanaLastWeek(txn.created_at);
+      else if (dateFilter === 'This Month') matchesDate = isGhanaSameMonth(txn.created_at);
     }
-
     return matchesSearch && matchesStatus && matchesPayment && matchesDate;
   });
 
@@ -219,12 +195,22 @@ const WalletPage: React.FC = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
-  const getStatusClass = (status: string) => {
-    const s = (status || '').toLowerCase();
-    if (s === 'completed') return 'status-completed';
-    if (s === 'pending') return 'status-pending';
-    return 'status-failed';
-  };
+  const groupedTransactions = useMemo(() => {
+    const groups: { label: string; items: DbTransaction[] }[] = [];
+    const grouped: Record<string, DbTransaction[]> = {};
+    for (const txn of paginatedTransactions) {
+      const label = getGhanaDateLabel(txn.created_at);
+      if (!grouped[label]) grouped[label] = [];
+      grouped[label].push(txn);
+    }
+    const order = ['Today', 'Yesterday', 'This Week', 'Older'];
+    for (const label of order) {
+      if (grouped[label]?.length) {
+        groups.push({ label, items: grouped[label] });
+      }
+    }
+    return groups;
+  }, [paginatedTransactions]);
 
   const handlePresetClick = (amount: number) => {
     setSelectedAmount(amount);
@@ -245,51 +231,35 @@ const WalletPage: React.FC = () => {
   const handleProceed = async () => {
     const amount = getDisplayAmount();
     if (amount <= 0) return;
-
-    // Client-side min/max validation (defense in depth — server also validates)
     if (topUpLimits) {
       if (amount < topUpLimits.min) {
-        setTopUpError(`Minimum top-up amount is GH₵${Number(topUpLimits.min ?? 0).toFixed(2)}`);
+        setTopUpError(`Minimum top-up amount is GH₵${formatCurrency(topUpLimits.min)}`);
         setTopUpStep('failed');
         return;
       }
       if (amount > topUpLimits.max) {
-        setTopUpError(`Maximum top-up amount is GH₵${Number(topUpLimits.max ?? 0).toFixed(2)}`);
+        setTopUpError(`Maximum top-up amount is GH₵${formatCurrency(topUpLimits.max)}`);
         setTopUpStep('failed');
         return;
       }
     }
-
     const publicKey = paystackPublicKey;
     if (!publicKey || publicKey.length < 10) {
       setTopUpError('Payment is not configured yet. Please contact support.');
       setTopUpStep('failed');
       return;
     }
-
     setTopUpLoading(true);
     setTopUpError('');
-
     try {
-      // Step 1: Initialize transaction server-side (validates amount, creates pending record)
       const initResult = await walletApi.initiateTopUp(amount);
       const { access_code, reference } = initResult;
-
-      if (!access_code || !reference) {
-        throw new Error('Failed to initialize payment');
-      }
-
-      // Step 2: Load Paystack script and open popup with server-provided access_code
+      if (!access_code || !reference) throw new Error('Failed to initialize payment');
       await loadPaystackScript();
-
       const PaystackPop = (window as any).PaystackPop;
       if (!PaystackPop || typeof PaystackPop.setup !== 'function') {
         throw new Error('Payment system failed to initialize. Please refresh and try again.');
       }
-
-      // Define stable callback handlers — use regular (non-async) functions
-      // because Paystack's SDK validates callbacks with {}.toString.call()
-      // which rejects async functions (returns "[object AsyncFunction]")
       const handlePaymentCallback = (response: any) => {
         setTopUpStep('processing');
         pollTransactionStatus(reference, amount)
@@ -299,9 +269,7 @@ const WalletPage: React.FC = () => {
           })
           .finally(() => setTopUpLoading(false));
       };
-
       const handlePopupClose = () => {
-        // Use a ref-like check: only process if we're still on the form step
         setTopUpStep((currentStep) => {
           if (currentStep !== 'success' && currentStep !== 'processing') {
             pollTransactionStatus(reference, amount)
@@ -316,7 +284,6 @@ const WalletPage: React.FC = () => {
           return currentStep;
         });
       };
-
       const config = {
         key: publicKey,
         email: user!.email,
@@ -328,12 +295,9 @@ const WalletPage: React.FC = () => {
         callback: handlePaymentCallback,
         onClose: handlePopupClose,
       };
-
-      // Defensive: ensure callback is always a function before passing to Paystack
       if (typeof config.callback !== 'function') {
         throw new Error('Payment configuration error. Please try again.');
       }
-
       const handler = PaystackPop.setup(config);
       if (!handler || typeof handler.openIframe !== 'function') {
         throw new Error('Payment system failed to initialize the checkout. Please try again.');
@@ -346,33 +310,20 @@ const WalletPage: React.FC = () => {
     }
   };
 
-  // Poll transaction status until completed/failed (max 30 seconds)
   const pollTransactionStatus = async (reference: string, amount: number) => {
     const maxAttempts = 15;
     const intervalMs = 2000;
-
     for (let i = 0; i < maxAttempts; i++) {
       const result = await walletApi.verifyTopUp(reference);
-
       if (result.status === 'completed') {
         setPaidAmount(amount);
         setTopUpStep('success');
-        // Send notifications
         sendTopUpNotifications(amount);
         return;
       }
-
-      if (result.status === 'failed') {
-        throw new Error('Payment was not successful. Please try again.');
-      }
-
-      // Still pending — wait and retry
-      if (i < maxAttempts - 1) {
-        await new Promise((resolve) => setTimeout(resolve, intervalMs));
-      }
+      if (result.status === 'failed') throw new Error('Payment was not successful. Please try again.');
+      if (i < maxAttempts - 1) await new Promise((resolve) => setTimeout(resolve, intervalMs));
     }
-
-    // Timeout — payment may still be processing via webhook
     setPaidAmount(amount);
     setTopUpStep('success');
     sendTopUpNotifications(amount);
@@ -382,7 +333,6 @@ const WalletPage: React.FC = () => {
     try {
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
       queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
-
       const { data: profile } = await supabase
         .from('profiles')
         .select('full_name, email, phone, wallet_balance')
@@ -391,7 +341,6 @@ const WalletPage: React.FC = () => {
       const balance = Number(profile?.wallet_balance ?? 0);
       if (profile?.email) {
         const { sendEmail, topUpEmailHtml } = await import('../services/email');
-        const now = getGhanaTodayISO();
         const dateDisplay = new Date().toLocaleDateString('en-US', {
           year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Africa/Accra',
         });
@@ -402,7 +351,6 @@ const WalletPage: React.FC = () => {
           'transactional'
         );
       }
-
       if (profile?.phone) {
         const { sendSms } = await import('../services/sms');
         sendSms(
@@ -412,15 +360,13 @@ const WalletPage: React.FC = () => {
           'transactional'
         );
       }
-      supabase.functions.invoke('send-push', {
-        body: {
-          user_id: user!.id,
-          title: 'Wallet Top-Up Successful',
-          body: `Your MTN AFA wallet has been credited with GH₵ ${amount.toFixed(2)}.`,
-          url: '/wallet',
-          type: 'transactional',
-        },
-      }).catch(() => {});
+      notificationApi.sendPush(
+        user!.id,
+        'Wallet Top-Up Successful',
+        `Your MTN AFA wallet has been credited with GH₵ ${amount.toFixed(2)}.`,
+        '/wallet',
+        'transactional',
+      ).catch(() => {});
     } catch (e) {
       // email and push are non-critical
     }
@@ -439,7 +385,7 @@ const WalletPage: React.FC = () => {
   const exportCSV = () => {
     const headers = 'Description,Amount,Date,Status,Payment Method\n';
     const rows = filteredTransactions.map((txn) =>
-      `${txn.description},${txn.type === 'credit' ? '+' : '-'}GH₵${Number(txn.amount ?? 0).toFixed(2)},${formatGhanaDate(txn.created_at)},${txn.status},${txn.payment_method || 'Wallet'}`
+      `${txn.description},${txn.type === 'credit' ? '+' : '-'}GH₵${formatCurrency(txn.amount)},${formatGhanaDate(txn.created_at)},${txn.status},${txn.payment_method || 'Wallet'}`
     ).join('\n');
     const blob = new Blob([headers + rows], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -451,88 +397,122 @@ const WalletPage: React.FC = () => {
   };
 
   const isLoading = balanceLoading || txnsLoading;
+  const hasActiveFilters = searchTerm || statusFilter !== 'All' || paymentFilter !== 'All' || dateFilter !== 'All';
+  const clearFilters = () => {
+    setSearchTerm('');
+    setStatusFilter('All');
+    setPaymentFilter('All');
+    setDateFilter('All');
+    setCurrentPage(1);
+  };
 
   return (
     <IonPage>
-        <DashboardLayout onRefresh={handleRefresh}>
-          <div className="wallet-page">
-        <motion.div
-          className="balance-card"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="balance-card-top">
-            <IonIcon icon={walletOutline} className="wallet-icon" />
-            <span className="balance-label">Wallet Balance</span>
-          </div>
-          <div className="balance-amount">
-            {balanceLoading ? '...' : `GH₵ ${Number(balanceData?.wallet_balance ?? 0).toFixed(2)}`}
-          </div>
-          <IonButton
-            expand="block"
-            className="top-up-btn"
-            onClick={() => setShowTopUp(true)}
+      <DashboardLayout onRefresh={handleRefresh}>
+        <div className="wallet-page">
+
+          {/* ── Balance Hero ── */}
+          <motion.div
+            className="wallet-hero"
+            initial={{ opacity: 0, y: -12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
           >
-            <IonIcon icon={addOutline} slot="start" />
-            Top Up Wallet
-          </IonButton>
-        </motion.div>
+            <div className="wallet-hero-glow" />
+            <div className="wallet-hero-glow wallet-hero-glow--alt" />
+            <div className="wallet-hero-content">
+              <div className="wallet-hero-badge">
+                <IonIcon icon={walletOutline} />
+                <span>Available Balance</span>
+              </div>
+              <div className="wallet-hero-amount-row">
+                {balanceLoading ? (
+                  <div className="wallet-hero-amount-display">
+                    <span className="wallet-hero-skeleton">...</span>
+                  </div>
+                ) : (
+                  <AmountDisplay
+                    value={balanceData?.wallet_balance ?? 0}
+                    className="amount-display--dark wallet-hero-amount-display"
+                  />
+                )}
+              </div>
+              <IonButton
+                expand="block"
+                className="wallet-hero-btn"
+                onClick={() => setShowTopUp(true)}
+              >
+                <IonIcon icon={addOutline} slot="start" />
+                Top Up Wallet
+              </IonButton>
+              <div className="wallet-hero-secure">
+                <IonIcon icon={shieldCheckmarkOutline} />
+                <span>Secured by Paystack</span>
+              </div>
+              <div className="wallet-hero-id">
+                <span className="wallet-hero-id-label">
+                  Wallet ID: ••••{(user?.id ?? '').slice(-4)}
+                </span>
+                <span className="wallet-hero-id-dot" />
+                <span className="wallet-hero-id-status">Protected • Private</span>
+              </div>
+            </div>
+          </motion.div>
 
-        <div className="transactions-section">
-          <div className="section-header">
-            <h2>Recent Transactions</h2>
-            <IonButton fill="clear" className="export-btn" onClick={exportCSV}>
-              <IonIcon icon={downloadOutline} slot="start" />
-              Export CSV
-            </IonButton>
-          </div>
-
-          <div className="filter-bar">
-            <div className="search-wrapper">
-              <IonIcon icon={searchOutline} className="search-icon" />
-              <input
-                type="text"
-                placeholder="Search transactions..."
-                value={searchTerm}
-                onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                className="search-input"
-              />
+          {/* ── Transactions Section ── */}
+          <Card noPadding className="wallet-txns-card">
+            <div className="wallet-txns-header">
+              <h2>Transactions</h2>
+              <div className="wallet-txns-header-actions">
+                {hasActiveFilters && (
+                  <button className="wallet-clear-btn" onClick={clearFilters}>
+                    Clear filters
+                  </button>
+                )}
+                <button className="wallet-export-btn" onClick={exportCSV}>
+                  <IonIcon icon={downloadOutline} />
+                  <span>Export</span>
+                </button>
+              </div>
             </div>
 
-            <div className="filter-selects">
-              <div className="filter-item">
-                <IonIcon icon={filterOutline} className="filter-icon" />
+            {/* ── Filter Bar ── */}
+            <div className="wallet-filters">
+              <div className="wallet-search">
+                <IonIcon icon={searchOutline} className="wallet-search-icon" />
+                <input
+                  type="text"
+                  placeholder="Search transactions..."
+                  value={searchTerm}
+                  onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                  className="wallet-search-input"
+                />
+              </div>
+              <div className="wallet-filter-row">
                 <select
                   value={dateFilter}
                   onChange={(e) => { setDateFilter(e.target.value); setCurrentPage(1); }}
-                  className="filter-select"
+                  className="wallet-filter-chip"
                 >
                   <option value="All">All Dates</option>
                   <option value="Today">Today</option>
                   <option value="This Week">This Week</option>
                   <option value="This Month">This Month</option>
                 </select>
-              </div>
-
-              <div className="filter-item">
                 <select
                   value={statusFilter}
                   onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                  className="filter-select"
+                  className="wallet-filter-chip"
                 >
                   <option value="All">All Status</option>
                   <option value="Completed">Completed</option>
                   <option value="Pending">Pending</option>
                   <option value="Failed">Failed</option>
                 </select>
-              </div>
-
-              <div className="filter-item">
                 <select
                   value={paymentFilter}
                   onChange={(e) => { setPaymentFilter(e.target.value); setCurrentPage(1); }}
-                  className="filter-select"
+                  className="wallet-filter-chip"
                 >
                   <option value="All">All Methods</option>
                   <option value="Mobile Money">Mobile Money</option>
@@ -543,214 +523,252 @@ const WalletPage: React.FC = () => {
                 </select>
               </div>
             </div>
-          </div>
 
-          {isLoading ? (
-            <motion.div
-              className="empty-state"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              <IonIcon icon={walletOutline} />
-              <p>Loading transactions...</p>
-            </motion.div>
-          ) : txnsError ? (
-            <motion.div
-              className="empty-state"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
-              <IonIcon icon={closeCircle} />
-              <p>Failed to load transactions. Please try again.</p>
-              <IonButton fill="clear" onClick={() => refetchTxns()}>Retry</IonButton>
-            </motion.div>
-          ) : (
-            <AnimatePresence mode="wait">
-              {paginatedTransactions.length === 0 ? (
-                <motion.div
-                  className="empty-state"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <IonIcon icon={walletOutline} />
-                  <p>No transactions found</p>
-                </motion.div>
-              ) : (
-                <motion.div
-                  className="transactions-list"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  {paginatedTransactions.map((txn, index) => (
-                    <motion.div
-                      key={txn.id}
-                      className="transaction-item"
-                      initial={{ opacity: 0, x: -10 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <div className={`txn-icon ${txn.type === 'credit' ? 'icon-credit' : 'icon-debit'}`}>
-                        <IonIcon icon={txn.type === 'credit' ? arrowDown : arrowUp} />
-                      </div>
-                      <div className="txn-info">
-                        <span className="txn-description">{txn.description}</span>
-                        <span className="txn-date">{formatGhanaDate(txn.created_at)}</span>
-                      </div>
-                      <div className="txn-right">
-                        <span className={`txn-amount ${txn.type === 'credit' ? 'amount-credit' : 'amount-debit'}`}>
-                          {txn.type === 'credit' ? '+' : '-'}GH₵{Number(txn.amount ?? 0).toFixed(2)}
-                        </span>
-                        <span className={`txn-status ${getStatusClass(txn.status)}`}>{txn.status}</span>
-                      </div>
-                    </motion.div>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          )}
-
-          {totalPages > 1 && (
-            <div className="pagination">
-              <button
-                className="page-btn"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage(currentPage - 1)}
-              >
-                Previous
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                <button
-                  key={page}
-                  className={`page-btn ${currentPage === page ? 'page-active' : ''}`}
-                  onClick={() => setCurrentPage(page)}
-                >
-                  {page}
-                </button>
-              ))}
-              <button
-                className="page-btn"
-                disabled={currentPage === totalPages}
-                onClick={() => setCurrentPage(currentPage + 1)}
-              >
-                Next
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <AnimatePresence>
-        {showTopUp && (
-          <motion.div
-            className="modal-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={resetTopUp}
-          >
-            <motion.div
-              className="modal-content"
-              initial={{ opacity: 0, scale: 0.9, y: 40 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 40 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {topUpStep === 'form' && (
-                <div className="top-up-form">
-                  <div className="modal-header">
-                    <h3>Top Up Wallet</h3>
-                    <button className="modal-close" onClick={resetTopUp}>
-                      <IonIcon icon={closeCircle} />
-                    </button>
-                  </div>
-
-                  <div className="paystack-badge">
-                    <IonIcon icon={shieldCheckmarkOutline} />
-                    <span>Secured by Paystack</span>
-                  </div>
-
-                  <div className="preset-amounts">
-                    <label className="modal-label">Select Amount</label>
-                    <div className="preset-grid">
-                      {presetAmounts.map((amt) => (
-                        <button
-                          key={amt}
-                          className={`preset-btn ${selectedAmount === amt ? 'preset-active' : ''}`}
-                          onClick={() => handlePresetClick(amt)}
-                        >
-                          GH₵{amt}
-                        </button>
-                      ))}
+            {/* ── Transaction List ── */}
+            {isLoading ? (
+              <div className="wallet-skeleton">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="wallet-skeleton-card">
+                    <div className="wallet-skeleton-icon" />
+                    <div className="wallet-skeleton-body">
+                      <div className="wallet-skeleton-line wallet-skeleton-line--wide" />
+                      <div className="wallet-skeleton-line wallet-skeleton-line--narrow" />
                     </div>
+                    <div className="wallet-skeleton-amount" />
                   </div>
-
-                  <div className="custom-amount">
-                    <label className="modal-label">Or enter custom amount</label>
-                    <div className="custom-input-wrap">
-                      <span className="currency-prefix">GH₵</span>
-                      <input
-                        type="number"
-                        placeholder="0.00"
-                        value={customAmount}
-                        onChange={(e) => handleCustomAmountChange(e.target.value)}
-                        className="custom-input"
-                        min="1"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="payment-info">
-                    <p>You'll be redirected to Paystack to complete payment via Mobile Money, Card, or Bank.</p>
-                  </div>
-
-                  <IonButton
-                    expand="block"
-                    className="proceed-btn"
-                    onClick={handleProceed}
-                    disabled={getDisplayAmount() <= 0 || topUpLoading}
+                ))}
+              </div>
+            ) : txnsError ? (
+              <div className="wallet-empty wallet-empty--error">
+                <div className="wallet-empty-icon wallet-empty-icon--error">
+                  <IonIcon icon={closeCircle} />
+                </div>
+                <h3>Something went wrong</h3>
+                <p>Failed to load transactions. Please try again.</p>
+                <IonButton fill="clear" className="wallet-empty-retry" onClick={() => refetchTxns()}>
+                  Retry
+                </IonButton>
+              </div>
+            ) : (
+              <AnimatePresence mode="wait">
+                {filteredTransactions.length === 0 ? (
+                  <motion.div
+                    className="wallet-empty"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
                   >
-                    {topUpLoading ? 'Opening Paystack...' : `Pay GH₵${Number(getDisplayAmount() ?? 0).toFixed(2)}`}
-                  </IonButton>
-                </div>
-              )}
+                    <div className="wallet-empty-icon">
+                      <IonIcon icon={walletOutline} />
+                    </div>
+                    <h3>{hasActiveFilters ? 'No matching transactions' : 'Your wallet is waiting'}</h3>
+                    <p>
+                      {hasActiveFilters
+                        ? 'Try adjusting your search or filters.'
+                        : 'Top up to get started with MTN AFA services.'
+                      }
+                    </p>
+                    {!hasActiveFilters && (
+                      <IonButton className="wallet-empty-cta" onClick={() => setShowTopUp(true)}>
+                        <IonIcon icon={addOutline} slot="start" />
+                        Top Up Wallet
+                      </IonButton>
+                    )}
+                    {hasActiveFilters && (
+                      <IonButton fill="clear" className="wallet-empty-retry" onClick={clearFilters}>
+                        Clear filters
+                      </IonButton>
+                    )}
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    className="wallet-txns-list"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    {groupedTransactions.map((group) => (
+                      <div key={group.label} className="wallet-txn-group">
+                        <div className="wallet-txn-group-label">{group.label}</div>
+                        {group.items.map((txn, index) => (
+                          <motion.div
+                            key={txn.id}
+                            className="wallet-txn"
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: index * 0.03 }}
+                          >
+                            <div className={`wallet-txn-icon wallet-txn-icon--${txn.type}`}>
+                              <IonIcon icon={txn.type === 'credit' ? arrowDown : arrowUp} />
+                            </div>
+                            <div className="wallet-txn-body">
+                              <div className="wallet-txn-top">
+                                <span className="wallet-txn-desc">{txn.description}</span>
+                                <span className={`wallet-txn-amount wallet-txn-amount--${txn.type}`}>
+                                  {txn.type === 'credit' ? '+' : '−'}GH₵ {formatCurrency(txn.amount)}
+                                </span>
+                              </div>
+                              <div className="wallet-txn-bottom">
+                                <span className="wallet-txn-time">{formatGhanaTimeAgo(txn.created_at)}</span>
+                                <span className={`wallet-txn-status wallet-txn-status--${(txn.status || '').toLowerCase()}`}>
+                                  {(txn.status || '').toLowerCase() === 'completed' && <IonIcon icon={checkmarkCircle} />}
+                                  {(txn.status || '').toLowerCase() === 'pending' && <IonIcon icon={timeOutline} />}
+                                  {(txn.status || '').toLowerCase() === 'failed' && <IonIcon icon={closeCircle} />}
+                                  {txn.status}
+                                </span>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            )}
 
-              {topUpStep === 'processing' && (
-                <div className="top-up-result result-processing">
-                  <div className="processing-spinner" />
-                  <h3>Processing Payment...</h3>
-                  <p>Please wait while we confirm your payment and credit your wallet.</p>
-                </div>
-              )}
+            {/* ── Pagination ── */}
+            {totalPages > 1 && (
+              <div className="wallet-pagination">
+                <button
+                  className="wallet-page-btn"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                >
+                  Previous
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    className={`wallet-page-btn ${currentPage === page ? 'wallet-page-btn--active' : ''}`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  className="wallet-page-btn"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </Card>
+        </div>
 
-              {topUpStep === 'success' && (
-                <div className="top-up-result result-success">
-                  <IonIcon icon={checkmarkCircle} className="result-icon" />
-                  <h3>Payment Successful!</h3>
-                  <p>GH₵{Number(paidAmount ?? 0).toFixed(2)} has been added to your wallet.</p>
-                  <IonButton expand="block" className="proceed-btn" onClick={resetTopUp}>
-                    Done
-                  </IonButton>
-                </div>
-              )}
+        {/* ── Top-Up Modal ── */}
+        <AnimatePresence>
+          {showTopUp && (
+            <motion.div
+              className="modal-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={resetTopUp}
+            >
+              <motion.div
+                className="modal-content"
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ type: 'spring', damping: 28, stiffness: 320 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {topUpStep === 'form' && (
+                  <div className="top-up-form">
+                    <div className="modal-header">
+                      <h3>Top Up Wallet</h3>
+                      <button className="modal-close" onClick={resetTopUp}>
+                        <IonIcon icon={closeCircle} />
+                      </button>
+                    </div>
 
-              {topUpStep === 'failed' && (
-                <div className="top-up-result result-failed">
-                  <IonIcon icon={closeCircle} className="result-icon" />
-                  <h3>Payment Failed</h3>
-                  <p>{topUpError || 'Something went wrong. Please try again.'}</p>
-                  <IonButton expand="block" className="proceed-btn" onClick={() => { setTopUpStep('form'); setTopUpError(''); setTopUpLoading(false); }}>
-                    Try Again
-                  </IonButton>
-                </div>
-              )}
+                    <div className="paystack-badge">
+                      <IonIcon icon={shieldCheckmarkOutline} />
+                      <span>Secured by Paystack</span>
+                    </div>
+
+                    <div className="preset-amounts">
+                      <label className="modal-label">Select Amount</label>
+                      <div className="preset-grid">
+                        {presetAmounts.map((amt) => (
+                          <button
+                            key={amt}
+                            className={`preset-btn ${selectedAmount === amt ? 'preset-active' : ''}`}
+                            onClick={() => handlePresetClick(amt)}
+                          >
+                            GH₵{amt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="custom-amount">
+                      <label className="modal-label">Or enter custom amount</label>
+                      <div className="custom-input-wrap">
+                        <span className="currency-prefix">GH₵</span>
+                        <input
+                          type="number"
+                          placeholder="0.00"
+                          value={customAmount}
+                          onChange={(e) => handleCustomAmountChange(e.target.value)}
+                          className="custom-input"
+                          min="1"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="payment-info">
+                      <p>You'll be redirected to Paystack to complete payment via Mobile Money, Card, or Bank.</p>
+                    </div>
+
+                    <IonButton
+                      expand="block"
+                      className="proceed-btn"
+                      onClick={handleProceed}
+                      disabled={getDisplayAmount() <= 0 || topUpLoading}
+                    >
+                      {topUpLoading ? 'Opening Paystack...' : `Pay GH₵${formatCurrency(getDisplayAmount())}`}
+                    </IonButton>
+                  </div>
+                )}
+
+                {topUpStep === 'processing' && (
+                  <div className="top-up-result result-processing">
+                    <div className="processing-spinner" />
+                    <h3>Processing Payment...</h3>
+                    <p>Please wait while we confirm your payment and credit your wallet.</p>
+                  </div>
+                )}
+
+                {topUpStep === 'success' && (
+                  <div className="top-up-result result-success">
+                    <IonIcon icon={checkmarkCircle} className="result-icon" />
+                    <h3>Payment Successful!</h3>
+                    <p>GH₵{formatCurrency(paidAmount)} has been added to your wallet.</p>
+                    <IonButton expand="block" className="proceed-btn" onClick={resetTopUp}>
+                      Done
+                    </IonButton>
+                  </div>
+                )}
+
+                {topUpStep === 'failed' && (
+                  <div className="top-up-result result-failed">
+                    <IonIcon icon={closeCircle} className="result-icon" />
+                    <h3>Payment Failed</h3>
+                    <p>{topUpError || 'Something went wrong. Please try again.'}</p>
+                    <IonButton expand="block" className="proceed-btn" onClick={() => { setTopUpStep('form'); setTopUpError(''); setTopUpLoading(false); }}>
+                      Try Again
+                    </IonButton>
+                  </div>
+                )}
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-        </DashboardLayout>
+          )}
+        </AnimatePresence>
+      </DashboardLayout>
     </IonPage>
   );
 };

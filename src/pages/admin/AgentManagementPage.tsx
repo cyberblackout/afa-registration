@@ -12,6 +12,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { agentApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
+import Card from '../../components/Card';
 import { formatGhanaDate, formatGhanaDateTime } from '../../utils/date';
 import './AgentManagementPage.css';
 
@@ -24,21 +25,16 @@ const AgentManagementPage: React.FC = () => {
   const [selectedApp, setSelectedApp] = useState<any>(null);
   const [adminNotes, setAdminNotes] = useState('');
 
-  const { data: agentsData, isLoading: agentsLoading } = useQuery({
+  const { data: agentResult, isLoading } = useQuery({
     queryKey: ['admin_agents'],
     queryFn: async () => {
       const data = await agentApi.adminGetApplications();
-      return data as any || { agents: [] };
+      return data as any || { agents: [], applications: [] };
     },
   });
 
-  const { data: appsData, isLoading: appsLoading } = useQuery({
-    queryKey: ['admin_agent_applications'],
-    queryFn: async () => {
-      const data = await agentApi.adminGetApplications();
-      return data as any || { applications: [] };
-    },
-  });
+  const agents = agentResult?.agents || [];
+  const applications = agentResult?.applications || [];
 
   const approveMutation = useMutation({
     mutationFn: async ({ id, status, notes }: { id: string; status: string; notes?: string }) => {
@@ -47,7 +43,6 @@ const AgentManagementPage: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin_agents'] });
-      queryClient.invalidateQueries({ queryKey: ['admin_agent_applications'] });
       setLoading(false);
       setSelectedApp(null);
       setAdminNotes('');
@@ -92,9 +87,6 @@ const AgentManagementPage: React.FC = () => {
     approveMutation.mutate({ id: selectedApp.id, status: 'rejected', notes: adminNotes });
   };
 
-  const agents = agentsData?.agents || [];
-  const applications = appsData?.applications || [];
-
   const filteredAgents = agents.filter((a: any) =>
     a.full_name?.toLowerCase().includes(search.toLowerCase()) ||
     a.agent_id?.toLowerCase().includes(search.toLowerCase()) ||
@@ -111,7 +103,6 @@ const AgentManagementPage: React.FC = () => {
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['admin_agents'] });
-    await queryClient.invalidateQueries({ queryKey: ['admin_agent_applications'] });
   };
 
   return (
@@ -129,34 +120,34 @@ const AgentManagementPage: React.FC = () => {
         </motion.div>
 
         <div className="am-stats-row">
-          <div className="am-stat-card">
+          <Card variant="bordered" className="am-stat-card">
             <IonIcon icon={peopleOutline} style={{ color: '#4CAF50' }} />
             <div>
               <span className="am-stat-value">{agents.length}</span>
               <span className="am-stat-label">Total Agents</span>
             </div>
-          </div>
-          <div className="am-stat-card">
+          </Card>
+          <Card variant="bordered" className="am-stat-card">
             <IonIcon icon={timeOutline} style={{ color: '#FF9800' }} />
             <div>
               <span className="am-stat-value">{pendingApps.length}</span>
               <span className="am-stat-label">Pending Applications</span>
             </div>
-          </div>
-          <div className="am-stat-card">
+          </Card>
+          <Card variant="bordered" className="am-stat-card">
             <IonIcon icon={checkmarkCircleOutline} style={{ color: '#2e7d32' }} />
             <div>
               <span className="am-stat-value">{agents.filter((a: any) => a.agent_verified).length}</span>
               <span className="am-stat-label">Verified Agents</span>
             </div>
-          </div>
-          <div className="am-stat-card">
+          </Card>
+          <Card variant="bordered" className="am-stat-card">
             <IonIcon icon={banOutline} style={{ color: '#c62828' }} />
             <div>
               <span className="am-stat-value">{agents.filter((a: any) => a.agent_status === 'suspended').length}</span>
               <span className="am-stat-label">Suspended</span>
             </div>
-          </div>
+          </Card>
         </div>
 
         <IonSearchbar

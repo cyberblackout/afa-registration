@@ -75,6 +75,19 @@
   gap: 1rem;
 }
 
+.admin-navbar-right .theme-toggle-btn {
+  color: var(--admin-text);
+  font-size: 20px;
+}
+
+.admin-navbar-right .theme-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.admin-navbar-right .theme-toggle-btn:active {
+  background: rgba(0, 0, 0, 0.1);
+}
+
 .admin-user-name {
   font-size: 0.9rem;
   color: var(--admin-text-secondary);
@@ -186,11 +199,46 @@ ion-refresher {
 }
 
 .admin-overlay {
-  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease-out;
+  will-change: opacity;
+}
+
+.admin-overlay--open {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .admin-mobile-drawer {
-  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 280px;
+  background: var(--admin-sidebar-bg);
+  z-index: 210;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  transform: translate3d(-100%, 0, 0);
+  transition: transform 180ms ease-out;
+  will-change: transform;
+}
+
+.admin-mobile-drawer--open {
+  transform: translate3d(0, 0, 0);
+}
+
+@media (min-width: 769px) {
+  .admin-overlay,
+  .admin-mobile-drawer {
+    display: none !important;
+  }
 }
 
 @media (max-width: 768px) {
@@ -209,29 +257,8 @@ ion-refresher {
   .admin-main {
     --padding-top: calc(var(--admin-navbar-height) + 1rem);
     --padding-bottom: 1rem;
-    --padding-start: 1rem;
-    --padding-end: 1rem;
-  }
-
-  .admin-overlay {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 200;
-  }
-
-  .admin-mobile-drawer {
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    width: 280px;
-    background: var(--admin-sidebar-bg);
-    z-index: 210;
-    overflow-y: auto;
+    --padding-start: 0;
+    --padding-end: 0;
   }
 }
 

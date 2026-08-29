@@ -35,6 +35,7 @@ import { supabase } from '../../services/supabase';
 import { adminCustomerApi, walletApi, orderApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate } from '../../utils/date';
+import Card from '../../components/Card';
 import './CustomersPage.css';
 
 const CustomersPage: React.FC = () => {
@@ -88,12 +89,17 @@ const CustomersPage: React.FC = () => {
 
   const saveEdit = async () => {
     if (!editCustomer) return;
-    await adminCustomerApi.updateProfile(editCustomer.id, { full_name: editName, email: editEmail, phone: editPhone });
-    queryClient.invalidateQueries({ queryKey: ['admin_customers'] });
-    setShowEditModal(false);
-    setEditCustomer(null);
-    setToastMessage('Customer details updated successfully');
-    setShowToast(true);
+    try {
+      await adminCustomerApi.updateProfile(editCustomer.id, { full_name: editName, email: editEmail, phone: editPhone });
+      queryClient.invalidateQueries({ queryKey: ['admin_customers'] });
+      setShowEditModal(false);
+      setEditCustomer(null);
+      setToastMessage('Customer details updated successfully');
+      setShowToast(true);
+    } catch (err: any) {
+      setToastMessage(err.message || 'Failed to update customer');
+      setShowToast(true);
+    }
   };
 
   const toggleRole = (c: any) => {
@@ -103,10 +109,15 @@ const CustomersPage: React.FC = () => {
       header: `${isAdmin ? 'Demote' : 'Promote'} Customer`,
       message: `Are you sure you want to ${isAdmin ? 'demote' : 'promote'} ${c.full_name} to ${newRole}?`,
       action: async () => {
-        await adminCustomerApi.updateRole(c.id, newRole);
-        queryClient.invalidateQueries({ queryKey: ['admin_customers'] });
-        setToastMessage(`${c.full_name} is now ${newRole}`);
-        setShowToast(true);
+        try {
+          await adminCustomerApi.updateRole(c.id, newRole);
+          queryClient.invalidateQueries({ queryKey: ['admin_customers'] });
+          setToastMessage(`${c.full_name} is now ${newRole}`);
+          setShowToast(true);
+        } catch (err: any) {
+          setToastMessage(err.message || 'Failed to update role');
+          setShowToast(true);
+        }
       },
     });
     setShowAlert(true);
@@ -170,7 +181,7 @@ const CustomersPage: React.FC = () => {
                     transition={{ delay: index * 0.03 }}
                     className="customer-card-wrapper"
                   >
-                    <div className="customer-card" onClick={() => toggleExpand(customer.id)}>
+                    <Card hover noPadding className="customer-card" onClick={() => toggleExpand(customer.id)}>
                       <div className="customer-main">
                         <div className={`status-dot ${customer.role === 'admin' ? 'dot-active' : 'dot-suspended'}`} />
                         <div className="customer-info">
@@ -256,7 +267,7 @@ const CustomersPage: React.FC = () => {
                           </motion.div>
                         )}
                       </AnimatePresence>
-                    </div>
+                    </Card>
                   </motion.div>
                 );
               })}

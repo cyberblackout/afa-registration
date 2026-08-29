@@ -27,6 +27,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../services/supabase';
 import { notificationApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
+import Card from '../../components/Card';
 import { formatGhanaDateTime } from '../../utils/date';
 import './NotificationsPage.css';
 
@@ -281,7 +282,7 @@ const NotificationsPage: React.FC = () => {
         <AnimatePresence mode="wait">
           {activeTab !== 'log' ? (
             <motion.div key="compose" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="notif-compose">
-              <div className="notif-form-card">
+              <Card className="notif-form-card">
                 <div className="form-section">
                   <div className="form-section-title">Channel</div>
                   <div className="channel-badge">
@@ -351,7 +352,7 @@ const NotificationsPage: React.FC = () => {
                   <IonIcon icon={sendOutline} slot="start" />
                   {sending ? 'Sending...' : `Send ${tabs.find(t => t.key === activeTab)?.label}`}
                 </IonButton>
-              </div>
+              </Card>
             </motion.div>
           ) : (
             <motion.div key="log" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="notif-log">

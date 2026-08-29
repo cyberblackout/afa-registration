@@ -5,10 +5,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
 import { profileApi, orderApi, referralApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { formatCurrency } from '../utils/number';
+import AmountDisplay from '../components/AmountDisplay';
 import DashboardLayout from '../layouts/DashboardLayout';
-import MTNAFABanner from '../components/MTNAFABanner';
-import { motion } from 'framer-motion';
 import {
   walletOutline,
   cartOutline,
@@ -16,15 +14,21 @@ import {
   addCircleOutline,
   personOutline,
   giftOutline,
+  notificationsOutline,
   arrowForward,
+  chevronForward,
+  timeOutline,
+  checkmarkCircleOutline,
 } from 'ionicons/icons';
 import './DashboardPage.css';
 
 const quickActions = [
-  { icon: addCircleOutline, title: 'Register AFA', subtitle: 'Create new order', path: '/register-afa' },
-  { icon: walletOutline, title: 'Wallet', subtitle: 'Top up and review', path: '/wallet' },
-  { icon: cartOutline, title: 'Orders', subtitle: 'Track submissions', path: '/orders' },
-  { icon: personOutline, title: 'Profile', subtitle: 'Manage account', path: '/profile' },
+  { icon: addCircleOutline, title: 'Register AFA', subtitle: 'New order', path: '/register-afa', color: '#FFCB05' },
+  { icon: walletOutline, title: 'Wallet', subtitle: 'Top up', path: '/wallet', color: '#10b981' },
+  { icon: cartOutline, title: 'Orders', subtitle: 'Track', path: '/orders', color: '#3b82f6' },
+  { icon: personOutline, title: 'Profile', subtitle: 'Account', path: '/profile', color: '#8b5cf6' },
+  { icon: giftOutline, title: 'Referral', subtitle: 'Earn', path: '/referrals', color: '#f59e0b' },
+  { icon: notificationsOutline, title: 'Notifications', subtitle: 'Alerts', path: '/notifications', color: '#ef4444' },
 ];
 
 const DashboardPage: React.FC = () => {
@@ -38,13 +42,13 @@ const DashboardPage: React.FC = () => {
     await queryClient.invalidateQueries({ queryKey: ['referral_stats_dash', user?.id] });
   };
 
-  const { data: profile } = useQuery({
+  const { data: profile, isLoading: profileLoading, isError: profileError } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: () => profileApi.get(user!.id),
     enabled: !!user?.id,
   });
 
-  const { data: ordersData } = useQuery({
+  const { data: ordersData, isLoading: ordersLoading } = useQuery({
     queryKey: ['orders-count', user?.id],
     queryFn: async () => {
       const data = await orderApi.list(user!.id);
@@ -53,7 +57,7 @@ const DashboardPage: React.FC = () => {
     enabled: !!user?.id,
   });
 
-  const { data: regCount } = useQuery({
+  const { data: regCount, isLoading: regLoading } = useQuery({
     queryKey: ['registrations-count', user?.id],
     queryFn: async () => {
       const { count, error } = await supabase
@@ -70,109 +74,166 @@ const DashboardPage: React.FC = () => {
   const orders = ordersData ?? [];
   const recentOrdersCount = orders.length;
 
-  const { data: referralStats } = useQuery({
+  const { data: referralStats, isLoading: referralLoading } = useQuery({
     queryKey: ['referral_stats_dash', user?.id],
     queryFn: () => referralApi.getStats(),
     enabled: !!user?.id,
   });
 
+  const isLoadingAll = profileLoading || ordersLoading || regLoading || referralLoading;
+
+  const displayName = profile?.full_name || user?.full_name || 'User';
+  const firstName = displayName.split(' ')[0];
+  const capitalizedName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+  const isAgent = (profile as any)?.role === 'agent' || user?.role === 'agent';
+
+  if (isLoadingAll) {
+    return (
+      <IonPage>
+        <DashboardLayout onRefresh={handleRefresh}>
+          <div className="db-page">
+            <div className="db-skeleton">
+              <div className="db-skeleton-line db-skeleton-line--lg" />
+              <div className="db-skeleton-card" />
+              <div className="db-skeleton-row">
+                <div className="db-skeleton-card" />
+                <div className="db-skeleton-card" />
+              </div>
+            </div>
+          </div>
+        </DashboardLayout>
+      </IonPage>
+    );
+  }
+
+  if (profileError) {
+    return (
+      <IonPage>
+        <DashboardLayout onRefresh={handleRefresh}>
+          <div className="db-page">
+            <div className="db-error">
+              <p>Failed to load dashboard.</p>
+              <button onClick={handleRefresh}>Retry</button>
+            </div>
+          </div>
+        </DashboardLayout>
+      </IonPage>
+    );
+  }
+
   return (
     <IonPage>
       <DashboardLayout onRefresh={handleRefresh}>
-        <div className="dashboard-container">
-          <MTNAFABanner
-            userName={profile?.full_name || user?.full_name || 'User'}
-            role="user"
-            newRegistrationHref="/register-afa"
-            secondaryActionHref="/become-agent"
-          />
+        <div className="db-page">
 
-          <div className="stats-grid">
-            <motion.div
-              className="stat-card"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.1 }}
-            >
-              <div className="stat-card-header">
-                <IonIcon icon={walletOutline} className="stat-icon wallet-icon" />
-                <span className="stat-label">Wallet Balance</span>
+          {/* ── WALLET CARD ── */}
+          <div className="db-wallet-card">
+            <div className="db-wallet-greeting">
+              <h1>Welcome back, {capitalizedName} <span className="db-wave">👋</span></h1>
+              <p>Your MTN AFA Portal is ready to serve you.</p>
+              {isAgent && (
+                <span className="db-role-badge">
+                  <IonIcon icon={personOutline} />
+                  Agent
+                </span>
+              )}
+            </div>
+            <div className="db-wallet-top">
+              <div className="db-wallet-label">
+                <IonIcon icon={walletOutline} />
+                <span>Wallet Balance</span>
               </div>
-              <p className="stat-value">{formatCurrency(balance)}</p>
-              <a href="/wallet" className="stat-btn wallet-btn">Top Up Wallet</a>
-            </motion.div>
-
-            <motion.div
-              className="stat-card"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.2 }}
-            >
-              <div className="stat-card-header">
-                <IonIcon icon={cartOutline} className="stat-icon orders-icon" />
-                <span className="stat-label">Recent Orders</span>
-              </div>
-              <p className="stat-value">{recentOrdersCount}</p>
-              <a href="/orders" className="stat-btn">View Orders</a>
-            </motion.div>
-
-            <motion.div
-              className="stat-card"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.3 }}
-            >
-              <div className="stat-card-header">
-                <IonIcon icon={documentTextOutline} className="stat-icon reg-icon" />
-                <span className="stat-label">Total Registrations</span>
-              </div>
-              <p className="stat-value">{regCount ?? 0}</p>
-              <a href="/register-afa" className="stat-btn">New AFA Registration</a>
-            </motion.div>
-
-            <motion.div
-              className="stat-card referral-card"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.35 }}
-            >
-              <div className="stat-card-header">
-                <IonIcon icon={giftOutline} className="stat-icon" style={{ color: '#8b5cf6' }} />
-                <span className="stat-label">Referral Earnings</span>
-              </div>
-              <p className="stat-value" style={{ fontSize: 22 }}>{formatCurrency((referralStats as any)?.total_earned)}</p>
-              <p className="stat-sub" style={{ fontSize: 12, color: '#6b7280', margin: '0 0 10px' }}>
-                {(referralStats as any)?.successful || 0} successful · {(referralStats as any)?.pending || 0} pending
-              </p>
-              <Link to="/referrals" className="stat-btn" style={{ background: '#f3e8ff', color: '#7c3aed' }}>
-                Refer & Earn
-              </Link>
-            </motion.div>
+              <a href="/wallet" className="db-wallet-history-btn">
+                <IonIcon icon={timeOutline} />
+                History
+              </a>
+            </div>
+            <div className="db-wallet-balance">
+              <AmountDisplay value={balance} className="amount-display--dark db-wallet-amount-display" />
+            </div>
+            <a href="/wallet" className="db-wallet-topup-btn">
+              <IonIcon icon={addCircleOutline} />
+              Top Up Wallet
+            </a>
           </div>
 
-          <div className="quick-actions-section">
-            <h2 className="section-title">Quick Actions</h2>
-            <div className="quick-actions-grid">
+          {/* ── QUICK ACTIONS ── */}
+          <div className="db-section">
+            <h2 className="db-section-title">Quick Actions</h2>
+            <div className="db-actions-grid">
               {quickActions.map((action) => (
-                <motion.a
-                  key={action.title}
-                  href={action.path}
-                  className="quick-action-card"
-                  whileHover={{ scale: 1.05 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                >
-                  <div className="quick-action-icon">
+                <a key={action.title} href={action.path} className="db-action-card">
+                  <div className="db-action-icon" style={{ background: `${action.color}18`, color: action.color }}>
                     <IonIcon icon={action.icon} />
                   </div>
-                  <div className="quick-action-text">
-                    <h3>{action.title}</h3>
-                    <p>{action.subtitle}</p>
+                  <div className="db-action-text">
+                    <span className="db-action-title">{action.title}</span>
+                    <span className="db-action-sub">{action.subtitle}</span>
                   </div>
-                  <IonIcon icon={arrowForward} className="quick-action-arrow" />
-                </motion.a>
+                  <IonIcon icon={chevronForward} className="db-action-arrow" />
+                </a>
               ))}
             </div>
           </div>
+
+          {/* ── STATS ROW ── */}
+          <div className="db-section">
+            <h2 className="db-section-title">Overview</h2>
+            <div className="db-stats-row">
+              <div className="db-stat-card">
+                <div className="db-stat-icon db-stat-icon--blue">
+                  <IonIcon icon={cartOutline} />
+                </div>
+                <div className="db-stat-info">
+                  <span className="db-stat-value">{recentOrdersCount}</span>
+                  <span className="db-stat-label">Recent Orders</span>
+                </div>
+              </div>
+              <div className="db-stat-card">
+                <div className="db-stat-icon db-stat-icon--emerald">
+                  <IonIcon icon={documentTextOutline} />
+                </div>
+                <div className="db-stat-info">
+                  <span className="db-stat-value">{regCount ?? 0}</span>
+                  <span className="db-stat-label">Registrations</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── REFERRAL CARD ── */}
+          {(referralStats as any)?.total_earned > 0 && (
+            <div className="db-section">
+              <div className="db-referral-card">
+                <div className="db-referral-top">
+                  <div className="db-referral-icon">
+                    <IonIcon icon={giftOutline} />
+                  </div>
+                  <div className="db-referral-info">
+                    <span className="db-referral-title">Referral Earnings</span>
+                    <span className="db-referral-amount">
+                      <AmountDisplay value={(referralStats as any)?.total_earned ?? 0} showToggle={false} className="amount-display--dark" />
+                    </span>
+                  </div>
+                </div>
+                <div className="db-referral-stats">
+                  <span className="db-referral-stat">
+                    <IonIcon icon={checkmarkCircleOutline} />
+                    {(referralStats as any)?.successful || 0} successful
+                  </span>
+                  <span className="db-referral-stat">
+                    <IonIcon icon={timeOutline} />
+                    {(referralStats as any)?.pending || 0} pending
+                  </span>
+                </div>
+                <Link to="/referrals" className="db-referral-link">
+                  Refer & Earn
+                  <IonIcon icon={arrowForward} />
+                </Link>
+              </div>
+            </div>
+          )}
+
         </div>
       </DashboardLayout>
     </IonPage>

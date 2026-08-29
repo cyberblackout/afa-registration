@@ -6,14 +6,13 @@ import {
 } from '@ionic/react';
 import {
   Tag, Wallet, Users, TrendingUp, ShieldCheck,
-  CheckCircle, ArrowRight, ChevronRight,
-  Star, Phone, Clock, Zap, Network,
-  UserCheck, LogIn, UserPlus, DollarSign,
+  CheckCircle, ArrowRight, UserPlus, DollarSign,
 } from 'lucide-react';
 import { settingsApi, pricingApi, agentApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import DashboardLayout from '../layouts/DashboardLayout';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import AmountDisplay from '../components/AmountDisplay';
 import './BecomeAgentPage.css';
 
 // Load Paystack Inline script (same pattern as WalletPage)
@@ -62,7 +61,7 @@ const benefits = [
   { icon: Users, title: 'Grow Your Customer Base', desc: 'Register more customers and build a successful AFA service business.' },
   { icon: TrendingUp, title: 'Increase Your Income', desc: 'The more customers you serve, the more opportunities you have to earn.' },
   { icon: ShieldCheck, title: 'Trusted Platform', desc: 'Operate securely with MTN-backed agent tools and support.' },
-  { icon: Star, title: 'Agent Badge & ID', desc: 'Get verified agent status with a professional Agent ID and badge.' },
+  { icon: Tag, title: 'Agent Badge & ID', desc: 'Get verified agent status with a professional Agent ID and badge.' },
 ];
 
 const steps = [
@@ -72,13 +71,6 @@ const steps = [
   { icon: DollarSign, title: 'Earn Commissions', desc: 'Make profit on every successful registration you complete.' },
 ];
 
-const trustIndicators = [
-  { icon: ShieldCheck, label: 'Secure Platform' },
-  { icon: Phone, label: '24/7 Support' },
-  { icon: Zap, label: 'Fast Processing' },
-  { icon: Network, label: 'Trusted Network' },
-];
-
 const BecomeAgentPage: React.FC = () => {
   const history = useHistory();
   const { user, setUser } = useAuthStore();
@@ -86,12 +78,12 @@ const BecomeAgentPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', color: 'success' });
 
-  const { data: agentFeeData } = useQuery({
+  const { data: agentFeeData, isLoading: feeLoading } = useQuery({
     queryKey: ['agent_fee'],
     queryFn: () => settingsApi.getSetting('agent_fee'),
   });
 
-  const { data: afaPricingData } = useQuery({
+  const { data: afaPricingData, isLoading: pricingLoading } = useQuery({
     queryKey: ['afa_registration_price'],
     queryFn: async () => {
       const allPricing = await pricingApi.get();
@@ -103,6 +95,8 @@ const BecomeAgentPage: React.FC = () => {
     await queryClient.invalidateQueries({ queryKey: ['agent_fee'] });
     await queryClient.invalidateQueries({ queryKey: ['afa_registration_price'] });
   };
+
+  const isLoadingData = feeLoading || pricingLoading;
 
   const agentFee = Number(agentFeeData ?? 100);
   const normalPrice = Number(afaPricingData?.normal_price ?? afaPricingData?.amount ?? 0);
@@ -207,72 +201,19 @@ const BecomeAgentPage: React.FC = () => {
       <div className="ba-page">
         {/* ===== HERO ===== */}
         <section className="ba-hero">
-          <div className="ba-hero-bg" />
           <div className="ba-hero-content">
-            <div className="ba-hero-text">
-              <div className="ba-hero-badge">
-                <ShieldCheck size={14} />
-                <span>Trusted Agent Network</span>
-              </div>
-              <h1 className="ba-hero-title">Become an <span className="ba-highlight">MTN AFA Agent</span></h1>
-              <p className="ba-hero-sub">
-                Register customers at affordable agent prices and earn commissions on every successful registration.
-              </p>
-              <p className="ba-hero-desc">
-                Grow your business, serve more customers, and increase your earnings with MTN AFA Agent tools.
-              </p>
-              <div className="ba-hero-actions">
-                <IonButton className="ba-btn-primary" onClick={handleApply} disabled={loading}>
-                  Become an Agent Now
-                  <ArrowRight size={18} style={{ marginLeft: 8 }} />
-                </IonButton>
-                <IonButton className="ba-btn-secondary" onClick={() => document.getElementById('ba-how')?.scrollIntoView({ behavior: 'smooth' })}>
-                  How It Works
-                </IonButton>
-              </div>
-              <div className="ba-hero-trust">
-                <ShieldCheck size={14} />
-                <span>Secure</span>
-                <span className="ba-dot">•</span>
-                <ShieldCheck size={14} />
-                <span>Reliable</span>
-                <span className="ba-dot">•</span>
-                <ShieldCheck size={14} />
-                <span>Profitable</span>
-              </div>
-            </div>
-            <div className="ba-hero-visual">
-              <div className="ba-hero-phone">
-                <div className="ba-hero-phone-screen">
-                  <div className="ba-hero-phone-statusbar">
-                    <span>MTN AFA</span>
-                    <span className="ba-signal">●●●●</span>
-                  </div>
-                  <div className="ba-hero-phone-agent">
-                    <div className="ba-agent-avatar">
-                      <UserCheck size={32} />
-                    </div>
-                    <div className="ba-agent-info">
-                      <strong>Agent Dashboard</strong>
-                      <span>GHS 0.00 earned</span>
-                    </div>
-                  </div>
-                  <div className="ba-hero-phone-stats">
-                    <div className="ba-phone-stat">
-                      <span className="ba-stat-label">Customers</span>
-                      <span className="ba-stat-value">0</span>
-                    </div>
-                    <div className="ba-phone-stat">
-                      <span className="ba-stat-label">Commission</span>
-                      <span className="ba-stat-value">GHS 0</span>
-                    </div>
-                    <div className="ba-phone-stat">
-                      <span className="ba-stat-label">Rating</span>
-                      <span className="ba-stat-value">★★★★★</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <h1 className="ba-hero-title">Become an MTN AFA Agent</h1>
+            <p className="ba-hero-sub">
+              Register customers at affordable agent prices and earn commissions on every successful registration.
+            </p>
+            <div className="ba-hero-actions">
+              <IonButton className="ba-btn-primary" onClick={handleApply} disabled={loading}>
+                Become an Agent Now
+                <ArrowRight size={18} style={{ marginLeft: 8 }} />
+              </IonButton>
+              <IonButton className="ba-btn-secondary" onClick={() => document.getElementById('ba-how')?.scrollIntoView({ behavior: 'smooth' })}>
+                How It Works
+              </IonButton>
             </div>
           </div>
         </section>
@@ -289,7 +230,7 @@ const BecomeAgentPage: React.FC = () => {
               return (
                 <div key={b.title} className="ba-benefit-card">
                   <div className="ba-benefit-icon-wrap">
-                    <IconEl size={24} />
+                    <IconEl size={20} />
                   </div>
                   <h3>{b.title}</h3>
                   <p>{b.desc}</p>
@@ -315,7 +256,6 @@ const BecomeAgentPage: React.FC = () => {
                   </th>
                   <th className="ba-compare-col ba-compare-agent">
                     <span className="ba-compare-label">AFA Agent</span>
-                    <Star size={14} className="ba-agent-star" />
                   </th>
                 </tr>
               </thead>
@@ -370,12 +310,12 @@ const BecomeAgentPage: React.FC = () => {
               <div className="ba-profit-divider" />
               <div className="ba-profit-item">
                 <span className="ba-profit-label">Profit per registration</span>
-                <span className="ba-profit-value ba-profit-accent">GHS {Number(profitPerRegistration ?? 0).toFixed(2)}</span>
+                <span className="ba-profit-value ba-profit-accent"><AmountDisplay value={profitPerRegistration ?? 0} showToggle={false} /></span>
               </div>
               <div className="ba-profit-divider" />
               <div className="ba-profit-item">
                 <span className="ba-profit-label">Estimated earnings</span>
-                <span className="ba-profit-value ba-profit-highlight">GHS {Number(estimatedEarnings ?? 0).toFixed(2)}</span>
+                <span className="ba-profit-value ba-profit-highlight"><AmountDisplay value={estimatedEarnings ?? 0} showToggle={false} /></span>
               </div>
             </div>
             <p className="ba-profit-note">The more customers you register, the more you earn.</p>
@@ -395,11 +335,10 @@ const BecomeAgentPage: React.FC = () => {
                 <div key={s.title} className="ba-step">
                   <div className="ba-step-number">{i + 1}</div>
                   <div className="ba-step-icon-wrap">
-                    <IconEl size={28} />
+                    <IconEl size={24} />
                   </div>
                   <h3>{s.title}</h3>
                   <p>{s.desc}</p>
-                  {i < steps.length - 1 && <div className="ba-step-connector"><ChevronRight size={20} /></div>}
                 </div>
               );
             })}
@@ -414,7 +353,7 @@ const BecomeAgentPage: React.FC = () => {
               <p>Join MTN AFA Agents today and start building your customer network.</p>
               <div className="ba-cta-price-row">
                 <span className="ba-cta-price-label">Registration Fee</span>
-                <span className="ba-cta-price-amount">GHS {Number(agentFee ?? 0).toFixed(2)}</span>
+                <span className="ba-cta-price-amount"><AmountDisplay value={agentFee ?? 0} showToggle={false} /></span>
                 <span className="ba-cta-price-note">One-time payment, non-refundable</span>
               </div>
               <div className="ba-cta-includes">
@@ -434,23 +373,10 @@ const BecomeAgentPage: React.FC = () => {
               </IonButton>
               <p className="ba-cta-disclaimer">
                 Payment will be deducted from your wallet balance.
-                {user && <span> Current balance: GHS {Number(user.wallet_balance || 0).toFixed(2)}</span>}
+                {user && <span> Current balance: <AmountDisplay value={user.wallet_balance || 0} showToggle={false} /></span>}
               </p>
             </div>
           </div>
-        </section>
-
-        {/* ===== TRUST FOOTER ===== */}
-        <section className="ba-trust-footer">
-          {trustIndicators.map((t) => {
-            const IconEl = t.icon;
-            return (
-              <div key={t.label} className="ba-trust-item">
-                <IconEl size={18} />
-                <span>{t.label}</span>
-              </div>
-            );
-          })}
         </section>
 
         <IonLoading isOpen={loading} message="Processing your application..." />

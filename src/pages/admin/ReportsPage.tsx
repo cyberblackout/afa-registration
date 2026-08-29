@@ -24,6 +24,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminReportsApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
+import Card from '../../components/Card';
 import './ReportsPage.css';
 
 type DateRange = 'Today' | 'This Week' | 'This Month' | 'This Year' | 'Custom';
@@ -205,7 +206,7 @@ const ReportsPage: React.FC = () => {
 
         <div className="reports-stats">
           {statCards.map((stat, i) => (
-            <motion.div key={stat.label} className="stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
+            <Card key={stat.label} className="stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
               <div className="stat-card-left">
                 <div className="stat-card-icon">
                   <IonIcon icon={stat.icon} />
@@ -215,7 +216,7 @@ const ReportsPage: React.FC = () => {
                   <span className="stat-card-value">{stat.value}</span>
                 </div>
               </div>
-            </motion.div>
+            </Card>
           ))}
         </div>
 

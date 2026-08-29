@@ -21,6 +21,7 @@ import { supabase } from '../../services/supabase';
 import { adminDashboardApi, type AdminDashboardStats } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate } from '../../utils/date';
+import Card from '../../components/Card';
 import './DashboardPage.css';
 
 const statusConfig = {
@@ -116,8 +117,9 @@ const DashboardPage: React.FC = () => {
 
         <div className="stat-cards-row">
           {statCards.map((card, i) => (
-            <motion.div
+            <Card
               key={card.label}
+              variant="accent"
               className="stat-card"
               custom={i}
               variants={cardVariants}
@@ -134,12 +136,12 @@ const DashboardPage: React.FC = () => {
                   <IonIcon icon={card.icon} />
                 </div>
               </div>
-            </motion.div>
+            </Card>
           ))}
         </div>
 
         <div className="charts-grid">
-          <motion.div
+          <Card
             className="chart-card"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -162,9 +164,9 @@ const DashboardPage: React.FC = () => {
                 </LineChart>
               </ResponsiveContainer>
             )}
-          </motion.div>
+          </Card>
 
-          <motion.div
+          <Card
             className="chart-card"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -187,11 +189,11 @@ const DashboardPage: React.FC = () => {
                 </BarChart>
               </ResponsiveContainer>
             )}
-          </motion.div>
+          </Card>
         </div>
 
         <div className="dashboard-bottom-grid">
-          <motion.div
+          <Card
             className="recent-registrations-card"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -233,9 +235,9 @@ const DashboardPage: React.FC = () => {
                 })
               )}
             </div>
-          </motion.div>
+          </Card>
 
-          <motion.div
+          <Card
             className="quick-stats-card"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -253,7 +255,7 @@ const DashboardPage: React.FC = () => {
                 </div>
               ))}
             </div>
-          </motion.div>
+          </Card>
         </div>
       </div>
     </AdminLayout>

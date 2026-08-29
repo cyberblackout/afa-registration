@@ -74,16 +74,7 @@
 }
 
 .customer-card {
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   overflow: hidden;
-  cursor: pointer;
-  transition: box-shadow 0.2s;
-}
-
-.customer-card:hover {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 .customer-main {

@@ -33,6 +33,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { walletApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate } from '../../utils/date';
+import Card from '../../components/Card';
 import './WalletPage.css';
 
 const WalletPage: React.FC = () => {
@@ -107,11 +108,16 @@ const WalletPage: React.FC = () => {
   const toggleFreeze = (profile: any) => {
     setConfirmMsg(`Are you sure you want to ${profile.wallet_status === 'frozen' ? 'unfreeze' : 'freeze'} ${profile.full_name}'s wallet?`);
     setConfirmAction(async () => {
-      const frozen = profile.wallet_status === 'frozen';
-      await walletApi.adminUpdateStatus(profile.id, frozen ? 'active' : 'frozen');
-      queryClient.invalidateQueries({ queryKey: ['admin_wallets'] });
-      setToastMessage(`${profile.full_name}'s wallet has been ${frozen ? 'unfrozen' : 'frozen'}`);
-      setShowToast(true);
+      try {
+        const frozen = profile.wallet_status === 'frozen';
+        await walletApi.adminUpdateStatus(profile.id, frozen ? 'active' : 'frozen');
+        queryClient.invalidateQueries({ queryKey: ['admin_wallets'] });
+        setToastMessage(`${profile.full_name}'s wallet has been ${frozen ? 'unfrozen' : 'frozen'}`);
+        setShowToast(true);
+      } catch (err: any) {
+        setToastMessage(err.message || 'Failed to update wallet status');
+        setShowToast(true);
+      }
     });
     setShowConfirm(true);
   };
@@ -130,7 +136,8 @@ const WalletPage: React.FC = () => {
     <IonPage>
       <AdminLayout onRefresh={handleRefresh}>
         <div className="admin-wallet-page">
-        <motion.div
+        <Card
+          variant="hero"
           className="wallet-total-card"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -142,9 +149,9 @@ const WalletPage: React.FC = () => {
           </div>
           <div className="wallet-total-amount">GH₵ {totalBalance.toFixed(2)}</div>
           <div className="wallet-total-sub">{profiles.length} wallets</div>
-        </motion.div>
+        </Card>
 
-        <div className="wallet-section">
+        <Card noPadding className="wallet-section">
           <div className="search-bar">
             <IonIcon icon={searchOutline} className="search-icon" />
             <input type="text" placeholder="Search by name or email..." value={search} onChange={(e) => setSearch(e.target.value)} className="search-input" />
@@ -174,7 +181,7 @@ const WalletPage: React.FC = () => {
                     transition={{ delay: index * 0.03 }}
                     className="wallet-card-wrapper"
                   >
-                    <div className="wallet-card" onClick={() => toggleExpand(profile.id)}>
+                    <Card hover noPadding className="wallet-card" onClick={() => toggleExpand(profile.id)}>
                       <div className="wallet-main">
                         <div className="wallet-avatar">{(profile.full_name || 'U').charAt(0)}</div>
                         <div className="wallet-info">
@@ -241,7 +248,7 @@ const WalletPage: React.FC = () => {
                           </motion.div>
                         )}
                       </AnimatePresence>
-                    </div>
+                    </Card>
                   </motion.div>
                 ))}
               </AnimatePresence>
@@ -253,7 +260,7 @@ const WalletPage: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
+        </Card>
       </div>
 
       <IonModal isOpen={showTxModal} onDidDismiss={() => setShowTxModal(false)} className="tx-modal">

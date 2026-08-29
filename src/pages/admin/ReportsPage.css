@@ -104,10 +104,6 @@
 }
 
 .stat-card {
-  background: white;
-  border-radius: 16px;
-  padding: 1.25rem;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   display: flex;
   align-items: center;
   justify-content: space-between;

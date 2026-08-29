@@ -46,10 +46,6 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 16px;
-  background: var(--card-bg, #fff);
-  border: 1px solid var(--border-color, #e0e0e0);
-  border-radius: 12px;
 }
 
 .am-stat-card ion-icon { font-size: 28px; }

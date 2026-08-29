@@ -21,6 +21,7 @@ import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminSettingsApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
+import Card from '../../components/Card';
 import './SettingsPage.css';
 
 const SettingsPage: React.FC = () => {
@@ -304,7 +305,7 @@ const SettingsPage: React.FC = () => {
 
             {/* ── General ── */}
             <motion.div custom={0} variants={sectionVariants} initial="hidden" animate="visible">
-              <div className="settings-card">
+              <Card variant="accent" noPadding className="settings-card">
                 <div className="settings-card-header">
                   <div className="section-icon-wrapper">
                     <IonIcon icon={settingsOutline} className="section-icon" />
@@ -323,12 +324,12 @@ const SettingsPage: React.FC = () => {
                     {saving === 'General' ? 'Saving...' : 'Save General'}
                   </IonButton>
                 </div>
-              </div>
+              </Card>
             </motion.div>
 
             {/* ── Registration Fees ── */}
             <motion.div custom={1} variants={sectionVariants} initial="hidden" animate="visible">
-              <div className="settings-card">
+              <Card variant="accent" noPadding className="settings-card">
                 <div className="settings-card-header">
                   <div className="section-icon-wrapper">
                     <IonIcon icon={pricetagOutline} className="section-icon" />
@@ -345,12 +346,12 @@ const SettingsPage: React.FC = () => {
                     {saving === 'Fees' ? 'Saving...' : 'Save Fees'}
                   </IonButton>
                 </div>
-              </div>
+              </Card>
             </motion.div>
 
             {/* ── Wallet & Referral ── */}
             <motion.div custom={2} variants={sectionVariants} initial="hidden" animate="visible">
-              <div className="settings-card">
+              <Card variant="accent" noPadding className="settings-card">
                 <div className="settings-card-header">
                   <div className="section-icon-wrapper">
                     <IonIcon icon={walletOutline} className="section-icon" />
@@ -402,12 +403,12 @@ const SettingsPage: React.FC = () => {
                     {saving === 'Wallet & Referral' ? 'Saving...' : 'Save Wallet & Referral'}
                   </IonButton>
                 </div>
-              </div>
+              </Card>
             </motion.div>
 
             {/* ── Notifications (WhatsApp + Email + SMS) ── */}
             <motion.div custom={3} variants={sectionVariants} initial="hidden" animate="visible">
-              <div className="settings-card">
+              <Card variant="accent" noPadding className="settings-card">
                 <div className="settings-card-header">
                   <div className="section-icon-wrapper">
                     <IonIcon icon={notificationsCircleOutline} className="section-icon" />
@@ -476,12 +477,12 @@ const SettingsPage: React.FC = () => {
                     {saving === 'Notifications' ? 'Saving...' : 'Save Notifications'}
                   </IonButton>
                 </div>
-              </div>
+              </Card>
             </motion.div>
 
             {/* ── Agent System ── */}
             <motion.div custom={4} variants={sectionVariants} initial="hidden" animate="visible">
-              <div className="settings-card">
+              <Card variant="accent" noPadding className="settings-card">
                 <div className="settings-card-header">
                   <div className="section-icon-wrapper">
                     <IonIcon icon={ribbonOutline} className="section-icon" />
@@ -532,7 +533,7 @@ const SettingsPage: React.FC = () => {
                     {saving === 'Agent' ? 'Saving...' : 'Save Agent Settings'}
                   </IonButton>
                 </div>
-              </div>
+              </Card>
             </motion.div>
 
           </div>

@@ -1,0 +1,81 @@
+/* ═══════════════════════════════════════════════════════
+   AmountDisplay — Centralized Amount Visibility Toggle
+   ═══════════════════════════════════════════════════════ */
+
+.amount-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.amount-display-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.amount-display-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  border: none;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  color: rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, transform 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+  padding: 0;
+  line-height: 1;
+}
+
+.amount-display-toggle:active {
+  transform: scale(0.9);
+}
+
+.amount-display-toggle:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: rgba(0, 0, 0, 0.5);
+}
+
+.amount-display-toggle ion-icon {
+  font-size: 16px;
+  pointer-events: none;
+}
+
+/* ── Inside dark cards (wallet hero, dashboard wallet) ── */
+
+.amount-display--dark .amount-display-toggle {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.amount-display--dark .amount-display-toggle:active {
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.amount-display--dark .amount-display-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* ── Inline variant (no gap) ── */
+
+.amount-display--inline {
+  gap: 6px;
+}
+
+.amount-display--inline .amount-display-toggle {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+}
+
+.amount-display--inline .amount-display-toggle ion-icon {
+  font-size: 14px;
+}

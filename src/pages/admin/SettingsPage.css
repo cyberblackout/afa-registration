@@ -59,12 +59,8 @@
 }
 
 .settings-card {
-  border-radius: 16px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   margin: 0;
-  border-left: 4px solid var(--mtn-yellow);
   padding: 1.5rem;
-  background: var(--admin-card-bg);
 }
 
 .settings-card-header {

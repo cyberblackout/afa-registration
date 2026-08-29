@@ -1,31 +1,48 @@
 import React from 'react';
+import { IonPage, IonIcon } from '@ionic/react';
 import { Link } from 'react-router-dom';
-import {
-  IonIcon, IonSpinner,
-} from '@ionic/react';
-import {
-  ribbonOutline, peopleOutline, cartOutline, cashOutline,
-  walletOutline, addCircleOutline, documentTextOutline,
-} from 'ionicons/icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { motion } from 'framer-motion';
 import { agentApi, profileApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+import AmountDisplay from '../components/AmountDisplay';
 import DashboardLayout from '../layouts/DashboardLayout';
-import MTNAFABanner from '../components/MTNAFABanner';
+import {
+  walletOutline,
+  cartOutline,
+  documentTextOutline,
+  addCircleOutline,
+  personOutline,
+  giftOutline,
+  notificationsOutline,
+  ribbonOutline,
+  peopleOutline,
+  cashOutline,
+  chevronForward,
+  timeOutline,
+  checkmarkCircleOutline,
+} from 'ionicons/icons';
 import './AgentDashboardPage.css';
+
+const quickActions = [
+  { icon: addCircleOutline, title: 'Register AFA', subtitle: 'New order', path: '/register-afa', color: '#FFCB05' },
+  { icon: walletOutline, title: 'Wallet', subtitle: 'Top up', path: '/wallet', color: '#10b981' },
+  { icon: cartOutline, title: 'Orders', subtitle: 'Track', path: '/orders', color: '#3b82f6' },
+  { icon: personOutline, title: 'Profile', subtitle: 'Account', path: '/profile', color: '#8b5cf6' },
+  { icon: giftOutline, title: 'Referral', subtitle: 'Earn', path: '/referrals', color: '#f59e0b' },
+  { icon: notificationsOutline, title: 'Notifications', subtitle: 'Alerts', path: '/notifications', color: '#ef4444' },
+];
 
 const AgentDashboardPage: React.FC = () => {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
 
-  const { data: dashboard, isLoading } = useQuery({
+  const { data: dashboard, isLoading, isError } = useQuery({
     queryKey: ['agent_dashboard', user?.id],
     queryFn: () => agentApi.getDashboard() as any,
     enabled: !!user?.id,
   });
 
-  const { data: profile } = useQuery({
+  const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ['agent_profile', user?.id],
     queryFn: () => profileApi.get(user!.id),
     enabled: !!user?.id,
@@ -36,72 +53,141 @@ const AgentDashboardPage: React.FC = () => {
     await queryClient.invalidateQueries({ queryKey: ['agent_profile', user?.id] });
   };
 
-  const statsCards = [
-    { icon: peopleOutline, label: 'Registrations', value: dashboard?.registrations_count || 0, color: '#4CAF50' },
-    { icon: cartOutline, label: 'Orders', value: dashboard?.orders_count || 0, color: '#2196F3' },
-    { icon: cashOutline, label: 'Total Earnings', value: `GHS ${Number(dashboard?.total_earnings || 0).toFixed(2)}`, color: '#FF9800' },
-    { icon: walletOutline, label: 'Wallet Balance', value: `GHS ${Number(user?.wallet_balance || 0).toFixed(2)}`, color: '#9C27B0' },
-  ];
+  const isLoadingAll = isLoading || profileLoading;
+  const balance = Number((profile as any)?.wallet_balance ?? user?.wallet_balance ?? 0);
+  const displayName = profile?.full_name || user?.full_name || 'Agent';
+  const firstName = displayName.split(' ')[0];
 
-  if (isLoading) {
+  if (isLoadingAll) {
     return (
-      <DashboardLayout onRefresh={handleRefresh}>
-        <div className="agent-loading">
-          <IonSpinner name="crescent" />
-          <p>Loading agent dashboard...</p>
-        </div>
-      </DashboardLayout>
+      <IonPage>
+        <DashboardLayout onRefresh={handleRefresh}>
+          <div className="ag-page">
+            <div className="ag-skeleton">
+              <div className="ag-skeleton-line ag-skeleton-line--lg" />
+              <div className="ag-skeleton-card" />
+              <div className="ag-skeleton-row">
+                <div className="ag-skeleton-card" />
+                <div className="ag-skeleton-card" />
+              </div>
+            </div>
+          </div>
+        </DashboardLayout>
+      </IonPage>
+    );
+  }
+
+  if (isError) {
+    return (
+      <IonPage>
+        <DashboardLayout onRefresh={handleRefresh}>
+          <div className="ag-page">
+            <div className="ag-error">
+              <p>Failed to load agent dashboard.</p>
+              <button onClick={handleRefresh}>Retry</button>
+            </div>
+          </div>
+        </DashboardLayout>
+      </IonPage>
     );
   }
 
   return (
-    <DashboardLayout onRefresh={handleRefresh}>
-      <div className="agent-dashboard-page">
-        <MTNAFABanner
-          userName={profile?.full_name || user?.full_name || 'Agent'}
-          role="agent"
-          newRegistrationHref="/register-afa"
-        />
+    <IonPage>
+      <DashboardLayout onRefresh={handleRefresh}>
+        <div className="ag-page">
 
-        <div className="agent-stats-grid">
-          {statsCards.map((card, i) => (
-            <motion.div
-              key={card.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className="agent-stat-card"
-            >
-              <div className="stat-icon" style={{ background: `${card.color}15`, color: card.color }}>
-                <IonIcon icon={card.icon} />
-              </div>
-              <div className="stat-info">
-                <span className="stat-label">{card.label}</span>
-                <span className="stat-value">{card.value}</span>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-
-        <div className="agent-quick-actions">
-          <h2>Quick Actions</h2>
-          <div className="quick-actions-grid">
-            <Link to="/register-afa" className="quick-action-card">
-              <IonIcon icon={addCircleOutline} />
-              <span>Register Customer</span>
-            </Link>
-            <Link to="/orders" className="quick-action-card">
-              <IonIcon icon={documentTextOutline} />
-              <span>My Orders</span>
-            </Link>
-            <Link to="/wallet" className="quick-action-card">
-              <IonIcon icon={walletOutline} />
-              <span>Wallet</span>
-            </Link>
+          {/* ── GREETING ── */}
+          <div className="ag-greeting">
+            <div className="ag-greeting-text">
+              <h1>Welcome back, {firstName} <span className="ag-wave">👋</span></h1>
+              <p>Manage your MTN AFA services</p>
+            </div>
+            <span className="ag-role-badge">
+              <IonIcon icon={personOutline} />
+              Agent
+            </span>
           </div>
+
+          {/* ── WALLET CARD ── */}
+          <div className="ag-wallet-card">
+            <div className="ag-wallet-top">
+              <div className="ag-wallet-label">
+                <IonIcon icon={walletOutline} />
+                <span>Wallet Balance</span>
+              </div>
+              <a href="/wallet" className="ag-wallet-history-btn">
+                <IonIcon icon={timeOutline} />
+                History
+              </a>
+            </div>
+            <div className="ag-wallet-balance">
+              <AmountDisplay value={balance} className="amount-display--dark ag-wallet-amount-display" />
+            </div>
+            <a href="/wallet" className="ag-wallet-topup-btn">
+              <IonIcon icon={addCircleOutline} />
+              Top Up Wallet
+            </a>
+          </div>
+
+          {/* ── QUICK ACTIONS ── */}
+          <div className="ag-section">
+            <h2 className="ag-section-title">Quick Actions</h2>
+            <div className="ag-actions-grid">
+              {quickActions.map((action) => (
+                <a key={action.title} href={action.path} className="ag-action-card">
+                  <div className="ag-action-icon" style={{ background: `${action.color}18`, color: action.color }}>
+                    <IonIcon icon={action.icon} />
+                  </div>
+                  <div className="ag-action-text">
+                    <span className="ag-action-title">{action.title}</span>
+                    <span className="ag-action-sub">{action.subtitle}</span>
+                  </div>
+                  <IonIcon icon={chevronForward} className="ag-action-arrow" />
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* ── STATS ROW ── */}
+          <div className="ag-section">
+            <h2 className="ag-section-title">Overview</h2>
+            <div className="ag-stats-row">
+              <div className="ag-stat-card">
+                <div className="ag-stat-icon ag-stat-icon--emerald">
+                  <IonIcon icon={peopleOutline} />
+                </div>
+                <div className="ag-stat-info">
+                  <span className="ag-stat-value">{dashboard?.registrations_count || 0}</span>
+                  <span className="ag-stat-label">Registrations</span>
+                </div>
+              </div>
+              <div className="ag-stat-card">
+                <div className="ag-stat-icon ag-stat-icon--blue">
+                  <IonIcon icon={cartOutline} />
+                </div>
+                <div className="ag-stat-info">
+                  <span className="ag-stat-value">{dashboard?.orders_count || 0}</span>
+                  <span className="ag-stat-label">Orders</span>
+                </div>
+              </div>
+              <div className="ag-stat-card">
+                <div className="ag-stat-icon ag-stat-icon--amber">
+                  <IonIcon icon={cashOutline} />
+                </div>
+                <div className="ag-stat-info">
+                  <span className="ag-stat-value">
+                    <AmountDisplay value={dashboard?.total_earnings || 0} showToggle={false} />
+                  </span>
+                  <span className="ag-stat-label">Total Earnings</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
-      </div>
-    </DashboardLayout>
+      </DashboardLayout>
+    </IonPage>
   );
 };
 

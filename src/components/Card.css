@@ -1,0 +1,79 @@
+/* ===== Shared Card Component ===== */
+
+.shared-card {
+  background: var(--card-bg);
+  border-radius: var(--card-radius);
+  padding: var(--card-padding);
+  box-shadow: var(--card-shadow);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+  min-width: 0;
+}
+
+.shared-card--no-padding {
+  padding: 0;
+}
+
+/* ── Default: white bg, standard shadow ── */
+.shared-card--default {
+  background: var(--card-bg);
+}
+
+/* ── Accent: left border accent ── */
+.shared-card--accent {
+  background: var(--card-bg);
+  border-left: 4px solid var(--card-accent);
+}
+
+/* ── Hero: dark gradient background ── */
+.shared-card--hero {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  color: #ffffff;
+  box-shadow:
+    0 4px 12px rgba(26, 26, 46, 0.12),
+    0 16px 48px rgba(26, 26, 46, 0.18);
+}
+
+.dark .shared-card--hero {
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.3),
+    0 16px 48px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Bordered: border instead of shadow ── */
+.shared-card--bordered {
+  background: var(--card-bg);
+  box-shadow: none;
+  border: 1px solid var(--card-border-color);
+}
+
+/* ── Flat: minimal, no shadow ── */
+.shared-card--flat {
+  background: var(--card-bg);
+  box-shadow: none;
+  border-radius: var(--card-radius);
+}
+
+/* ── Hover state ── */
+.shared-card--hover {
+  cursor: pointer;
+}
+
+.shared-card--hover:hover {
+  box-shadow: var(--card-shadow-hover);
+  transform: translateY(-2px);
+}
+
+.shared-card--accent.shared-card--hover:hover {
+  border-left-color: var(--card-accent);
+}
+
+/* ── Dark mode overrides ── */
+.dark .shared-card--default,
+.dark .shared-card--accent {
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+}
+
+.dark .shared-card--bordered {
+  border-color: var(--card-border-color);
+}

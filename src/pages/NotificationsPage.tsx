@@ -2,7 +2,6 @@ import React, { useState, useMemo, useCallback } from 'react';
 import {
   IonPage,
   IonIcon,
-  IonButton,
   IonToast,
 } from '@ionic/react';
 import {
@@ -19,6 +18,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
+import { notificationApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { Notification } from '../types';
 import DashboardLayout from '../layouts/DashboardLayout';
@@ -30,13 +30,6 @@ const typeIcons: Record<string, string> = {
   success: checkmarkCircleOutline,
   warning: alertCircleOutline,
   error: closeCircleOutline,
-};
-
-const typeLabels: Record<string, string> = {
-  info: 'Info',
-  success: 'Success',
-  warning: 'Warning',
-  error: 'Error',
 };
 
 function getTimeAgo(dateStr: string): string {
@@ -65,28 +58,23 @@ function groupByDateCategory(notifications: Notification[]): Map<string, Notific
   return groups;
 }
 
-const notificationVariants = {
-  initial: { opacity: 0, y: 12, scale: 0.98 },
+const itemVariants = {
+  initial: { opacity: 0, y: 8 },
   animate: (i: number) => ({
     opacity: 1,
     y: 0,
-    scale: 1,
-    transition: { delay: i * 0.035, type: 'spring' as const, stiffness: 300, damping: 28 },
+    transition: { delay: i * 0.03, duration: 0.25 },
   }),
-  exit: { opacity: 0, x: 60, transition: { duration: 0.2 } },
-} as const;
-
-const containerVariants = {
-  animate: { transition: { staggerChildren: 0.03 } },
+  exit: { opacity: 0, x: 40, transition: { duration: 0.2 } },
 };
 
-function SkeletonCard() {
+function SkeletonRow() {
   return (
-    <div className="skeleton-card">
-      <div className="skeleton-icon" />
-      <div className="skeleton-lines">
-        <div className="skeleton-line skeleton-line--title" />
-        <div className="skeleton-line skeleton-line--message" />
+    <div className="nf-skeleton-row">
+      <div className="nf-skel-icon" />
+      <div className="nf-skel-content">
+        <div className="nf-skel-line nf-skel-line--title" />
+        <div className="nf-skel-line nf-skel-line--text" />
       </div>
     </div>
   );
@@ -97,6 +85,7 @@ const NotificationsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [toastMessage, setToastMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
 
   const showToastMessage = useCallback((msg: string) => {
     setToastMessage(msg);
@@ -105,19 +94,17 @@ const NotificationsPage: React.FC = () => {
 
   const { data: notifications = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['notifications', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user!.id)
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return (data || []) as Notification[];
-    },
+    queryFn: () => notificationApi.list() as Promise<Notification[]>,
     enabled: !!user?.id,
   });
 
-  const groupedNotifications = useMemo(() => groupByDateCategory(notifications), [notifications]);
+  const filteredNotifications = useMemo(() => {
+    if (filter === 'unread') return notifications.filter((n) => !n.read);
+    if (filter === 'read') return notifications.filter((n) => n.read);
+    return notifications;
+  }, [notifications, filter]);
+
+  const groupedNotifications = useMemo(() => groupByDateCategory(filteredNotifications), [filteredNotifications]);
   const categoryKeys = useMemo(() => Array.from(groupedNotifications.keys()), [groupedNotifications]);
 
   React.useEffect(() => {
@@ -143,27 +130,14 @@ const NotificationsPage: React.FC = () => {
   }, [user?.id, queryClient]);
 
   const markReadMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('id', id);
-      if (error) throw error;
-    },
+    mutationFn: (id: string) => notificationApi.markRead(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 
   const markAllReadMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from('notifications')
-        .update({ read: true })
-        .eq('user_id', user!.id)
-        .eq('read', false);
-      if (error) throw error;
-    },
+    mutationFn: () => notificationApi.markAllRead(),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       showToastMessage('All notifications marked as read');
@@ -171,13 +145,7 @@ const NotificationsPage: React.FC = () => {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('notifications')
-        .delete()
-        .eq('id', id);
-      if (error) throw error;
-    },
+    mutationFn: (id: string) => notificationApi.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
       showToastMessage('Notification removed');
@@ -185,6 +153,7 @@ const NotificationsPage: React.FC = () => {
   });
 
   const unreadCount = useMemo(() => notifications.filter((n) => !n.read).length, [notifications]);
+  const readCount = useMemo(() => notifications.filter((n) => n.read).length, [notifications]);
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['notifications', user?.id] });
@@ -205,145 +174,187 @@ const NotificationsPage: React.FC = () => {
     <IonPage>
       <DashboardLayout onRefresh={handleRefresh}>
         <motion.div
-          className="notifications-page"
+          className="nf-page"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.4 }}
+          transition={{ duration: 0.35 }}
         >
-            <div className="notifications-header">
-              <div className="notifications-header-left">
-                <div className="notifications-title-wrap">
-                  <div className="title-icon-wrap">
-                    <IonIcon icon={notificationsCircleOutline} className="title-bell-icon" />
-                  </div>
-                  <div className="title-text-wrap">
-                    <h1 className="notifications-title">Notifications</h1>
-                    <span className="title-subtitle">Stay updated with your latest activities</span>
-                  </div>
-                </div>
-                {unreadCount > 0 && (
-                  <span className="unread-badge">{unreadCount} new</span>
-                )}
+          {/* ── HEADER ── */}
+          <div className="nf-header">
+            <div className="nf-header-left">
+              <div className="nf-header-icon">
+                <IonIcon icon={notificationsCircleOutline} />
               </div>
-              <div className="notifications-header-actions">
-                {unreadCount > 0 && (
-                  <IonButton
-                    fill="clear"
-                    className="mark-all-btn"
-                    onClick={() => markAllReadMutation.mutate()}
-                    disabled={markAllReadMutation.isPending}
-                  >
-                    <IonIcon icon={checkmarkDoneOutline} slot="start" />
-                    {markAllReadMutation.isPending ? 'Marking...' : 'Mark All Read'}
-                  </IonButton>
-                )}
+              <div className="nf-header-text">
+                <h1>Notifications</h1>
+                <p>Stay updated on your AFA account and activities</p>
               </div>
             </div>
+          </div>
 
-
-            {isLoading ? (
-              <div className="skeleton-container">
-                {[...Array(5)].map((_, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.06 }}
-                  >
-                    <SkeletonCard />
-                  </motion.div>
-                ))}
-              </div>
-            ) : isError ? (
-              <motion.div
-                className="empty-state"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-              >
-                <div className="empty-icon-circle">
-                  <IonIcon icon={notificationsOutline} className="empty-icon" />
-                </div>
-                <h3>Failed to load notifications</h3>
-                <p>Pull down to try again</p>
-              </motion.div>
-            ) : (
-              <AnimatePresence mode="wait">
-                {notifications.length === 0 ? (
-                  <motion.div
-                    key="empty"
-                    className="empty-state"
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                  >
-                    <div className="empty-icon-circle">
-                      <IonIcon icon={notificationsOutline} className="empty-icon" />
-                    </div>
-                    <h3>All caught up!</h3>
-                    <p>You have no notifications at the moment</p>
-                  </motion.div>
-                ) : (
-                  <motion.div
-                    key="list"
-                    className="notifications-list"
-                    variants={containerVariants}
-                    initial="initial"
-                    animate="animate"
-                  >
-                    {categoryKeys.map((category) => {
-                      const items = groupedNotifications.get(category)!;
-                      return (
-                        <div key={category} className="notification-group">
-                          <div className="notification-group-header">
-                            <IonIcon icon={timeOutline} className="group-icon" />
-                            <span>{category}</span>
-                            <span className="group-count">{items.length}</span>
-                          </div>
-                          {items.map((notification, idx) => (
-                            <motion.div
-                              key={notification.id}
-                              className={`notification-item ${!notification.read ? 'unread' : ''}`}
-                              custom={idx}
-                              variants={notificationVariants}
-                              layout
-                              exit="exit"
-                              onClick={() => handleNotificationClick(notification)}
-                            >
-                              <div className={`notification-accent ${notification.type}`} />
-                              <div className={`notification-icon icon-${notification.type}`}>
-                                <IonIcon icon={typeIcons[notification.type] || informationCircleOutline} />
-                              </div>
-                              <div className="notification-body">
-                                <div className="notification-top">
-                                  <span className="notification-title">{notification.title}</span>
-                                  <span className="notification-time">
-                                    {getTimeAgo(notification.created_at)}
-                                  </span>
-                                </div>
-                                <p className="notification-message">{notification.message}</p>
-                                <div className="notification-footer">
-                                  <span className={`notification-type-tag type-${notification.type}`}>
-                                    {typeLabels[notification.type] || 'Info'}
-                                  </span>
-                                </div>
-                              </div>
-                              {!notification.read && <span className="unread-dot" />}
-                              <button
-                                className="notification-delete"
-                                onClick={(e) => handleDelete(e, notification.id)}
-                                aria-label="Delete notification"
-                              >
-                                <IonIcon icon={trashOutline} />
-                              </button>
-                            </motion.div>
-                          ))}
-                        </div>
-                      );
-                    })}
-                  </motion.div>
+          {/* ── SUMMARY BAR ── */}
+          {!isLoading && !isError && notifications.length > 0 && (
+            <div className="nf-summary">
+              <div className="nf-summary-info">
+                <span className="nf-summary-count">
+                  {notifications.length} notification{notifications.length !== 1 ? 's' : ''}
+                </span>
+                {unreadCount > 0 && (
+                  <>
+                    <span className="nf-summary-dot" />
+                    <span className="nf-summary-unread">
+                      {unreadCount} unread
+                    </span>
+                  </>
                 )}
-              </AnimatePresence>
-            )}
+              </div>
+              {unreadCount > 0 && (
+                <button
+                  className="nf-mark-all"
+                  onClick={() => markAllReadMutation.mutate()}
+                  disabled={markAllReadMutation.isPending}
+                >
+                  <IonIcon icon={checkmarkDoneOutline} />
+                  {markAllReadMutation.isPending ? 'Marking...' : 'Mark all read'}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* ── FILTER TABS ── */}
+          {!isLoading && !isError && notifications.length > 0 && (
+            <div className="nf-tabs">
+              {([
+                { key: 'all' as const, label: 'All', count: notifications.length },
+                { key: 'unread' as const, label: 'Unread', count: unreadCount },
+                { key: 'read' as const, label: 'Read', count: readCount },
+              ]).map((tab) => (
+                <button
+                  key={tab.key}
+                  className={`nf-tab ${filter === tab.key ? 'nf-tab--active' : ''}`}
+                  onClick={() => setFilter(tab.key)}
+                >
+                  {tab.label}
+                  <span className="nf-tab-count">{tab.count}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* ── LOADING ── */}
+          {isLoading && (
+            <div className="nf-loading">
+              {[...Array(5)].map((_, i) => (
+                <SkeletonRow key={i} />
+              ))}
+            </div>
+          )}
+
+          {/* ── ERROR ── */}
+          {!isLoading && isError && (
+            <div className="nf-empty">
+              <div className="nf-empty-icon">
+                <IonIcon icon={alertCircleOutline} />
+              </div>
+              <h3>Unable to load notifications</h3>
+              <p>Please try again</p>
+              <button className="nf-retry-btn" onClick={() => refetch()}>
+                Retry
+              </button>
+            </div>
+          )}
+
+          {/* ── EMPTY ── */}
+          {!isLoading && !isError && notifications.length === 0 && (
+            <div className="nf-empty">
+              <div className="nf-empty-icon">
+                <IonIcon icon={notificationsOutline} />
+              </div>
+              <h3>You're all caught up</h3>
+              <p>There are no new notifications right now</p>
+            </div>
+          )}
+
+          {/* ── FILTER EMPTY ── */}
+          {!isLoading && !isError && notifications.length > 0 && filteredNotifications.length === 0 && (
+            <div className="nf-empty">
+              <div className="nf-empty-icon">
+                <IonIcon icon={notificationsOutline} />
+              </div>
+              <h3>No {filter} notifications</h3>
+              <p>There are no {filter} notifications to display</p>
+            </div>
+          )}
+
+          {/* ── NOTIFICATION LIST ── */}
+          {!isLoading && !isError && notifications.length > 0 && (
+            <div className="nf-list">
+              {categoryKeys.map((category) => {
+                const items = groupedNotifications.get(category)!;
+                return (
+                  <div key={category} className="nf-group">
+                    <div className="nf-group-header">
+                      <IonIcon icon={timeOutline} />
+                      <span>{category}</span>
+                      <span className="nf-group-count">{items.length}</span>
+                    </div>
+                    <AnimatePresence mode="popLayout">
+                      {items.map((notification, idx) => (
+                        <motion.div
+                          key={notification.id}
+                          className={`nf-item ${!notification.read ? 'nf-item--unread' : ''}`}
+                          custom={idx}
+                          variants={itemVariants}
+                          initial="initial"
+                          animate="animate"
+                          exit="exit"
+                          layout
+                          onClick={() => handleNotificationClick(notification)}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault();
+                              handleNotificationClick(notification);
+                            }
+                          }}
+                          aria-label={`${notification.title} - ${notification.read ? 'read' : 'unread'}`}
+                        >
+                          <div className={`nf-item-icon nf-item-icon--${notification.type}`}>
+                            <IonIcon icon={typeIcons[notification.type] || informationCircleOutline} />
+                          </div>
+
+                          <div className="nf-item-body">
+                            <div className="nf-item-top">
+                              <span className="nf-item-title">{notification.title}</span>
+                              <span className="nf-item-time">{getTimeAgo(notification.created_at)}</span>
+                            </div>
+                            <p className="nf-item-message">{notification.message}</p>
+                            <div className="nf-item-footer">
+                              <span className={`nf-badge nf-badge--${notification.type}`}>
+                                {notification.type}
+                              </span>
+                            </div>
+                          </div>
+
+                          {!notification.read && <span className="nf-unread-dot" />}
+
+                          <button
+                            className="nf-delete-btn"
+                            onClick={(e) => handleDelete(e, notification.id)}
+                            aria-label="Delete notification"
+                            title="Delete"
+                          >
+                            <IonIcon icon={trashOutline} />
+                          </button>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </motion.div>
 
         <IonToast
@@ -352,7 +363,7 @@ const NotificationsPage: React.FC = () => {
           message={toastMessage}
           duration={2000}
           position="bottom"
-          className="notif-toast"
+          className="nf-toast"
         />
       </DashboardLayout>
     </IonPage>

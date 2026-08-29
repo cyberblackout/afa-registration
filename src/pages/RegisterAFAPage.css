@@ -1,146 +1,343 @@
-/* ═══════════════════════════════════════════════
-   RegisterAFAPage — clean single-card form
-   Matches afaregistration.com/user/register_afa.php
-   ═══════════════════════════════════════════════ */
+/* ============================================================
+   Register AFA — Trust-first form design
+   DNA: matches dashboard, referral hero, settings cards
+   ============================================================ */
 
+/* ===== PAGE ===== */
 .afa-page {
-  max-width: 640px;
+  max-width: 580px;
   margin: 0 auto;
-  padding: 32px 16px 48px;
-  min-height: calc(100vh - 64px);
+  padding: 0 20px 48px;
+  overflow-x: hidden;
 }
 
-/* ── Card ── */
-
-.afa-card {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 1.25rem;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
-  padding: 28px 28px 32px;
+/* ===== HEADER ===== */
+.afa-header {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 20px;
 }
 
-.dark .afa-card {
-  background: rgba(30, 30, 50, 0.95);
-  border-color: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+.afa-header-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 196, 9, 0.12), rgba(255, 152, 0, 0.06));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ff9800;
+  flex-shrink: 0;
 }
 
-/* ── Header ── */
-
-.afa-card-header {
-  margin-bottom: 28px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #f0f0f0;
+.afa-header-text {
+  flex: 1;
+  min-width: 0;
 }
 
-.dark .afa-card-header {
-  border-bottom-color: rgba(255, 255, 255, 0.08);
-}
-
-.afa-card-title {
-  font-size: 1.35rem;
+.afa-header-title {
+  font-size: 24px;
   font-weight: 800;
-  color: #111827;
-  margin: 0 0 6px;
-  letter-spacing: -0.02em;
+  color: var(--text-primary, #1a1a2e);
+  margin: 0 0 4px;
+  letter-spacing: -0.3px;
 }
 
-.dark .afa-card-title {
+.dark .afa-header-title {
   color: #ffffff;
 }
 
-.afa-card-subtitle {
-  font-size: 0.88rem;
-  color: #6b7280;
+.afa-header-sub {
+  font-size: 14px;
+  color: var(--text-muted, #9ca3af);
   margin: 0;
   line-height: 1.5;
 }
 
-.dark .afa-card-subtitle {
-  color: #9ca3af;
+.dark .afa-header-sub {
+  color: rgba(255, 255, 255, 0.5);
 }
 
-/* ── Form ── */
+/* ===== BALANCE + FEE CARD ===== */
+.afa-balance-card {
+}
 
+.dark .afa-balance-card {
+}
+
+.afa-balance-card--insufficient {
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.dark .afa-balance-card--insufficient {
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.afa-balance-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.afa-balance-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.afa-balance-icon-wrap {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(255, 196, 9, 0.1), rgba(255, 152, 0, 0.05));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ff9800;
+  flex-shrink: 0;
+}
+
+.afa-balance-icon-wrap--wallet {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
+  color: #22c55e;
+}
+
+.afa-balance-data {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.afa-balance-label {
+  font-size: 12px;
+  color: var(--text-muted, #9ca3af);
+  font-weight: 500;
+}
+
+.afa-balance-amount {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary, #1a1a2e);
+  letter-spacing: -0.3px;
+}
+
+.dark .afa-balance-amount {
+  color: #ffffff;
+}
+
+.afa-balance-amount--low {
+  color: #ef4444;
+}
+
+.afa-balance-divider {
+  width: 1px;
+  height: 36px;
+  background: rgba(0, 0, 0, 0.08);
+  margin: 0 16px;
+  flex-shrink: 0;
+}
+
+.dark .afa-balance-divider {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Insufficient balance warning */
+.afa-insufficient {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: rgba(239, 68, 68, 0.06);
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  border-radius: 10px;
+  font-size: 13px;
+  color: #dc2626;
+  flex-wrap: wrap;
+}
+
+.dark .afa-insufficient {
+  background: rgba(239, 68, 68, 0.08);
+  color: #fca5a5;
+}
+
+.afa-topup-btn {
+  margin-left: auto;
+  padding: 6px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #ef4444;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  min-height: 32px;
+}
+
+.afa-topup-btn:active {
+  transform: scale(0.97);
+}
+
+/* Sufficient balance */
+.afa-balance-ok {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #22c55e;
+  font-weight: 500;
+}
+
+.dark .afa-balance-ok {
+  color: #6ee7b7;
+}
+
+/* ===== FORM ===== */
 .afa-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 0;
+}
+
+/* ===== SECTION ===== */
+.afa-section {
+  background: var(--card-bg, #ffffff);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  border-radius: 16px;
+  padding: 22px 20px;
+  margin-bottom: 14px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+}
+
+.dark .afa-section {
+  background: rgba(26, 26, 46, 0.4);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.afa-section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dark .afa-section-head {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.afa-section-icon {
+  color: var(--mtn-yellow, #FFCB05);
+  flex-shrink: 0;
+}
+
+.afa-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary, #1a1a2e);
+  margin: 0;
+}
+
+.dark .afa-section-title {
+  color: #ffffff;
+}
+
+/* ===== FIELDS ===== */
+.afa-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 16px;
+}
+
+.afa-field:last-child {
+  margin-bottom: 0;
 }
 
 .afa-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 14px;
 }
-
-.afa-field {
-  display: flex;
-  flex-direction: column;
-}
-
-.afa-field.full {
-  width: 100%;
-}
-
-/* ── Label ── */
 
 .afa-label {
   display: block;
-  font-size: 0.82rem;
+  font-size: 13px;
   font-weight: 600;
-  color: #374151;
-  margin-bottom: 8px;
-  letter-spacing: 0.01em;
+  color: var(--text-secondary, #6b7280);
+  margin-bottom: 6px;
 }
 
 .dark .afa-label {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.6);
 }
 
-/* ── Input ── */
+.afa-required {
+  color: #ef4444;
+  font-weight: 700;
+}
 
+.afa-field-hint {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted, #9ca3af);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.dark .afa-field-hint {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* ===== INPUT ===== */
 .afa-input {
   width: 100%;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.9rem;
-  background: #ffffff;
-  padding: 0.85rem 1rem;
-  font-size: 0.95rem;
+  border: 1.5px solid rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  background: var(--card-bg, #ffffff);
+  padding: 11px 14px;
+  font-size: 15px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color: #111827;
+  color: var(--text-primary, #1a1a2e);
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s, box-shadow 0.2s;
   -webkit-appearance: none;
   appearance: none;
+  box-sizing: border-box;
 }
 
 .afa-input::placeholder {
-  color: #9ca3af;
+  color: var(--text-muted, #9ca3af);
 }
 
 .afa-input:focus {
-  border-color: #111827;
-  box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.06);
+  border-color: var(--mtn-yellow, #FFCB05);
+  box-shadow: 0 0 0 3px rgba(255, 203, 5, 0.15);
 }
 
-.afa-input.error {
+.afa-input--error {
   border-color: #ef4444;
 }
 
-.afa-input.error:focus {
+.afa-input--error:focus {
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
-/* Date input specific */
+/* Date input */
 .afa-input[type='date'] {
-  color: #111827;
+  color: var(--text-primary, #1a1a2e);
 }
 
 .afa-input[type='date']:invalid,
 .afa-input[type='date'][value=''] {
-  color: #9ca3af;
+  color: var(--text-muted, #9ca3af);
 }
 
 .dark .afa-input {
@@ -155,239 +352,315 @@
 
 .dark .afa-input:focus {
   border-color: #FCD116;
-  box-shadow: 0 0 0 3px rgba(252, 209, 22, 0.1);
+  box-shadow: 0 0 0 3px rgba(252, 209, 22, 0.15);
 }
 
-/* ── Field Error ── */
-
+/* ===== FIELD ERROR ===== */
 .afa-field-error {
   display: block;
-  font-size: 0.75rem;
+  font-size: 12px;
   color: #ef4444;
   margin-top: 5px;
-  padding-left: 4px;
+  font-weight: 500;
 }
 
 .dark .afa-field-error {
   color: #fca5a5;
 }
 
-/* ── Pricing Banner ── */
-
-.afa-pricing-banner {
+/* ===== TRUST SIGNAL ===== */
+.afa-trust {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  background: #FFF8D9;
-  border: 1px solid #FCD116;
-  border-radius: 1rem;
-  padding: 16px 20px;
-  margin-top: 4px;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px;
+  background: rgba(34, 197, 94, 0.04);
+  border: 1px solid rgba(34, 197, 94, 0.1);
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--text-muted, #9ca3af);
+  line-height: 1.45;
+  margin-bottom: 16px;
 }
 
-.dark .afa-pricing-banner {
-  background: rgba(252, 209, 22, 0.08);
-  border-color: rgba(252, 209, 22, 0.3);
-}
-
-.afa-pricing-text {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.afa-pricing-text strong {
-  font-size: 0.88rem;
-  font-weight: 700;
-  color: #111827;
-}
-
-.dark .afa-pricing-text strong {
-  color: #ffffff;
-}
-
-.afa-pricing-text span {
-  font-size: 0.78rem;
-  color: #6b7280;
-  font-style: italic;
-}
-
-.dark .afa-pricing-text span {
-  color: #9ca3af;
-}
-
-.afa-pricing-total {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
+.afa-trust svg {
+  color: #22c55e;
   flex-shrink: 0;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.75rem;
-  padding: 10px 18px;
+  margin-top: 1px;
 }
 
-.dark .afa-pricing-total {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.12);
+.dark .afa-trust {
+  background: rgba(34, 197, 94, 0.04);
+  border-color: rgba(34, 197, 94, 0.1);
+  color: rgba(255, 255, 255, 0.45);
 }
 
-.afa-pricing-badge {
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: #92400e;
-}
-
-.dark .afa-pricing-badge {
-  color: #FCD116;
-}
-
-.afa-pricing-amount {
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: #111827;
-  white-space: nowrap;
-}
-
-.dark .afa-pricing-amount {
-  color: #ffffff;
-}
-
-/* ── Submit Button ── */
-
+/* ===== SUBMIT BUTTON ===== */
 .afa-submit-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.55rem;
+  gap: 8px;
   width: 100%;
   border: none;
-  border-radius: 0.9rem;
-  padding: 0.95rem 1rem;
-  background: #000000;
-  color: #ffffff;
+  border-radius: 12px;
+  padding: 14px 20px;
+  background: var(--mtn-yellow, #FFCB05);
+  color: #0f0f1a;
   font-weight: 700;
-  font-size: 0.95rem;
+  font-size: 15px;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(255, 203, 5, 0.3);
+  min-height: 50px;
   -webkit-appearance: none;
   appearance: none;
-}
-
-.afa-submit-btn:hover {
-  background: #111827;
 }
 
 .afa-submit-btn:active {
   transform: scale(0.985);
 }
 
-.afa-submit-btn:disabled {
-  opacity: 0.6;
+.afa-submit-btn:disabled,
+.afa-submit-btn--disabled {
+  background: #d1d5db;
+  color: #6b7280;
+  box-shadow: none;
   cursor: not-allowed;
 }
 
-.dark .afa-submit-btn {
-  background: #FCD116;
-  color: #000000;
+.dark .afa-submit-btn:disabled,
+.dark .afa-submit-btn--disabled {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.3);
 }
 
-.dark .afa-submit-btn:hover {
-  filter: brightness(0.95);
+.afa-submit-note {
+  text-align: center;
+  font-size: 13px;
+  color: var(--text-muted, #9ca3af);
+  margin: 10px 0 0;
 }
 
-/* ── Spinner ── */
+.dark .afa-submit-note {
+  color: rgba(255, 255, 255, 0.4);
+}
 
+/* ===== SPINNER ===== */
 .afa-spinner {
   display: inline-block;
   width: 18px;
   height: 18px;
-  border: 2.5px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #ffffff;
+  border: 2.5px solid rgba(15, 15, 26, 0.2);
+  border-top-color: #0f0f1a;
   border-radius: 50%;
   animation: afa-spin 0.65s linear infinite;
-}
-
-.dark .afa-spinner {
-  border-color: rgba(0, 0, 0, 0.2);
-  border-top-color: #000000;
 }
 
 @keyframes afa-spin {
   to { transform: rotate(360deg); }
 }
 
-/* ── Success State ── */
-
-.afa-success {
+/* ===== SUCCESS STATE ===== */
+.afa-success-card {
   text-align: center;
-  padding: 80px 24px;
-  max-width: 420px;
+  padding: 48px 24px;
+  max-width: 440px;
   margin: 0 auto;
 }
 
-.afa-success-icon {
-  font-size: 4rem;
+.dark .afa-success-card {
+}
+
+.afa-success-icon-wrap {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(34, 197, 94, 0.06));
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: #22c55e;
-  margin-bottom: 20px;
+  margin: 0 auto 20px;
 }
 
-.afa-success h2 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #111827;
-  margin: 0 0 10px;
+.afa-success-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text-primary, #1a1a2e);
+  margin: 0 0 16px;
 }
 
-.dark .afa-success h2 {
+.dark .afa-success-title {
   color: #ffffff;
 }
 
-.afa-success p {
-  font-size: 0.95rem;
-  color: #6b7280;
-  margin: 0;
-  line-height: 1.6;
+.afa-success-id {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: rgba(255, 196, 9, 0.06);
+  border: 1px solid rgba(255, 196, 9, 0.15);
+  border-radius: 10px;
+  padding: 10px 20px;
+  margin-bottom: 20px;
 }
 
-.dark .afa-success p {
-  color: #9ca3af;
+.afa-success-id-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted, #9ca3af);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-/* ── Responsive ── */
+.afa-success-id-value {
+  font-size: 18px;
+  font-weight: 800;
+  font-family: 'Courier New', monospace;
+  color: var(--text-primary, #1a1a2e);
+  letter-spacing: 1px;
+}
 
+.dark .afa-success-id-value {
+  color: #ffffff;
+}
+
+.afa-success-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.afa-success-detail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-secondary, #6b7280);
+}
+
+.dark .afa-success-detail {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.afa-success-detail strong {
+  color: var(--text-primary, #1a1a2e);
+  font-weight: 700;
+}
+
+.dark .afa-success-detail strong {
+  color: #ffffff;
+}
+
+.afa-success-note {
+  font-size: 13px;
+  color: var(--text-muted, #9ca3af);
+  margin: 0 0 20px;
+  line-height: 1.5;
+}
+
+.dark .afa-success-note {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.afa-success-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 12px;
+  border: none;
+  background: var(--mtn-yellow, #FFCB05);
+  color: #0f0f1a;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(255, 203, 5, 0.3);
+  min-height: 44px;
+}
+
+.afa-success-btn:active {
+  transform: scale(0.97);
+}
+
+/* ===== RESPONSIVE ===== */
 @media (max-width: 600px) {
   .afa-page {
-    padding: 16px 12px 32px;
+    max-width: none;
+    margin: 0;
+    padding: 0 16px 32px;
   }
 
-  .afa-card {
-    padding: 20px 18px 24px;
-    border-radius: 1rem;
+  .afa-header-title {
+    font-size: 20px;
+  }
+
+  .afa-balance-row {
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .afa-balance-divider {
+    width: 100%;
+    height: 1px;
+    margin: 0;
+  }
+
+  .afa-balance-item {
+    width: 100%;
+  }
+
+  .afa-insufficient {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .afa-topup-btn {
+    margin-left: 0;
+    width: 100%;
   }
 
   .afa-row {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 16px;
   }
 
-  .afa-card-title {
-    font-size: 1.2rem;
+  .afa-section {
+    padding: 18px 16px;
+    border-radius: 14px;
   }
 
-  .afa-pricing-banner {
-    flex-direction: column;
-    text-align: center;
-    gap: 12px;
-    padding: 16px;
+  .afa-success-card {
+    padding: 36px 20px;
+    border-radius: 16px;
   }
 
-  .afa-pricing-text {
-    align-items: center;
+  .afa-success-icon-wrap {
+    width: 60px;
+    height: 60px;
+  }
+
+  .afa-success-icon-wrap svg {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+@media (max-width: 480px) {
+  .afa-balance-amount {
+    font-size: 18px;
+  }
+
+  .afa-submit-btn {
+    font-size: 14px;
+    padding: 13px 16px;
   }
 }
