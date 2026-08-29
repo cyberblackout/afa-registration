@@ -24,17 +24,21 @@ import {
   logoWhatsapp,
   shieldCheckmarkOutline,
   chevronForward,
+  sunnyOutline,
+  moonOutline,
 } from 'ionicons/icons';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useSidebarStore } from '../store/sidebarStore';
 import { useAuthStore } from '../store/authStore';
 import { useNotificationStore } from '../store/notificationStore';
+import { useThemeStore } from '../store/themeStore';
 import { supabase } from '../services/supabase';
 import './DashboardLayout.css';
+import AmountDisplay from '../components/AmountDisplay';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
   onRefresh?: () => Promise<void>;
+  noScroll?: boolean;
 }
 
 interface NavItem {
@@ -102,16 +106,6 @@ const agentNavGroups = [
   },
 ];
 
-const sidebarVariants = {
-  open: { x: 0, transition: { type: 'spring' as const, damping: 26, stiffness: 200 } },
-  closed: { x: '-100%', transition: { type: 'spring' as const, damping: 26, stiffness: 200 } },
-};
-
-const overlayVariants = {
-  open: { opacity: 1, transition: { duration: 0.2 } },
-  closed: { opacity: 0, transition: { duration: 0.2 } },
-};
-
 const defaultConfig: WhatsAppConfig = {
   enabled: true,
   userNumber: '',
@@ -120,12 +114,17 @@ const defaultConfig: WhatsAppConfig = {
   agentMessage: 'Hello, I am an agent and I need assistance.',
 };
 
-const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh }) => {
+const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh, noScroll }) => {
   const location = useLocation();
   const { isOpen, toggle, close } = useSidebarStore();
   const { user, logout } = useAuthStore();
   const { unreadCount } = useNotificationStore();
+  const { isDark, toggle: toggleTheme } = useThemeStore();
   const activePath = location.pathname;
+
+  const displayName = user?.full_name || 'User';
+  const firstName = displayName.split(' ')[0];
+  const capitalizedName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
 
   const role = user?.role ?? 'user';
   const navGroups = role === 'agent' ? agentNavGroups : userNavGroups;
@@ -176,20 +175,33 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh }
   const sidebarContent = (
     <>
       <div className="sb-header">
-        <div className="sb-brand">
-          <div className="sb-logo">
-            <img src="/favicon.png" alt="MTN" className="sb-logo-img" />
+        <div className="sb-header-top">
+          <div className="sb-brand">
+            <div className="sb-logo">
+              <img src="/mtn-woman-afa-logo.png" alt="MTN Woman AFA" className="sb-logo-img" />
+            </div>
+            <div className="sb-brand-text">
+              <span className="sb-brand-name">MTN AFA Portal</span>
+            </div>
           </div>
-          <div className="sb-brand-text">
-            <span className="sb-brand-name">MTN AFA</span>
-            <span className="sb-brand-role">{isAgent ? 'Agent Account' : 'User Account'}</span>
-          </div>
-          <div className="sb-brand-signal">
-            <div className="sb-signal-dot sb-signal-dot--1"></div>
-            <div className="sb-signal-dot sb-signal-dot--2"></div>
-            <div className="sb-signal-dot sb-signal-dot--3"></div>
-          </div>
+          <button className="sb-close-btn" onClick={close} aria-label="Close menu">
+            <IonIcon icon={closeOutline} />
+          </button>
         </div>
+        <div className="sb-user-section">
+          <p className="sb-welcome">Welcome back, {capitalizedName} <span className="sb-wave">👋</span></p>
+          <span className="sb-role-badge">{isAgent ? 'Agent' : 'User'}</span>
+        </div>
+        <Link to="/wallet" className="sb-wallet-card" onClick={close}>
+          <div className="sb-wallet-info">
+            <IonIcon icon={walletOutline} className="sb-wallet-icon" />
+            <div className="sb-wallet-text">
+              <span className="sb-wallet-label">Wallet Balance</span>
+              <span className="sb-wallet-amount"><AmountDisplay value={user?.wallet_balance || 0} showToggle={false} /></span>
+            </div>
+          </div>
+          <IonIcon icon={chevronForward} className="sb-wallet-arrow" />
+        </Link>
       </div>
 
       <nav className="sb-nav">
@@ -272,9 +284,20 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh }
         </div>
         <div className="navbar-brand">
           <img src="/favicon.png" alt="MTN" className="navbar-logo" />
-          <span>{isAgent ? 'MTN AFA AGENT' : 'MTN AFA PORTAL'}</span>
+          <div className="navbar-brand-text">
+            <span className="navbar-title">{isAgent ? 'MTN AFA AGENT' : 'MTN AFA PORTAL'}</span>
+            <span className="navbar-welcome">Welcome, {capitalizedName}</span>
+          </div>
         </div>
         <div className="navbar-right">
+          <button
+            className="theme-toggle-btn"
+            onClick={toggleTheme}
+            aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            <IonIcon icon={isDark ? moonOutline : sunnyOutline} />
+          </button>
           <button className="hamburger-btn" onClick={toggle} aria-label="Toggle menu">
             <IonIcon icon={isOpen ? closeOutline : menuOutline} />
           </button>
@@ -283,34 +306,16 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh }
 
       <aside className="dashboard-sidebar">{sidebarContent}</aside>
 
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            className="sidebar-overlay"
-            variants={overlayVariants}
-            initial="closed"
-            animate="open"
-            exit="closed"
-            onClick={close}
-          />
-        )}
-      </AnimatePresence>
+      <div
+        className={`sidebar-overlay ${isOpen ? 'sidebar-overlay--open' : ''}`}
+        onClick={close}
+      />
 
-      <AnimatePresence>
-        {isOpen && (
-          <motion.aside
-            className="sidebar-mobile-drawer"
-            variants={sidebarVariants}
-            initial="closed"
-            animate="open"
-            exit="closed"
-          >
-            {sidebarContent}
-          </motion.aside>
-        )}
-      </AnimatePresence>
+      <aside className={`sidebar-mobile-drawer ${isOpen ? 'sidebar-mobile-drawer--open' : ''}`}>
+        {sidebarContent}
+      </aside>
 
-      <IonContent className="main-content">
+      <IonContent className={`main-content ${noScroll ? 'main-content--no-scroll' : ''}`}>
         <IonRefresher slot="fixed" onIonRefresh={async (e) => {
           try { if (onRefresh) await onRefresh(); } finally { (e.target as any).complete(); }
         }}>
