@@ -77,18 +77,29 @@
   align-items: center;
   gap: 10px;
   justify-self: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.navbar-brand-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .navbar-title {
-  display: flex;
-  flex-direction: column;
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--mtn-yellow);
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  line-height: 1.15;
-  text-shadow: 0 0 20px rgba(255, 203, 5, 0.15);
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.navbar-welcome {
+  display: none;
 }
 
 .navbar-logo {
@@ -822,13 +833,8 @@ ion-refresher {
   .navbar-brand {
     flex: 1;
     min-width: 0;
-    gap: 14px;
-    font-size: inherit;
-    font-weight: inherit;
-    letter-spacing: inherit;
-    text-transform: none;
+    gap: 12px;
     justify-self: auto;
-    text-shadow: none;
   }
 
   .navbar-logo {
@@ -840,16 +846,27 @@ ion-refresher {
     box-shadow: 0 2px 10px rgba(255, 196, 9, 0.25);
   }
 
-  .navbar-title {
+  .navbar-brand-text {
     display: flex;
     flex-direction: column;
-    font-size: clamp(14px, 4vw, 18px);
-    font-weight: 800;
+    min-width: 0;
+  }
+
+  .navbar-title {
+    font-size: clamp(18px, 5.2vw, 23px);
+    font-weight: 700;
     color: var(--mtn-yellow);
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
-    line-height: 1.15;
-    text-shadow: 0 0 16px rgba(255, 203, 5, 0.12);
+    letter-spacing: -0.2px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .navbar-welcome {
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.5);
+    line-height: 1.2;
   }
 
   .navbar-right {
@@ -959,7 +976,11 @@ ion-refresher {
   }
 
   .navbar-title {
-    font-size: clamp(13px, 3.5vw, 16px);
+    font-size: clamp(17px, 5vw, 21px);
+  }
+
+  .navbar-welcome {
+    font-size: 13px;
   }
 
   .hamburger-btn {
@@ -1042,7 +1063,11 @@ ion-refresher {
   }
 
   .navbar-title {
-    font-size: clamp(12px, 3vw, 15px);
+    font-size: clamp(16px, 4.5vw, 18px);
+  }
+
+  .navbar-welcome {
+    font-size: 12px;
   }
 
   .hamburger-btn {
