@@ -277,9 +277,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh, 
     <>
       <nav className="dashboard-navbar">
         <div className="navbar-left">
-          <Link to="/notifications" className="notification-btn" aria-label="Notifications">
+          <Link to="/notifications" className={`notification-btn ${unreadCount > 0 ? 'notification-btn--unread' : ''}`} aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}>
             <IonIcon icon={notificationsOutline} />
-            {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
+            {unreadCount > 0 && <span className="notification-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>}
           </Link>
         </div>
         <div className="navbar-brand">
@@ -290,6 +290,14 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh, 
           </div>
         </div>
         <div className="navbar-right">
+          <Link
+            to="/notifications"
+            className={`notification-btn notification-btn--mobile ${unreadCount > 0 ? 'unread' : ''}`}
+            aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : 'Notifications'}
+          >
+            <IonIcon icon={notificationsOutline} />
+            {unreadCount > 0 && <span className="notification-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+          </Link>
           <button
             className="theme-toggle-btn"
             onClick={toggleTheme}
