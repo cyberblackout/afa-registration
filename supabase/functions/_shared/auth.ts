@@ -10,6 +10,7 @@ const ALLOWED_ORIGINS = [
   "https://mt-naa-portal.netlify.app",
   "http://localhost:5173",
   "http://localhost:4173",
+  "https://localhost",
 ];
 
 export function getCorsHeaders(origin: string | null): Record<string, string> {
