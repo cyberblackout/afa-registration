@@ -345,33 +345,6 @@ const WalletPage: React.FC = () => {
     try {
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
       queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name, email, phone, wallet_balance')
-        .eq('id', user!.id)
-        .single();
-      const balance = Number(profile?.wallet_balance ?? 0);
-      if (profile?.email) {
-        const { sendEmail, topUpEmailHtml } = await import('../services/email');
-        const dateDisplay = new Date().toLocaleDateString('en-US', {
-          year: 'numeric', month: 'long', day: 'numeric', timeZone: 'Africa/Accra',
-        });
-        sendEmail(
-          profile.email,
-          'Wallet Top-Up Confirmed',
-          topUpEmailHtml(profile.full_name || 'User', amount, balance, dateDisplay),
-          'transactional'
-        );
-      }
-      if (profile?.phone) {
-        const { sendSms } = await import('../services/sms');
-        sendSms(
-          user!.id,
-          profile.phone,
-          `MTN AFA: Your wallet has been credited with GH₵ ${amount.toFixed(2)}. New balance: GH₵ ${balance.toFixed(2)}.`,
-          'transactional'
-        );
-      }
       notificationApi.sendPush(
         user!.id,
         'Wallet Top-Up Successful',
@@ -380,7 +353,7 @@ const WalletPage: React.FC = () => {
         'transactional',
       ).catch(() => {});
     } catch (e) {
-      // email and push are non-critical
+      // push notifications are non-critical
     }
   };
 

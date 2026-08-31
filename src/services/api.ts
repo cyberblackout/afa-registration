@@ -106,9 +106,6 @@ export const registrationApi = {
 // WALLET
 // ============================================================
 export const walletApi = {
-  topUp: (amount: number, reference: string, method: string): Promise<any> =>
-    invoke<any>('wallet-topup', { action: 'top_up', amount, reference, method }),
-
   getTransactions: (): Promise<any[]> =>
     invoke<any[]>('wallet-topup', { action: 'get_transactions' }),
 
@@ -140,9 +137,6 @@ export const walletApi = {
 export const orderApi = {
   list: (userId?: string): Promise<any[]> =>
     invoke<any[]>(`orders${userId ? '?user_id=' + userId : ''}`, undefined, 'GET'),
-
-  create: (amount: number, description: string): Promise<any> =>
-    invoke<any>('orders', { action: 'create', amount, description }),
 
   updateStatus: (id: string, status: string): Promise<any> =>
     invoke<any>('orders', { action: 'update_status', id, status }),

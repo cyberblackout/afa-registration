@@ -140,11 +140,6 @@ export const db = {
     return { data };
   },
 
-  createOrder: async (data: any) => {
-    const result = await orderApi.create(data.amount, data.description);
-    return { data: result };
-  },
-
   updateOrderStatus: async (id: string, status: string) => {
     await orderApi.updateStatus(id, status);
     return { data: null };
