@@ -200,7 +200,7 @@ export const agentApi = {
     invoke<any>('verify-agent-application', { reference }),
 
   getDashboard: (): Promise<any> =>
-    invoke<any>('admin-agents', { action: 'get_dashboard' }),
+    invoke<any>('admin-agents', undefined, 'GET'),
 
   getApplications: (): Promise<any[]> =>
     invoke<any[]>('agent-apply', { action: 'get_applications' }),

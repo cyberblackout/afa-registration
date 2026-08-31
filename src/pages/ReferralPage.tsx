@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   IonPage,
   IonToast,
@@ -15,7 +15,10 @@ import { useAuthStore } from '../store/authStore';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Card from '../components/Card';
 import AmountDisplay from '../components/AmountDisplay';
+import type { ReferralStats, Referral, ReferralReward, Profile } from '../types';
 import './ReferralPage.css';
+
+const REFERRAL_STATS_KEY = 'referral_stats';
 
 const timeAgo = (dateStr: string) => {
   const now = Date.now();
@@ -44,6 +47,29 @@ const getInitialColor = (name: string) => {
   return INITIAL_COLORS[Math.abs(hash) % INITIAL_COLORS.length];
 };
 
+const SkeletonBlock: React.FC<{ className: string }> = ({ className }) => (
+  <div className={`rr-skeleton ${className}`} />
+);
+
+const ReferralSkeleton: React.FC = () => (
+  <div className="rr-page">
+    <SkeletonBlock className="rr-skeleton-hero" />
+    <SkeletonBlock className="rr-skeleton-card" />
+    <div className="rr-skeleton-stats">
+      <SkeletonBlock className="rr-skeleton-stat" />
+      <SkeletonBlock className="rr-skeleton-stat" />
+      <SkeletonBlock className="rr-skeleton-stat" />
+    </div>
+    <SkeletonBlock className="rr-skeleton-card-sm" />
+    <div className="rr-skeleton-section">
+      <SkeletonBlock className="rr-skeleton-line-lg" />
+      <SkeletonBlock className="rr-skeleton-feed" />
+      <SkeletonBlock className="rr-skeleton-feed" />
+      <SkeletonBlock className="rr-skeleton-feed-short" />
+    </div>
+  </div>
+);
+
 const ReferralPage: React.FC = () => {
   const { user } = useAuthStore();
   const queryClient = useQueryClient();
@@ -52,53 +78,62 @@ const ReferralPage: React.FC = () => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [showSecurityTips, setShowSecurityTips] = useState(false);
 
-  const { data: profile, isLoading: profileLoading } = useQuery({
-    queryKey: ['profile', user?.id],
-    queryFn: () => referralApi.getProfile() as Promise<any>,
+  const { data: profile, isLoading: profileLoading, isError: profileError } = useQuery({
+    queryKey: ['referral_profile', user?.id],
+    queryFn: () => referralApi.getProfile() as Promise<Profile>,
     enabled: !!user?.id,
+    staleTime: 60000,
   });
 
-  const referralCode = profile?.referral_code || '';
+  const referralCode = (profile as any)?.referral_code || '';
   const referralLink = `${window.location.origin}/register?ref=${referralCode}`;
 
-  const { data: stats, isLoading: statsLoading } = useQuery({
-    queryKey: ['referral_stats', user?.id],
-    queryFn: () => referralApi.getStats() as Promise<any>,
+  const { data: stats, isLoading: statsLoading, isError: statsError } = useQuery({
+    queryKey: [REFERRAL_STATS_KEY, user?.id],
+    queryFn: () => referralApi.getStats() as Promise<ReferralStats>,
     enabled: !!user?.id,
+    staleTime: 60000,
   });
 
-  const { data: referrals = [] as any[], isLoading: referralsLoading } = useQuery({
+  const { data: referrals = [] as Referral[], isLoading: referralsLoading, isError: referralsError } = useQuery({
     queryKey: ['my_referrals', user?.id],
-    queryFn: () => referralApi.getMyReferrals() as Promise<any[]>,
+    queryFn: () => referralApi.getMyReferrals() as Promise<Referral[]>,
     enabled: !!user?.id,
+    staleTime: 60000,
   });
 
-  const { data: rewards = [] as any[], isLoading: rewardsLoading } = useQuery({
+  const { data: rewards = [] as ReferralReward[], isLoading: rewardsLoading, isError: rewardsError } = useQuery({
     queryKey: ['referral_rewards', user?.id],
-    queryFn: () => referralApi.getMyRewards() as Promise<any[]>,
+    queryFn: () => referralApi.getMyRewards() as Promise<ReferralReward[]>,
     enabled: !!user?.id,
+    staleTime: 60000,
   });
 
-  const handleRefresh = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
-    await queryClient.invalidateQueries({ queryKey: ['referral_stats', user?.id] });
-    await queryClient.invalidateQueries({ queryKey: ['my_referrals', user?.id] });
-    await queryClient.invalidateQueries({ queryKey: ['referral_rewards', user?.id] });
-    await queryClient.invalidateQueries({ queryKey: ['referral-reward-transactions', user?.id] });
-  };
-
-  const pendingRewards = rewards
-    .filter((r: any) => r.status === 'pending')
-    .reduce((sum: number, r: any) => sum + Number(r.amount || 0), 0);
-
-  const { data: transactions = [], isLoading: txnsLoading } = useQuery({
+  const { data: transactions = [], isLoading: txnsLoading, isError: txnsError } = useQuery({
     queryKey: ['referral-reward-transactions', user?.id],
     queryFn: () => referralApi.getMyReferralTransactions() as Promise<any[]>,
     enabled: !!user?.id,
+    staleTime: 60000,
   });
 
-  const referralTransactions = transactions.filter((t: any) => t.reference?.startsWith('REF-'));
+  const handleRefresh = useCallback(async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['referral_profile', user?.id] }),
+      queryClient.invalidateQueries({ queryKey: [REFERRAL_STATS_KEY, user?.id] }),
+      queryClient.invalidateQueries({ queryKey: ['my_referrals', user?.id] }),
+      queryClient.invalidateQueries({ queryKey: ['referral_rewards', user?.id] }),
+      queryClient.invalidateQueries({ queryKey: ['referral-reward-transactions', user?.id] }),
+    ]);
+  }, [queryClient, user?.id]);
 
+  const pendingRewards = useMemo(() => rewards
+    .filter((r) => r.status === 'pending')
+    .reduce((sum, r) => sum + Number(r.amount || 0), 0), [rewards]);
+
+  const referralTransactions = useMemo(() => transactions.filter((t: any) => t.reference?.startsWith('REF-')), [transactions]);
+
+  const isLoadingInitial = profileLoading && !profile;
+  const hasError = profileError || statsError;
   const isLoadingAll = profileLoading || statsLoading || referralsLoading || rewardsLoading || txnsLoading;
 
   const copyCode = useCallback(async () => {
@@ -131,13 +166,26 @@ const ReferralPage: React.FC = () => {
     return false;
   }, [referralCode]);
 
-  if (isLoadingAll) {
+  if (isLoadingInitial) {
+    return (
+      <IonPage>
+        <DashboardLayout onRefresh={handleRefresh}>
+          <ReferralSkeleton />
+        </DashboardLayout>
+      </IonPage>
+    );
+  }
+
+  if (hasError && !profile && !stats) {
     return (
       <IonPage>
         <DashboardLayout onRefresh={handleRefresh}>
           <div className="rr-page">
-            <div className="loading-state">
-              <p>Loading referrals...</p>
+            <div className="rr-error-state">
+              <AlertTriangle size={40} />
+              <h3>Failed to load referrals</h3>
+              <p>Something went wrong. Please try again.</p>
+              <button className="rr-retry-btn" onClick={handleRefresh}>Retry</button>
             </div>
           </div>
         </DashboardLayout>
@@ -170,7 +218,7 @@ const ReferralPage: React.FC = () => {
     return <span className={`rr-badge ${m.cls}`}>{m.label}</span>;
   };
 
-  const statsData = stats || { total_invited: 0, successful: 0, pending: 0, rejected: 0, total_earned: 0 };
+  const statsData: ReferralStats = stats || { total_invited: 0, successful: 0, pending: 0, rejected: 0, total_earned: 0 };
 
   const rejectedCount = statsData.rejected || 0;
   const hasRejectedReferrals = rejectedCount > 0;
@@ -338,7 +386,7 @@ const ReferralPage: React.FC = () => {
             <div className="rr-earnings-secondary-item">
               <Wallet size={14} />
               <span className="rr-earnings-secondary-label">Available</span>
-              <span className="rr-earnings-secondary-value"><AmountDisplay value={user?.wallet_balance || 0} showToggle={false} /></span>
+              <span className="rr-earnings-secondary-value"><AmountDisplay value={(user as any)?.wallet_balance || 0} showToggle={false} /></span>
             </div>
           </div>
         </Card>
@@ -392,8 +440,8 @@ const ReferralPage: React.FC = () => {
               <span className="rr-section-count">{referrals.length}</span>
             </div>
             <Card noPadding variant="bordered" className="rr-feed">
-              {referrals.map((r: any) => {
-                const name = r.referred_profile?.full_name || r.referred_id?.slice(0, 8) || 'Pending';
+              {referrals.map((r) => {
+                const name = (r as any).referred_profile?.full_name || r.referred_id?.slice(0, 8) || 'Pending';
                 const color = getInitialColor(name);
                 return (
                   <div key={r.id} className="rr-feed-item">
@@ -417,7 +465,7 @@ const ReferralPage: React.FC = () => {
           </div>
         )}
 
-        {referrals.length === 0 && (
+        {referrals.length === 0 && !referralsLoading && (
           <Card variant="bordered" className="rr-empty-state">
             <div className="rr-empty-icon"><Users size={32} /></div>
             <p className="rr-empty-title">No referrals yet</p>

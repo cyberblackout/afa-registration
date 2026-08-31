@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { IonPage, IonIcon } from '@ionic/react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -39,13 +39,14 @@ const DashboardPage: React.FC = () => {
     await queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
     await queryClient.invalidateQueries({ queryKey: ['orders-count', user?.id] });
     await queryClient.invalidateQueries({ queryKey: ['registrations-count', user?.id] });
-    await queryClient.invalidateQueries({ queryKey: ['referral_stats_dash', user?.id] });
+    await queryClient.invalidateQueries({ queryKey: ['referral_stats', user?.id] });
   };
 
   const { data: profile, isLoading: profileLoading, isError: profileError } = useQuery({
     queryKey: ['profile', user?.id],
     queryFn: () => profileApi.get(user!.id),
     enabled: !!user?.id,
+    staleTime: 60000,
   });
 
   const { data: ordersData, isLoading: ordersLoading } = useQuery({
@@ -55,6 +56,7 @@ const DashboardPage: React.FC = () => {
       return (Array.isArray(data) ? data : []).slice(0, 5);
     },
     enabled: !!user?.id,
+    staleTime: 60000,
   });
 
   const { data: regCount, isLoading: regLoading } = useQuery({
@@ -68,6 +70,7 @@ const DashboardPage: React.FC = () => {
       return count || 0;
     },
     enabled: !!user?.id,
+    staleTime: 60000,
   });
 
   const balance = Number((profile as any)?.wallet_balance ?? 0);
@@ -75,19 +78,21 @@ const DashboardPage: React.FC = () => {
   const recentOrdersCount = orders.length;
 
   const { data: referralStats, isLoading: referralLoading } = useQuery({
-    queryKey: ['referral_stats_dash', user?.id],
+    queryKey: ['referral_stats', user?.id],
     queryFn: () => referralApi.getStats(),
     enabled: !!user?.id,
+    staleTime: 60000,
   });
 
+  const isLoadingInitial = profileLoading && !profile;
   const isLoadingAll = profileLoading || ordersLoading || regLoading || referralLoading;
 
-  const displayName = profile?.full_name || user?.full_name || 'User';
-  const firstName = displayName.split(' ')[0];
-  const capitalizedName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+  const displayName = useMemo(() => profile?.full_name || user?.full_name || '', [profile, user]);
+  const firstName = displayName ? displayName.split(' ')[0] : '';
+  const capitalizedName = firstName ? firstName.charAt(0).toUpperCase() + firstName.slice(1) : '';
   const isAgent = (profile as any)?.role === 'agent' || user?.role === 'agent';
 
-  if (isLoadingAll) {
+  if (isLoadingInitial) {
     return (
       <IonPage>
         <DashboardLayout onRefresh={handleRefresh}>
@@ -129,7 +134,7 @@ const DashboardPage: React.FC = () => {
           {/* ── WALLET CARD ── */}
           <div className="db-wallet-card">
             <div className="db-wallet-greeting">
-              <h1>Welcome back, {capitalizedName} <span className="db-wave">👋</span></h1>
+              <h1>Welcome back{capitalizedName ? `, ${capitalizedName}` : ''} <span className="db-wave">👋</span></h1>
               <p>Your MTN AFA Portal is ready to serve you.</p>
               {isAgent && (
                 <span className="db-role-badge">

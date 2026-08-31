@@ -39,9 +39,12 @@ Deno.serve(async (req) => {
 
   switch (data.action) {
     case "get_applications": {
+      if (auth.user!.role !== "admin") {
+        return errorResp("Insufficient permissions", 403, origin);
+      }
       const { data: apps, error } = await admin
         .from("agent_applications")
-        .select("*")
+        .select("*, profiles!agent_applications_user_id_fkey(full_name, email, phone)")
         .order("created_at", { ascending: false });
       if (error) return errorResp("Failed to fetch applications", 500, origin);
       return successResp(apps, origin);

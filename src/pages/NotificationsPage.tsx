@@ -13,7 +13,6 @@ import {
   checkmarkDoneOutline,
   trashOutline,
   timeOutline,
-  notificationsCircleOutline,
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -96,6 +95,7 @@ const NotificationsPage: React.FC = () => {
     queryKey: ['notifications', user?.id],
     queryFn: () => notificationApi.list() as Promise<Notification[]>,
     enabled: !!user?.id,
+    staleTime: 60000,
   });
 
   const filteredNotifications = useMemo(() => {
@@ -181,14 +181,9 @@ const NotificationsPage: React.FC = () => {
         >
           {/* ── HEADER ── */}
           <div className="nf-header">
-            <div className="nf-header-left">
-              <div className="nf-header-icon">
-                <IonIcon icon={notificationsCircleOutline} />
-              </div>
-              <div className="nf-header-text">
-                <h1>Notifications</h1>
-                <p>Stay updated on your AFA account and activities</p>
-              </div>
+            <div className="nf-header-text">
+              <h1>Notifications</h1>
+              <p>Stay updated with your latest alerts and account activity</p>
             </div>
           </div>
 

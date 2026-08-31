@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useHistory } from 'react-router-dom';
 import { IonIcon, IonContent, IonRefresher, IonRefresherContent } from '@ionic/react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   gridOutline,
   peopleOutline,
@@ -48,6 +49,8 @@ const menuItems = [
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
   const location = useLocation();
+  const history = useHistory();
+  const queryClient = useQueryClient();
   const { isOpen, toggle, close } = useSidebarStore();
   const { user, logout } = useAuthStore();
   const { isDark, toggle: toggleTheme } = useThemeStore();
@@ -81,9 +84,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
   const waLink = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}` : '#';
 
   const handleLogout = async () => {
+    localStorage.removeItem('remember_me');
+    queryClient.clear();
     await supabase.auth.signOut();
     logout();
-    window.location.replace('/login');
+    history.push('/login');
   };
 
   return (

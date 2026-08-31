@@ -10,12 +10,6 @@ import {
 import { z, validateBody } from "../_shared/validation.ts";
 
 const actionSchema = z.discriminatedUnion("action", [
-  z.object({
-    action: z.literal("top_up"),
-    amount: z.number().positive("Amount must be positive"),
-    reference: z.string().min(1, "Reference is required"),
-    method: z.string().min(1, "Payment method is required"),
-  }),
   z.object({ action: z.literal("get_transactions") }),
 ]);
 
@@ -40,25 +34,6 @@ Deno.serve(async (req) => {
   const data = validation.data!;
 
   switch (data.action) {
-    case "top_up": {
-      const { amount, reference, method } = data;
-      const { error } = await admin.rpc("credit_wallet", {
-        p_user_id: auth.user!.id,
-        p_amount: amount,
-        p_description: `Wallet Top Up via ${method}`,
-        p_reference: reference,
-      });
-      if (error) {
-        console.error("wallet-topup error:", error);
-        return errorResp("Failed to credit wallet", 500, origin);
-      }
-      await admin
-        .from("wallet_transactions")
-        .update({ payment_method: method, status: "Completed" })
-        .eq("reference", reference);
-      return successResp({ message: "Wallet credited" }, origin);
-    }
-
     case "get_transactions": {
       const { data: txns, error } = await admin
         .from("wallet_transactions")

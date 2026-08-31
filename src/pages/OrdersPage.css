@@ -551,6 +551,68 @@
   font-size: 1.1rem;
 }
 
+/* ===== SKELETON LOADING ===== */
+.orders-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 0;
+}
+
+.orders-skeleton-card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.orders-skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.orders-skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: ordShimmer 1.5s infinite;
+}
+
+.dark .orders-skeleton-line {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+}
+
+.orders-skeleton-line--id { width: 40%; height: 14px; }
+.orders-skeleton-line--name { width: 50%; }
+.orders-skeleton-line--phone { width: 30%; }
+.orders-skeleton-line--date { width: 35%; }
+.orders-skeleton-line--amount { width: 20%; }
+
+.orders-skeleton-badge {
+  width: 70px;
+  height: 22px;
+  border-radius: 100px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: ordShimmer 1.5s infinite;
+  margin-left: auto;
+}
+
+.dark .orders-skeleton-badge {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+}
+
+@keyframes ordShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
 .empty-state {
   display: flex;
   flex-direction: column;

@@ -31,6 +31,7 @@ const AdminNotifs = lazy(() => import('./pages/admin/NotificationsPage'));
 const AdminReferrals = lazy(() => import('./pages/admin/ReferralManagementPage'));
 const AdminReports = lazy(() => import('./pages/admin/ReportsPage'));
 const AdminSettings = lazy(() => import('./pages/admin/SettingsPage'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
 import '@ionic/react/css/core.css';
 import '@ionic/react/css/normalize.css';
@@ -210,6 +211,7 @@ const App: React.FC = () => (
                 <Suspense fallback={<LoadingSpinner message="Loading..." />}>
                   <Route exact path="/login" component={Login} />
                   <Route exact path="/register" component={Register} />
+                  <Route exact path="/reset-password" component={ResetPassword} />
                   <Route exact path="/cyberin" component={AdminLogin} />
                   <ProtectedRoute exact path="/dashboard" component={DashboardPage} requireRole="user" />
                   <ProtectedRoute exact path="/wallet" component={WalletPage} />

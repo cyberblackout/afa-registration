@@ -3,6 +3,137 @@
    DNA: matches dashboard welcome card, stat cards, wallet depth
    ============================================================ */
 
+/* ===== SKELETON LOADING ===== */
+.rr-skeleton {
+  border-radius: 16px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: rrShimmer 1.5s infinite;
+}
+
+.dark .rr-skeleton {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+}
+
+@keyframes rrShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.rr-skeleton-hero {
+  height: 260px;
+  margin-bottom: 20px;
+}
+
+.rr-skeleton-card {
+  height: 100px;
+  margin-bottom: 16px;
+}
+
+.rr-skeleton-card-sm {
+  height: 52px;
+  margin-bottom: 16px;
+}
+
+.rr-skeleton-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.rr-skeleton-stat {
+  height: 72px;
+  border-left: 4px solid #e2e8f0;
+}
+
+.dark .rr-skeleton-stat {
+  border-left-color: #334155;
+}
+
+.rr-skeleton-section {
+  margin-bottom: 20px;
+}
+
+.rr-skeleton-line-lg {
+  height: 20px;
+  width: 50%;
+  margin-bottom: 12px;
+  border-radius: 6px;
+}
+
+.rr-skeleton-feed {
+  height: 64px;
+  margin-bottom: 1px;
+  border-radius: 0;
+}
+
+.rr-skeleton-feed:first-of-type {
+  border-radius: 16px 16px 0 0;
+}
+
+.rr-skeleton-feed:last-of-type,
+.rr-skeleton-feed-short {
+  border-radius: 0;
+}
+
+.rr-skeleton-feed-short {
+  height: 64px;
+  border-radius: 0 0 16px 16px;
+  margin-bottom: 0;
+}
+
+/* ===== ERROR STATE ===== */
+.rr-error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text-muted, #9ca3af);
+}
+
+.rr-error-state svg {
+  margin-bottom: 16px;
+  opacity: 0.5;
+}
+
+.rr-error-state h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary, #1a1a2e);
+  margin: 0 0 6px;
+}
+
+.dark .rr-error-state h3 {
+  color: #ffffff;
+}
+
+.rr-error-state p {
+  font-size: 13px;
+  color: var(--text-muted, #9ca3af);
+  margin: 0 0 20px;
+}
+
+.rr-retry-btn {
+  background: var(--mtn-yellow, #FFCB05);
+  color: #0f0f1a;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 28px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-height: 44px;
+}
+
+.rr-retry-btn:active {
+  transform: scale(0.96);
+}
+
 /* ===== PAGE ===== */
 .rr-page {
   max-width: 580px;

@@ -32,6 +32,8 @@ self.addEventListener('push', function (event) {
 
 self.addEventListener('notificationclick', function (event) {
   event.notification.close();
-  const url = event.notification.data?.url || '/dashboard';
+  const rawUrl = event.notification.data?.url || '/dashboard';
+  // Only allow same-origin paths to prevent open redirect
+  const url = rawUrl.startsWith('/') && !rawUrl.startsWith('//') ? rawUrl : '/dashboard';
   event.waitUntil(clients.openWindow(url));
 });

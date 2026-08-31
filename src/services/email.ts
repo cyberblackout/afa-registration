@@ -34,7 +34,7 @@ export function topUpEmailHtml(name: string, amount: number, balance: number, da
         <tr>
           <td style="background:#ffffff;padding:32px 24px;border-radius:0 0 12px 12px">
             <h2 style="color:#1a1a2e;margin:0 0 6px;font-size:20px;font-weight:600">Wallet Top-Up Confirmed</h2>
-            <p style="color:#6b7280;margin:0 0 20px;font-size:14px;line-height:1.5">Hi <strong style="color:#1a1a2e">${name}</strong>,</p>
+            <p style="color:#6b7280;margin:0 0 20px;font-size:14px;line-height:1.5">Hi <strong style="color:#1a1a2e">${escapeHtml(name)}</strong>,</p>
             <p style="color:#6b7280;margin:0 0 20px;font-size:14px;line-height:1.5">Your MTN AFA wallet has been successfully credited.</p>
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa;border-radius:10px;padding:20px;margin:0 0 20px">
               <tr><td style="padding:0 0 4px;color:#6b7280;font-size:13px">Amount Credited</td></tr>
@@ -51,6 +51,15 @@ export function topUpEmailHtml(name: string, amount: number, balance: number, da
     </td></tr>
   </table>
 </body></html>`;
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
 }
 
 export function registrationStatusHtml(name: string, registrationId: string, status: string, notes?: string): string {
@@ -90,13 +99,13 @@ export function registrationStatusHtml(name: string, registrationId: string, sta
         <tr>
           <td style="background:#ffffff;padding:32px 24px;border-radius:0 0 12px 12px">
             <h2 style="color:#1a1a2e;margin:0 0 6px;font-size:20px;font-weight:600">Registration Status Update</h2>
-            <p style="color:#6b7280;margin:0 0 20px;font-size:14px;line-height:1.5">Hi <strong style="color:#1a1a2e">${name}</strong>,</p>
+            <p style="color:#6b7280;margin:0 0 20px;font-size:14px;line-height:1.5">Hi <strong style="color:#1a1a2e">${escapeHtml(name)}</strong>,</p>
             <p style="color:#6b7280;margin:0 0 20px;font-size:14px;line-height:1.5">Your AFA registration <strong style="color:#1a1a2e">#${registrationId}</strong> has been updated.</p>
             <table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa;border-radius:10px;padding:20px;margin:0 0 20px;text-align:center">
               <tr><td style="padding:0 0 8px;color:#6b7280;font-size:13px">Current Status</td></tr>
               <tr><td style="padding:0"><span style="display:inline-block;background:${color}15;color:${color};padding:6px 20px;border-radius:20px;font-weight:700;font-size:14px">${label}</span></td></tr>
             </table>
-            ${notes ? `<p style="color:#6b7280;margin:0 0 20px;font-size:14px;line-height:1.5"><strong>Note:</strong> ${notes}</p>` : ''}
+            ${notes ? `<p style="color:#6b7280;margin:0 0 20px;font-size:14px;line-height:1.5"><strong>Note:</strong> ${escapeHtml(notes)}</p>` : ''}
             <p style="color:#9ca3af;margin:0 0 4px;font-size:12px">Reference: ${registrationId}</p>
             <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0">
             <p style="color:#9ca3af;margin:0;font-size:11px;text-align:center">MTN AFA Registration Portal &middot; <a href="#" style="color:#9ca3af;text-decoration:underline">Support</a></p>
@@ -123,8 +132,8 @@ export function marketingEmailHtml(title: string, message: string): string {
         </tr>
         <tr>
           <td style="background:#ffffff;padding:32px 24px;border-radius:0 0 12px 12px">
-            <h2 style="color:#1a1a2e;margin:0 0 16px;font-size:20px;font-weight:600">${title}</h2>
-            <p style="color:#6b7280;margin:0 0 20px;font-size:14px;line-height:1.6;white-space:pre-wrap">${message}</p>
+            <h2 style="color:#1a1a2e;margin:0 0 16px;font-size:20px;font-weight:600">${escapeHtml(title)}</h2>
+            <p style="color:#6b7280;margin:0 0 20px;font-size:14px;line-height:1.6;white-space:pre-wrap">${escapeHtml(message)}</p>
             <hr style="border:none;border-top:1px solid #e5e7eb;margin:20px 0">
             <p style="color:#9ca3af;margin:0;font-size:11px;text-align:center">You received this email because you opted in for marketing communications.<br><a href="#" style="color:#9ca3af;text-decoration:underline">Unsubscribe from marketing emails</a></p>
           </td>

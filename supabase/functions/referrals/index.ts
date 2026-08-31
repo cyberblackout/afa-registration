@@ -29,6 +29,14 @@ const actionSchema = z.discriminatedUnion("action", [
     action: z.literal("validate_code"),
     code: z.string().min(1),
   }),
+  z.object({
+    action: z.literal("create_referral"),
+    referral_code: z.string().min(1),
+    device_fingerprint: z.string().optional(),
+  }),
+  z.object({
+    action: z.literal("get_my_referral_transactions"),
+  }),
 ]);
 
 Deno.serve(async (req) => {
@@ -113,6 +121,26 @@ Deno.serve(async (req) => {
       });
       if (error) return errorResp("Failed to validate code", 500, origin);
       return successResp(result, origin);
+    }
+
+    case "create_referral": {
+      const { data: result, error } = await admin.rpc("create_user_referral", {
+        code: data.referral_code,
+        fingerprint: data.device_fingerprint || null,
+      });
+      if (error) return errorResp("Failed to create referral", 500, origin);
+      return successResp(result, origin);
+    }
+
+    case "get_my_referral_transactions": {
+      const { data: txns, error } = await admin
+        .from("wallet_transactions")
+        .select("id, amount, description, reference, created_at, status")
+        .eq("user_id", auth.user!.id)
+        .ilike("description", "%referral%")
+        .order("created_at", { ascending: false });
+      if (error) return errorResp("Failed to fetch transactions", 500, origin);
+      return successResp(txns || [], origin);
     }
 
     default:

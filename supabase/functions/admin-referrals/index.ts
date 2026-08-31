@@ -21,6 +21,10 @@ const actionSchema = z.discriminatedUnion("action", [
     id: z.string().uuid(),
     status: z.string().min(1),
   }),
+  z.object({
+    action: z.literal("retry_reward"),
+    referral_id: z.string().uuid(),
+  }),
 ]);
 
 Deno.serve(async (req) => {
@@ -73,6 +77,17 @@ Deno.serve(async (req) => {
         .eq("id", data.id);
       if (error) return errorResp("Failed to update status", 500, origin);
       return successResp({ message: "Status updated" }, origin);
+    }
+
+    case "retry_reward": {
+      const { data: reward, error } = await admin.rpc("process_referral_reward", {
+        registration_id: data.referral_id,
+      });
+      if (error) {
+        console.error("retry_reward error:", error);
+        return errorResp("Failed to retry reward", 500, origin);
+      }
+      return successResp(reward, origin);
     }
 
     default:

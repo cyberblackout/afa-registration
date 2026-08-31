@@ -15,11 +15,7 @@ import {
 import {
   eyeOutline,
   eyeOffOutline,
-  walletOutline,
-  cartOutline,
-  shieldCheckmarkOutline,
   arrowForward,
-  personCircleOutline,
 } from 'ionicons/icons';
 import { supabase } from '../services/supabase';
 import { useAuthStore } from '../store/authStore';
@@ -40,8 +36,15 @@ const Login: React.FC = () => {
 
   useEffect(() => {
     const saved = localStorage.getItem('remembered_email');
+    const rememberMeFlag = localStorage.getItem('remember_me');
     if (saved) {
       setEmail(saved);
+    }
+    if (rememberMeFlag === 'true') {
+      setRememberMe(true);
+    } else if (rememberMeFlag === 'false') {
+      setRememberMe(false);
+    } else if (saved) {
       setRememberMe(true);
     }
   }, []);
@@ -64,15 +67,15 @@ const Login: React.FC = () => {
       if (data.user) {
         if (rememberMe) {
           localStorage.setItem('remembered_email', email);
+          localStorage.setItem('remember_me', 'true');
         } else {
           localStorage.removeItem('remembered_email');
+          localStorage.removeItem('remember_me');
         }
-        // Fetch profile via SECURITY DEFINER RPC (bypasses RLS)
         const { data: profileRows } = await supabase.rpc('get_my_profile');
         const profile = profileRows?.[0] ?? null;
         const role = (profile?.role ?? 'user') as 'user' | 'agent' | 'admin';
 
-        // Block admin users from the customer portal
         if (role === 'admin') {
           await supabase.auth.signOut();
           setToast({ show: true, message: 'Admin accounts must use the Admin Portal to sign in.' });
@@ -113,7 +116,9 @@ const Login: React.FC = () => {
     }
     setResetLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim());
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
       if (error) throw error;
       setToast({ show: true, message: 'Password reset link sent to your email.' });
       setShowForgotModal(false);
@@ -126,136 +131,100 @@ const Login: React.FC = () => {
 
   return (
     <IonPage>
-      <IonContent className="login-content" scrollY={true}>
+      <IonContent className="login-content" scrollY={false}>
         <div className="login-container">
-          <div className="login-brand">
-            <div className="brand-icon">
-              <img src="/favicon.png" alt="MTN" className="brand-logo" />
+          <div className="login-card">
+            <div className="login-brand">
+              <p className="login-brand-name">MTN AFA Portal</p>
+              <div className="login-brand-divider" />
             </div>
-            <IonText>
-              <h1 className="brand-title">MTN AFA</h1>
-              <p className="brand-subtitle">Agent Financial Access Portal</p>
-            </IonText>
-          </div>
 
-          <div className="login-card-wrapper">
-            <div className="login-card-inner">
-              <div className="login-card-header">
-                <IonText>
-                  <h2 className="welcome-title">Welcome back</h2>
-                  <p className="welcome-subtitle">
-                    Sign in to manage your wallet, AFA registrations, orders, and account.
-                  </p>
-                </IonText>
+            <div className="login-header">
+              <IonText>
+                <h1 className="login-welcome">Welcome back 👋</h1>
+                <p className="login-subtitle">Sign in to continue to your MTN AFA Portal.</p>
+              </IonText>
+            </div>
 
-                <div className="feature-strip">
-                  <div className="feature-item">
-                    <IonIcon icon={walletOutline} />
-                    <div>
-                      <span>Wallet</span>
-                      <small>Fast funding</small>
-                    </div>
-                  </div>
-                  <div className="feature-divider" />
-                  <div className="feature-item">
-                    <IonIcon icon={cartOutline} />
-                    <div>
-                      <span>Orders</span>
-                      <small>Track status</small>
-                    </div>
-                  </div>
-                  <div className="feature-divider" />
-                  <div className="feature-item">
-                    <IonIcon icon={shieldCheckmarkOutline} />
-                    <div>
-                      <span>Security</span>
-                      <small>Protected</small>
-                    </div>
-                  </div>
-                </div>
+            <form onSubmit={handleSubmit} className="login-form">
+              <div className="input-group">
+                <IonLabel className="input-label">Email Address</IonLabel>
+                <IonItem className="input-item" lines="none">
+                  <IonInput
+                    type="email"
+                    value={email}
+                    onIonInput={(e) => setEmail(e.detail.value!)}
+                    placeholder="you@example.com"
+                    required
+                  />
+                </IonItem>
               </div>
 
-              <form onSubmit={handleSubmit} className="login-form">
-                <div className="input-group">
-                  <IonLabel className="input-label">Email Address</IonLabel>
-                  <IonItem className="input-item" lines="none">
-                    <IonInput
-                      type="email"
-                      value={email}
-                      onIonInput={(e) => setEmail(e.detail.value!)}
-                      placeholder="you@example.com"
-                      required
-                    />
-                  </IonItem>
-                </div>
-
-                <div className="input-group">
-                  <IonLabel className="input-label">Password</IonLabel>
-                  <IonItem className="input-item" lines="none">
-                    <IonInput
-                      type={showPassword ? 'text' : 'password'}
-                      value={password}
-                      onIonInput={(e) => setPassword(e.detail.value!)}
-                      placeholder="Enter your password"
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="password-toggle"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      <IonIcon icon={showPassword ? eyeOffOutline : eyeOutline} />
-                    </button>
-                  </IonItem>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <IonItem lines="none" style={{ '--background': 'transparent', fontSize: '0.85rem' }}>
-                    <IonCheckbox
-                      checked={rememberMe}
-                      onIonChange={(e) => setRememberMe(e.detail.checked)}
-                      slot="start"
-                      style={{ '--checkbox-background-checked': '#ffc409', '--checkmark-color': '#0f0f1a' }}
-                    />
-                    <IonLabel style={{ color: '#aaaacc', fontSize: '0.85rem' }}>Remember me</IonLabel>
-                  </IonItem>
+              <div className="input-group">
+                <IonLabel className="input-label">Password</IonLabel>
+                <IonItem className="input-item" lines="none">
+                  <IonInput
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onIonInput={(e) => setPassword(e.detail.value!)}
+                    placeholder="Enter your password"
+                    required
+                  />
                   <button
                     type="button"
-                    className="link-btn"
-                    onClick={handleForgotPassword}
-                    style={{ fontSize: '0.8rem' }}
+                    className="password-toggle"
+                    onClick={() => setShowPassword(!showPassword)}
                   >
-                    Forgot password?
+                    <IonIcon icon={showPassword ? eyeOffOutline : eyeOutline} />
                   </button>
-                </div>
-
-                <IonButton
-                  type="submit"
-                  expand="block"
-                  className={`login-button ${loading ? 'button-loading' : ''}`}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <span className="btn-spinner" />
-                  ) : (
-                    <>
-                      Sign In
-                      <IonIcon icon={arrowForward} slot="end" />
-                    </>
-                  )}
-                </IonButton>
-              </form>
-
-              <div className="login-footer" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                <IonText>
-                  <p>
-                    Don't have an account?{' '}
-                    <button className="link-btn" onClick={() => history.push('/register')}>
-                      Create one
-                    </button>
-                  </p>
-                </IonText>
+                </IonItem>
               </div>
+
+              <div className="login-options">
+                <IonItem lines="none" className="login-remember">
+                  <IonCheckbox
+                    checked={rememberMe}
+                    onIonChange={(e) => setRememberMe(e.detail.checked)}
+                    slot="start"
+                    style={{ '--checkbox-background-checked': '#ffc409', '--checkmark-color': '#1a1a2e' }}
+                  />
+                  <IonLabel>Remember me</IonLabel>
+                </IonItem>
+                <button
+                  type="button"
+                  className="link-btn"
+                  onClick={handleForgotPassword}
+                >
+                  Forgot password?
+                </button>
+              </div>
+
+              <IonButton
+                type="submit"
+                expand="block"
+                className={`login-button ${loading ? 'button-loading' : ''}`}
+                disabled={loading}
+              >
+                {loading ? (
+                  <span className="btn-spinner" />
+                ) : (
+                  <>
+                    LOGIN
+                    <IonIcon icon={arrowForward} slot="end" />
+                  </>
+                )}
+              </IonButton>
+            </form>
+
+            <div className="login-footer">
+              <IonText>
+                <p>
+                  Don't have an account?{' '}
+                  <button className="link-btn" onClick={() => history.push('/register')}>
+                    Create an account
+                  </button>
+                </p>
+              </IonText>
             </div>
           </div>
         </div>

@@ -93,6 +93,7 @@ const ProfilePage: React.FC = () => {
       return await profileApi.get(user!.id);
     },
     enabled: !!user?.id,
+    staleTime: 60000,
   });
 
   const handleRefresh = async () => {
@@ -221,9 +222,21 @@ const ProfilePage: React.FC = () => {
           transition={{ duration: 0.4, ease: 'easeOut' }}
         >
           {isLoading ? (
-            <div className="profile-loading">
-              <div className="profile-loading-spinner" />
-              <span>Loading profile...</span>
+            <div className="pf-skeleton">
+              <div className="pf-skeleton-header">
+                <div className="pf-skeleton-avatar" />
+                <div className="pf-skeleton-name" />
+                <div className="pf-skeleton-email" />
+              </div>
+              <div className="pf-skeleton-section">
+                <div className="pf-skeleton-field" />
+                <div className="pf-skeleton-field" />
+                <div className="pf-skeleton-field pf-skeleton-field--wide" />
+              </div>
+              <div className="pf-skeleton-section">
+                <div className="pf-skeleton-field" />
+                <div className="pf-skeleton-field" />
+              </div>
             </div>
           ) : isError ? (
             <div className="profile-error">

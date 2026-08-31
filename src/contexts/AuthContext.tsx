@@ -30,6 +30,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { user, isLoading: loading, setUser, setLoading } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
   const initialised = useRef(false);
+  const profileFetched = useRef(false);
 
   const fetchProfile = useCallback(async () => {
     const res = await withTimeout(
@@ -42,6 +43,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
     const init = async () => {
       if (initialised.current) return;
       initialised.current = true;
@@ -52,17 +55,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           AUTH_INIT_TIMEOUT_MS,
           'getSession',
         ) as { data: { session: any } };
+
+        if (cancelled) return;
         const { session } = sessionRes.data;
 
         if (session?.user) {
           const existing = useAuthStore.getState();
           if (existing.user && existing.isAuthenticated) {
+            profileFetched.current = true;
             setLoading(false);
             return;
           }
 
           try {
             const profile = await fetchProfile();
+            if (cancelled) return;
+            profileFetched.current = true;
             if (profile) {
               setUser(profile as any, (profile.role ?? 'user') as 'user' | 'agent' | 'admin');
               setError(null);
@@ -71,15 +79,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setError('Profile not found. Please log in again.');
             }
           } catch (profileErr: any) {
-            console.error('Auth profile fetch failed:', profileErr);
+            if (cancelled) return;
+            profileFetched.current = true;
             setUser(null);
             setError('Failed to load profile. Please try again.');
           }
         } else {
+          profileFetched.current = true;
           setUser(null);
         }
       } catch (initErr: any) {
-        console.error('Auth init failed:', initErr);
+        if (cancelled) return;
+        profileFetched.current = true;
         setLoading(false);
         setError('Connection timed out. Please check your network and try again.');
       }
@@ -88,7 +99,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     init();
 
     const subRes = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (cancelled) return;
+
       if (event === 'SIGNED_OUT') {
+        profileFetched.current = false;
         setUser(null);
         setError(null);
         return;
@@ -96,14 +110,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (event === 'SIGNED_IN') {
         if (session?.user) {
+          const existing = useAuthStore.getState();
+          if (existing.user && existing.isAuthenticated && profileFetched.current) {
+            return;
+          }
           try {
             const profile = await fetchProfile();
+            if (cancelled) return;
+            profileFetched.current = true;
             if (profile) {
               setUser(profile as any, (profile.role ?? 'user') as 'user' | 'agent' | 'admin');
               setError(null);
             }
           } catch (err: any) {
-            console.error('Auth onAuthStateChange profile fetch failed:', err);
+            if (cancelled) return;
+            profileFetched.current = true;
           }
         }
       }
@@ -116,20 +137,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (session?.user) {
           try {
             const profile = await fetchProfile();
+            if (cancelled) return;
             if (profile) {
               setUser(profile as any, (profile.role ?? 'user') as 'user' | 'agent' | 'admin');
             }
           } catch (err: any) {
-            console.error('Auth TOKEN_REFRESHED profile fetch failed:', err);
+            // Token refresh profile fetch failed — non-critical
           }
         }
       }
     });
 
-    return () => subRes.data.subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      subRes.data.subscription.unsubscribe();
+    };
   }, [fetchProfile, setUser, setLoading]);
 
   const signOut = async () => {
+    localStorage.removeItem('remember_me');
+    profileFetched.current = false;
     await supabase.auth.signOut();
     setUser(null);
     setError(null);

@@ -9,6 +9,9 @@ import {
 } from "../_shared/auth.ts";
 import { z, validateBody } from "../_shared/validation.ts";
 
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+
 const actionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("get_user_role"), user_id: z.string().uuid().optional() }),
   z.object({ action: z.literal("is_admin") }),
@@ -102,14 +105,28 @@ Deno.serve(async (req) => {
     }
 
     case "upload_avatar": {
-      const ext = data.file_name.split(".").pop() || "png";
-      const filePath = `avatars/${auth.user!.id}.${ext}`;
+      const ext = data.file_name.split(".").pop()?.toLowerCase() || "";
+      const allowedExts = ["jpg", "jpeg", "png", "webp", "gif"];
+      if (!allowedExts.includes(ext)) {
+        return errorResp("Invalid file type. Allowed: JPG, PNG, WebP, GIF", 400, origin);
+      }
+
       const binaryContent = Uint8Array.from(atob(data.file_content), (c) => c.charCodeAt(0));
+      if (binaryContent.length > MAX_FILE_SIZE) {
+        return errorResp("File too large. Maximum size is 2MB", 400, origin);
+      }
+
+      const mimeType = `image/${ext === "jpg" ? "jpeg" : ext}`;
+      if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
+        return errorResp("Invalid image type", 400, origin);
+      }
+
+      const filePath = `avatars/${auth.user!.id}.${ext}`;
 
       const { error: uploadError } = await admin.storage
         .from("profiles")
         .upload(filePath, binaryContent, {
-          contentType: `image/${ext}`,
+          contentType: mimeType,
           upsert: true,
         });
       if (uploadError) {

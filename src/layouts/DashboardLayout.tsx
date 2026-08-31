@@ -1,6 +1,8 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import { Link, useLocation, useHistory } from 'react-router-dom';
 import { IonIcon, IonContent, IonRefresher, IonRefresherContent } from '@ionic/react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useProfile } from '../hooks/useData';
 import {
   gridOutline,
   grid,
@@ -116,42 +118,46 @@ const defaultConfig: WhatsAppConfig = {
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh, noScroll }) => {
   const location = useLocation();
+  const history = useHistory();
+  const queryClient = useQueryClient();
   const { isOpen, toggle, close } = useSidebarStore();
   const { user, logout } = useAuthStore();
   const { unreadCount } = useNotificationStore();
   const { isDark, toggle: toggleTheme } = useThemeStore();
   const activePath = location.pathname;
 
-  const displayName = user?.full_name || 'User';
-  const firstName = displayName.split(' ')[0];
-  const capitalizedName = firstName.charAt(0).toUpperCase() + firstName.slice(1);
+  const { data: profile } = useProfile();
+  const displayName = profile?.full_name || user?.full_name || '';
+  const firstName = displayName ? displayName.split(' ')[0] : '';
+  const capitalizedName = firstName ? firstName.charAt(0).toUpperCase() + firstName.slice(1) : '';
 
   const role = user?.role ?? 'user';
   const navGroups = role === 'agent' ? agentNavGroups : userNavGroups;
 
   const [wa, setWa] = useState<WhatsAppConfig>(defaultConfig);
 
+  const { data: systemSettings } = useQuery({
+    queryKey: ['system-settings'],
+    queryFn: async () => {
+      const { adminConfigApi } = await import('../services/api');
+      return adminConfigApi.getSystemSettings();
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+  });
+
   useEffect(() => {
-    const fetchConfig = async () => {
-      try {
-        const { adminConfigApi } = await import('../services/api');
-        const data = await adminConfigApi.getSystemSettings();
-        if (!data) return;
-        const map: Record<string, string> = {};
-        data.forEach((s: any) => { map[s.setting_name] = s.setting_value; });
-        setWa({
-          enabled: map['whatsapp_enabled'] !== 'false',
-          userNumber: (map['whatsapp_user_number'] || '').replace(/[^0-9]/g, ''),
-          agentNumber: (map['whatsapp_agent_number'] || '').replace(/[^0-9]/g, ''),
-          userMessage: map['whatsapp_user_message'] || defaultConfig.userMessage,
-          agentMessage: map['whatsapp_agent_message'] || defaultConfig.agentMessage,
-        });
-      } catch (e) {
-        // Non-critical
-      }
-    };
-    fetchConfig();
-  }, []);
+    if (!systemSettings) return;
+    const map: Record<string, string> = {};
+    systemSettings.forEach((s: any) => { map[s.setting_name] = s.setting_value; });
+    setWa({
+      enabled: map['whatsapp_enabled'] !== 'false',
+      userNumber: (map['whatsapp_user_number'] || '').replace(/[^0-9]/g, ''),
+      agentNumber: (map['whatsapp_agent_number'] || '').replace(/[^0-9]/g, ''),
+      userMessage: map['whatsapp_user_message'] || defaultConfig.userMessage,
+      agentMessage: map['whatsapp_agent_message'] || defaultConfig.agentMessage,
+    });
+  }, [systemSettings]);
 
   const userWaLink = wa.userNumber
     ? `https://wa.me/${wa.userNumber}?text=${encodeURIComponent(wa.userMessage)}`
@@ -162,10 +168,12 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh, 
     : '#';
 
   const handleLogout = useCallback(async () => {
+    localStorage.removeItem('remember_me');
+    queryClient.clear();
     await supabase.auth.signOut();
     logout();
-    window.location.replace('/login');
-  }, [logout]);
+    history.push('/login');
+  }, [logout, history, queryClient]);
 
   const waLinkForFloat = role === 'agent' ? agentWaLink : userWaLink;
   const waNumberForFloat = role === 'agent' ? wa.agentNumber : wa.userNumber;
@@ -189,7 +197,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh, 
           </button>
         </div>
         <div className="sb-user-section">
-          <p className="sb-welcome">Welcome back, {capitalizedName} <span className="sb-wave">👋</span></p>
+          <p className="sb-welcome">Welcome back{capitalizedName ? `, ${capitalizedName}` : ''} <span className="sb-wave">👋</span></p>
           <span className="sb-role-badge">{isAgent ? 'Agent' : 'User'}</span>
         </div>
         <Link to="/wallet" className="sb-wallet-card" onClick={close}>
@@ -233,20 +241,22 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh, 
       </nav>
 
       <div className="sb-footer-area">
-        <Link
-          to="/become-agent"
-          className="sb-promo-card sb-promo-card--agent"
-          onClick={close}
-        >
-          <div className="sb-promo-icon">
-            <IonIcon icon={shieldCheckmarkOutline} />
-          </div>
-          <div className="sb-promo-text">
-            <span className="sb-promo-title">Become an Agent</span>
-            <span className="sb-promo-desc">Start earning with MTN AFA</span>
-          </div>
-          <IonIcon icon={chevronForward} className="sb-promo-arrow" />
-        </Link>
+        {!isAgent && (
+          <Link
+            to="/become-agent"
+            className="sb-promo-card sb-promo-card--agent"
+            onClick={close}
+          >
+            <div className="sb-promo-icon">
+              <IonIcon icon={shieldCheckmarkOutline} />
+            </div>
+            <div className="sb-promo-text">
+              <span className="sb-promo-title">Become an Agent</span>
+              <span className="sb-promo-desc">Start earning with MTN AFA</span>
+            </div>
+            <IonIcon icon={chevronForward} className="sb-promo-arrow" />
+          </Link>
+        )}
 
         {wa.enabled && (isAgent ? wa.agentNumber : wa.userNumber) && (
           <a
@@ -286,7 +296,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh, 
           <img src="/favicon.png" alt="MTN" className="navbar-logo" />
           <div className="navbar-brand-text">
             <span className="navbar-title">{isAgent ? 'MTN AFA Agent' : 'MTN AFA Portal'}</span>
-            <span className="navbar-welcome">Welcome, {capitalizedName}</span>
+            <span className="navbar-welcome">Welcome{capitalizedName ? `, ${capitalizedName}` : ''}</span>
           </div>
         </div>
         <div className="navbar-right">

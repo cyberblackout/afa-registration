@@ -78,17 +78,19 @@ const BecomeAgentPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', color: 'success' });
 
-  const { data: agentFeeData, isLoading: feeLoading } = useQuery({
+  const { data: agentFeeData, isLoading: feeLoading, isError: feeError } = useQuery({
     queryKey: ['agent_fee'],
     queryFn: () => settingsApi.getSetting('agent_fee'),
+    staleTime: 300000,
   });
 
-  const { data: afaPricingData, isLoading: pricingLoading } = useQuery({
+  const { data: afaPricingData, isLoading: pricingLoading, isError: pricingError } = useQuery({
     queryKey: ['afa_registration_price'],
     queryFn: async () => {
       const allPricing = await pricingApi.get();
       return (allPricing as any[]).find((p) => p.key === 'afa_registration') || null;
     },
+    staleTime: 300000,
   });
 
   const handleRefresh = async () => {

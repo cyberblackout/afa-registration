@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   IonButton,
   IonIcon,
@@ -116,6 +116,7 @@ const WalletPage: React.FC = () => {
   const [topUpLoading, setTopUpLoading] = useState(false);
   const [topUpError, setTopUpError] = useState('');
   const [paidAmount, setPaidAmount] = useState(0);
+  const isProcessingRef = useRef(false);
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['topup-limits'] });
@@ -142,6 +143,7 @@ const WalletPage: React.FC = () => {
     queryKey: ['wallet', user?.id],
     queryFn: () => profileApi.getWalletBalance(user!.id),
     enabled: !!user?.id,
+    staleTime: 60000,
   });
 
   const {
@@ -156,6 +158,7 @@ const WalletPage: React.FC = () => {
       return (data || []) as DbTransaction[];
     },
     enabled: !!user?.id,
+    staleTime: 60000,
   });
 
   const paystackPublicKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string;
@@ -229,6 +232,7 @@ const WalletPage: React.FC = () => {
   }, [selectedAmount, customAmount]);
 
   const handleProceed = async () => {
+    if (isProcessingRef.current) return;
     const amount = getDisplayAmount();
     if (amount <= 0) return;
     if (topUpLimits) {
@@ -249,6 +253,7 @@ const WalletPage: React.FC = () => {
       setTopUpStep('failed');
       return;
     }
+    isProcessingRef.current = true;
     setTopUpLoading(true);
     setTopUpError('');
     try {
@@ -267,7 +272,10 @@ const WalletPage: React.FC = () => {
             setTopUpError(err.message || 'Payment verification failed. Contact support.');
             setTopUpStep('failed');
           })
-          .finally(() => setTopUpLoading(false));
+          .finally(() => {
+            setTopUpLoading(false);
+            isProcessingRef.current = false;
+          });
       };
       const handlePopupClose = () => {
         setTopUpStep((currentStep) => {
@@ -278,7 +286,10 @@ const WalletPage: React.FC = () => {
                 setTopUpError('Payment was cancelled. If you already paid, it will be processed shortly.');
                 setTopUpStep('failed');
               })
-              .finally(() => setTopUpLoading(false));
+              .finally(() => {
+                setTopUpLoading(false);
+                isProcessingRef.current = false;
+              });
             return 'processing';
           }
           return currentStep;
@@ -307,6 +318,7 @@ const WalletPage: React.FC = () => {
       setTopUpError(err.message || 'Failed to start payment. Please try again.');
       setTopUpStep('failed');
       setTopUpLoading(false);
+      isProcessingRef.current = false;
     }
   };
 
@@ -380,6 +392,7 @@ const WalletPage: React.FC = () => {
     setTopUpLoading(false);
     setTopUpError('');
     setPaidAmount(0);
+    isProcessingRef.current = false;
   };
 
   const exportCSV = () => {
@@ -710,18 +723,31 @@ const WalletPage: React.FC = () => {
                       <div className="custom-input-wrap">
                         <span className="currency-prefix">GH₵</span>
                         <input
-                          type="number"
+                          type="text"
+                          inputMode="decimal"
                           placeholder="0.00"
                           value={customAmount}
-                          onChange={(e) => handleCustomAmountChange(e.target.value)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) {
+                              handleCustomAmountChange(val);
+                            }
+                          }}
                           className="custom-input"
-                          min="1"
                         />
                       </div>
+                      {topUpLimits && (
+                        <span className="custom-input-hint">
+                          Min GH₵{formatCurrency(topUpLimits.min)} — Max GH₵{formatCurrency(topUpLimits.max)}
+                        </span>
+                      )}
                     </div>
 
                     <div className="payment-info">
-                      <p>You'll be redirected to Paystack to complete payment via Mobile Money, Card, or Bank.</p>
+                      <div className="payment-info-row">
+                        <IonIcon icon={shieldCheckmarkOutline} className="payment-info-icon" />
+                        <p>Secure payment powered by Paystack. You'll be redirected to complete your payment.</p>
+                      </div>
                     </div>
 
                     <IonButton
@@ -730,7 +756,12 @@ const WalletPage: React.FC = () => {
                       onClick={handleProceed}
                       disabled={getDisplayAmount() <= 0 || topUpLoading}
                     >
-                      {topUpLoading ? 'Opening Paystack...' : `Pay GH₵${formatCurrency(getDisplayAmount())}`}
+                      {topUpLoading
+                        ? 'Redirecting to secure payment...'
+                        : getDisplayAmount() > 0
+                          ? `Pay GH₵${formatCurrency(getDisplayAmount())}`
+                          : 'Enter an amount to continue'
+                      }
                     </IonButton>
                   </div>
                 )}
@@ -759,7 +790,7 @@ const WalletPage: React.FC = () => {
                     <IonIcon icon={closeCircle} className="result-icon" />
                     <h3>Payment Failed</h3>
                     <p>{topUpError || 'Something went wrong. Please try again.'}</p>
-                    <IonButton expand="block" className="proceed-btn" onClick={() => { setTopUpStep('form'); setTopUpError(''); setTopUpLoading(false); }}>
+                    <IonButton expand="block" className="proceed-btn" onClick={() => { setTopUpStep('form'); setTopUpError(''); setTopUpLoading(false); isProcessingRef.current = false; }}>
                       Try Again
                     </IonButton>
                   </div>

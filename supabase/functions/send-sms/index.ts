@@ -8,7 +8,7 @@ Deno.serve(async (req) => {
   }
   if (req.method !== "POST") return errorResp("Method not allowed", 405, origin);
 
-  const auth = await verifyAuth(req, ["admin", "user", "agent"]);
+  const auth = await verifyAuth(req, ["admin"]);
   if (auth.error) return auth.error;
 
   let body: any;
@@ -21,6 +21,24 @@ Deno.serve(async (req) => {
   const { user_id, phone, message, type = "transactional" } = body;
   if (!phone || !message) {
     return errorResp("phone and message are required", 400, origin);
+  }
+
+  // Validate phone number format (Ghana: +233XXXXXXXXX or 0XXXXXXXXX)
+  const phoneRegex = /^(\+233|0)[0-9]{9}$/;
+  if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
+    return errorResp("Invalid phone number format", 400, origin);
+  }
+
+  // Rate limit: max 20 SMS per minute per admin
+  const adminClient = getSupabaseAdmin();
+  const { data: rateLimit } = await adminClient.rpc("check_rate_limit", {
+    p_key: `sms:${auth.user!.id}`,
+    p_action: "send_sms",
+    p_window_seconds: 60,
+    p_max_attempts: 20,
+  });
+  if (rateLimit === false) {
+    return errorResp("Rate limit exceeded. Please wait before sending more SMS.", 429, origin);
   }
 
   const admin = getSupabaseAdmin();

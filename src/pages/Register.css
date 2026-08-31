@@ -1,81 +1,64 @@
 .register-content {
-  --background: #0f0f1a;
+  --background: #f5f5f7;
 }
 
 .register-container {
   display: flex;
-  flex-direction: column;
-  min-height: 100%;
-  background: linear-gradient(180deg, #0f0f1a 0%, #1a1a2e 50%, #0f0f1a 100%);
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 16px;
+  box-sizing: border-box;
+  background: #f5f5f7;
+}
+
+.register-card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 20px;
+  padding: 28px 24px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  box-sizing: border-box;
 }
 
 .register-brand {
   text-align: center;
-  padding: 2.5rem 1.5rem 1.5rem;
-  position: relative;
+  margin-bottom: 20px;
 }
 
-.register-brand::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 80px;
-  height: 3px;
-  background: linear-gradient(90deg, transparent, #ffc409, transparent);
-  border-radius: 2px;
-}
-
-.register-brand .brand-icon {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 0.75rem;
-  background: linear-gradient(135deg, #ffc409, #ff9800);
-  border-radius: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 8px 32px rgba(255, 196, 9, 0.3);
-}
-
-.register-brand .brand-logo {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: contain;
-}
-
-.register-card-wrapper {
-  flex: 1;
-  padding: 1.5rem;
-}
-
-.register-card-inner {
-  background: #1a1a2e;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 24px;
-  padding: 2rem;
-  width: 100%;
-  max-width: 440px;
-  margin: 0 auto;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
-}
-
-.register-card-header {
-  margin-bottom: 2rem;
-}
-
-.register-title {
-  font-size: 1.5rem;
+.register-brand-name {
+  font-size: 1.1rem;
   font-weight: 700;
-  color: #ffffff;
-  margin: 0 0 0.5rem;
+  color: #1a1a2e;
+  margin: 0;
+  letter-spacing: 0.5px;
+}
+
+.register-brand-divider {
+  width: 40px;
+  height: 3px;
+  background: #ffc409;
+  border-radius: 2px;
+  margin: 12px auto 0;
+}
+
+.register-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.register-welcome {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #1a1a2e;
+  margin: 0 0 6px;
 }
 
 .register-subtitle {
   font-size: 0.85rem;
-  color: #8888aa;
+  color: #6b7280;
   margin: 0;
   line-height: 1.5;
 }
@@ -83,79 +66,73 @@
 .register-form {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 14px;
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-@media (max-width: 360px) {
-  .form-row {
-    grid-template-columns: 1fr;
-  }
+  gap: 12px;
 }
 
 .input-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 6px;
 }
 
 .input-label {
   font-size: 0.8rem !important;
   font-weight: 600 !important;
-  color: #aaaacc !important;
-  padding-left: 0.25rem;
+  color: #374151 !important;
+  padding-left: 2px;
 }
 
 .input-hint {
   font-size: 0.7rem !important;
-  color: #666688 !important;
-  padding-left: 0.25rem;
+  color: #9ca3af !important;
+  padding-left: 2px;
 }
 
 .input-item {
   --background: #ffffff;
-  --border-radius: 14px;
-  --padding-start: 16px;
+  --border-radius: 12px;
+  --padding-start: 14px;
   --padding-end: 8px;
-  --min-height: 52px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 14px;
+  --min-height: 50px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .input-item:focus-within {
   border-color: #ffc409;
-  box-shadow: 0 0 0 3px rgba(255, 196, 9, 0.1);
+  box-shadow: 0 0 0 3px rgba(255, 196, 9, 0.12);
 }
 
 .input-item ion-input {
-  --color: #000000 !important;
-  --placeholder-color: #999999;
+  --color: #1a1a2e !important;
+  --placeholder-color: #9ca3af;
   --placeholder-opacity: 1;
   font-size: 0.95rem;
-  color: #000000 !important;
+  color: #1a1a2e !important;
 }
 
 .input-item ion-input input {
-  color: #000000 !important;
+  color: #1a1a2e !important;
 }
 
 .input-item ion-input input::placeholder {
-  color: #999999 !important;
+  color: #9ca3af !important;
   opacity: 1 !important;
 }
 
 .password-toggle {
   background: none;
   border: none;
-  padding: 0.5rem;
+  padding: 8px;
   cursor: pointer;
-  color: #8888aa;
+  color: #9ca3af;
   display: flex;
   align-items: center;
   transition: color 0.2s;
@@ -166,27 +143,27 @@
 }
 
 .password-toggle ion-icon {
-  font-size: 1.2rem;
+  font-size: 1.15rem;
 }
 
 .password-hints {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
-  padding-left: 0.25rem;
+  gap: 4px;
+  padding-left: 2px;
 }
 
 .hint {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 6px;
   font-size: 0.75rem;
-  color: #555577;
+  color: #9ca3af;
   transition: color 0.3s;
 }
 
 .hint.met {
-  color: #4caf50;
+  color: #22c55e;
 }
 
 .hint ion-icon {
@@ -194,21 +171,21 @@
 }
 
 .hint.met ion-icon {
-  color: #4caf50;
+  color: #22c55e;
 }
 
 .register-button {
-  --background: linear-gradient(135deg, #ffc409, #ff9800);
+  --background: #ffc409;
   --background-activated: #e6b008;
-  --border-radius: 14px;
-  --box-shadow: 0 4px 20px rgba(255, 196, 9, 0.3);
-  height: 52px;
-  font-size: 1rem;
+  --border-radius: 12px;
+  --box-shadow: 0 2px 8px rgba(255, 196, 9, 0.25);
+  height: 50px;
+  font-size: 0.95rem;
   font-weight: 700;
-  margin-top: 0.5rem;
-  --color: #0f0f1a;
-  letter-spacing: 0.5px;
-  transition: transform 0.2s, box-shadow 0.2s;
+  margin-top: 4px;
+  --color: #1a1a2e;
+  letter-spacing: 0.3px;
+  transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .register-button:active {
@@ -216,21 +193,21 @@
 }
 
 .register-button.button-disabled {
-  --background: #333355;
-  --color: #8888aa;
+  --background: #d1d5db;
+  --color: #9ca3af;
   --box-shadow: none;
 }
 
 .register-footer {
   text-align: center;
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f2;
 }
 
 .register-footer p {
   font-size: 0.85rem;
-  color: #8888aa;
+  color: #6b7280;
   margin: 0;
 }
 
@@ -238,7 +215,7 @@
   background: none;
   border: none;
   color: #ffc409;
-  font-weight: 700;
+  font-weight: 600;
   font-size: 0.85rem;
   cursor: pointer;
   padding: 0;
@@ -247,5 +224,30 @@
 }
 
 .link-btn:hover {
-  color: #ffd54f;
+  color: #e6b008;
+}
+
+.input-item.input-error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.input-error-text {
+  font-size: 0.75rem;
+  color: #ef4444;
+  padding-left: 2px;
+}
+
+@media (max-width: 360px) {
+  .register-card {
+    padding: 24px 18px;
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .register-welcome {
+    font-size: 1.3rem;
+  }
 }

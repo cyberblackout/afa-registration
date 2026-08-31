@@ -8,9 +8,16 @@ function getAdmin() {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 }
 
+const ALLOWED_ORIGINS = [
+  "https://mt-naa-portal.netlify.app",
+  "http://localhost:5173",
+  "http://localhost:4173",
+];
+
 function getCors(origin: string | null): Record<string, string> {
+  const allowed = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
   return {
-    "Access-Control-Allow-Origin": origin || "*",
+    "Access-Control-Allow-Origin": allowed,
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
   };
@@ -146,6 +153,18 @@ Deno.serve(async (req) => {
     return errResp("Insufficient permissions", 403, origin);
   }
 
+  // Rate limit: max 5 push sends per minute per user
+  const admin = getAdmin();
+  const { data: rateLimit } = await admin.rpc("check_rate_limit", {
+    p_key: `push:${user.id}`,
+    p_action: "send_push",
+    p_window_seconds: 60,
+    p_max_attempts: 5,
+  });
+  if (rateLimit === false) {
+    return errResp("Rate limit exceeded. Please wait before sending more notifications.", 429, origin);
+  }
+
   let body: any;
   try {
     body = await req.json();
@@ -161,6 +180,11 @@ Deno.serve(async (req) => {
 
   if (!title) {
     return errResp("title is required", 400, origin);
+  }
+
+  // Authorization: non-admins can only send push to themselves
+  if (targetUserId && targetUserId !== user.id && user.role !== "admin") {
+    return errResp("You can only send notifications to yourself", 403, origin);
   }
 
   const admin = getAdmin();

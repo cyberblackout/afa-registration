@@ -9,7 +9,6 @@ import DashboardLayout from '../layouts/DashboardLayout';
 import {
   walletOutline,
   cartOutline,
-  documentTextOutline,
   addCircleOutline,
   personOutline,
   giftOutline,
@@ -19,7 +18,6 @@ import {
   cashOutline,
   chevronForward,
   timeOutline,
-  checkmarkCircleOutline,
 } from 'ionicons/icons';
 import './AgentDashboardPage.css';
 
@@ -40,12 +38,14 @@ const AgentDashboardPage: React.FC = () => {
     queryKey: ['agent_dashboard', user?.id],
     queryFn: () => agentApi.getDashboard() as any,
     enabled: !!user?.id,
+    staleTime: 60000,
   });
 
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ['agent_profile', user?.id],
     queryFn: () => profileApi.get(user!.id),
     enabled: !!user?.id,
+    staleTime: 60000,
   });
 
   const handleRefresh = async () => {
@@ -55,8 +55,9 @@ const AgentDashboardPage: React.FC = () => {
 
   const isLoadingAll = isLoading || profileLoading;
   const balance = Number((profile as any)?.wallet_balance ?? user?.wallet_balance ?? 0);
-  const displayName = profile?.full_name || user?.full_name || 'Agent';
-  const firstName = displayName.split(' ')[0];
+  const displayName = profile?.full_name || user?.full_name || '';
+  const firstName = displayName ? displayName.split(' ')[0] : '';
+  const capitalizedName = firstName ? firstName.charAt(0).toUpperCase() + firstName.slice(1) : '';
 
   if (isLoadingAll) {
     return (
@@ -83,7 +84,7 @@ const AgentDashboardPage: React.FC = () => {
         <DashboardLayout onRefresh={handleRefresh}>
           <div className="ag-page">
             <div className="ag-error">
-              <p>Failed to load agent dashboard.</p>
+              <p>Unable to load your dashboard. Please try again.</p>
               <button onClick={handleRefresh}>Retry</button>
             </div>
           </div>
@@ -97,37 +98,33 @@ const AgentDashboardPage: React.FC = () => {
       <DashboardLayout onRefresh={handleRefresh}>
         <div className="ag-page">
 
-          {/* ── GREETING ── */}
-          <div className="ag-greeting">
-            <div className="ag-greeting-text">
-              <h1>Welcome back, {firstName} <span className="ag-wave">👋</span></h1>
-              <p>Manage your MTN AFA services</p>
-            </div>
-            <span className="ag-role-badge">
-              <IonIcon icon={personOutline} />
-              Agent
-            </span>
-          </div>
-
-          {/* ── WALLET CARD ── */}
+          {/* ── WALLET CARD (includes greeting) ── */}
           <div className="ag-wallet-card">
+            <div className="ag-wallet-greeting">
+              <h1>Welcome back{capitalizedName ? `, ${capitalizedName}` : ''} <span className="ag-wave">👋</span></h1>
+              <p>Manage your MTN AFA services</p>
+              <span className="ag-role-badge">
+                <IonIcon icon={personOutline} />
+                Agent
+              </span>
+            </div>
             <div className="ag-wallet-top">
               <div className="ag-wallet-label">
                 <IonIcon icon={walletOutline} />
                 <span>Wallet Balance</span>
               </div>
-              <a href="/wallet" className="ag-wallet-history-btn">
+              <Link to="/wallet" className="ag-wallet-history-btn">
                 <IonIcon icon={timeOutline} />
                 History
-              </a>
+              </Link>
             </div>
             <div className="ag-wallet-balance">
               <AmountDisplay value={balance} className="amount-display--dark ag-wallet-amount-display" />
             </div>
-            <a href="/wallet" className="ag-wallet-topup-btn">
+            <Link to="/wallet" className="ag-wallet-topup-btn">
               <IonIcon icon={addCircleOutline} />
               Top Up Wallet
-            </a>
+            </Link>
           </div>
 
           {/* ── QUICK ACTIONS ── */}
@@ -135,7 +132,7 @@ const AgentDashboardPage: React.FC = () => {
             <h2 className="ag-section-title">Quick Actions</h2>
             <div className="ag-actions-grid">
               {quickActions.map((action) => (
-                <a key={action.title} href={action.path} className="ag-action-card">
+                <Link key={action.title} to={action.path} className="ag-action-card">
                   <div className="ag-action-icon" style={{ background: `${action.color}18`, color: action.color }}>
                     <IonIcon icon={action.icon} />
                   </div>
@@ -144,7 +141,7 @@ const AgentDashboardPage: React.FC = () => {
                     <span className="ag-action-sub">{action.subtitle}</span>
                   </div>
                   <IonIcon icon={chevronForward} className="ag-action-arrow" />
-                </a>
+                </Link>
               ))}
             </div>
           </div>

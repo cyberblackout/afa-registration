@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   IonIcon,
   IonToast,
@@ -76,6 +76,7 @@ const OrdersPage: React.FC = () => {
     queryKey: ['orders', user?.id],
     queryFn: () => orderApi.list(user!.id) as Promise<Order[]>,
     enabled: !!user?.id,
+    staleTime: 60000,
   });
 
   const handleRefresh = async () => {
@@ -92,7 +93,7 @@ const OrdersPage: React.FC = () => {
     return () => { supabase.removeChannel(channel); };
   }, [user?.id]);
 
-  const filteredOrders = orders.filter((order) => {
+  const filteredOrders = useMemo(() => orders.filter((order) => {
     const query = searchTerm.toLowerCase();
     const matchesSearch =
       order.id.toLowerCase().includes(query) ||
@@ -113,15 +114,15 @@ const OrdersPage: React.FC = () => {
     }
 
     return matchesSearch && matchesStatus && matchesDate;
-  });
+  }), [orders, searchTerm, statusFilter, dateFilter]);
 
-  const sortedOrders = [...filteredOrders].sort((a, b) => {
+  const sortedOrders = useMemo(() => [...filteredOrders].sort((a, b) => {
     if (sortBy === 'Newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     if (sortBy === 'Oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
     if (sortBy === 'Highest Amount') return b.amount - a.amount;
     if (sortBy === 'Lowest Amount') return a.amount - b.amount;
     return 0;
-  });
+  }), [filteredOrders, sortBy]);
 
   const totalPages = Math.ceil(sortedOrders.length / ITEMS_PER_PAGE);
   const paginatedOrders = sortedOrders.slice(
@@ -222,14 +223,24 @@ const OrdersPage: React.FC = () => {
         </div>
 
         {isLoading ? (
-          <motion.div
-            className="empty-state"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
-            <IonIcon icon={cartOutline} className="empty-icon" />
-            <h3>Loading orders...</h3>
-          </motion.div>
+          <div className="orders-skeleton">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="orders-skeleton-card">
+                <div className="orders-skeleton-row">
+                  <div className="orders-skeleton-line orders-skeleton-line--id" />
+                  <div className="orders-skeleton-badge" />
+                </div>
+                <div className="orders-skeleton-row">
+                  <div className="orders-skeleton-line orders-skeleton-line--name" />
+                  <div className="orders-skeleton-line orders-skeleton-line--phone" />
+                </div>
+                <div className="orders-skeleton-row">
+                  <div className="orders-skeleton-line orders-skeleton-line--date" />
+                  <div className="orders-skeleton-line orders-skeleton-line--amount" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : isError ? (
           <motion.div
             className="empty-state"

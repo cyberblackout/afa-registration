@@ -16,8 +16,7 @@ const actionSchema = z.discriminatedUnion("action", [
   }),
   z.object({
     action: z.literal("create"),
-    amount: z.number().positive(),
-    description: z.string().min(1),
+    product_id: z.string().min(1, "Product ID is required"),
   }),
   z.object({
     action: z.literal("update_status"),
@@ -87,13 +86,25 @@ Deno.serve(async (req) => {
     }
 
     case "create": {
+      const productPrices: Record<string, { amount: number; description: string }> = {
+        afa_basic: { amount: 50, description: "MTN AFA Basic Registration" },
+        afa_premium: { amount: 100, description: "MTN AFA Premium Registration" },
+        afa_enterprise: { amount: 250, description: "MTN AFA Enterprise Registration" },
+      };
+
+      const product = productPrices[data.product_id];
+      if (!product) {
+        return errorResp("Invalid product", 400, origin);
+      }
+
       const { data: order, error } = await admin
         .from("orders")
         .insert({
           user_id: auth.user!.id,
-          amount: data.amount,
-          description: data.description,
+          amount: product.amount,
+          description: product.description,
           status: "pending",
+          product_id: data.product_id,
         })
         .select()
         .single();

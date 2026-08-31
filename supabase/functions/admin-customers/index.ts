@@ -44,8 +44,9 @@ Deno.serve(async (req) => {
     const admin = getSupabaseAdmin();
     const { data, error } = await admin
       .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .select("id, full_name, email, phone, role, created_at, agent_status")
+      .order("created_at", { ascending: false })
+      .limit(200);
     if (error) return errorResp("Failed to fetch users", 500, origin);
     return successResp(data, origin);
   }
@@ -65,8 +66,9 @@ Deno.serve(async (req) => {
     case "list": {
       const { data: users, error } = await admin
         .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
+        .select("id, full_name, email, phone, role, created_at, agent_status")
+        .order("created_at", { ascending: false })
+        .limit(200);
       if (error) return errorResp("Failed to fetch users", 500, origin);
       return successResp(users, origin);
     }
@@ -74,7 +76,7 @@ Deno.serve(async (req) => {
     case "get_user": {
       const { data: user, error } = await admin
         .from("profiles")
-        .select("*")
+        .select("id, full_name, email, phone, role, created_at, agent_status, wallet_balance, avatar_url")
         .eq("id", data.user_id)
         .single();
       if (error) return errorResp("User not found", 404, origin);
@@ -100,6 +102,14 @@ Deno.serve(async (req) => {
     }
 
     case "update_role": {
+      // Prevent admin from changing their own role
+      if (data.user_id === auth.user!.id) {
+        return errorResp("Cannot change your own role", 400, origin);
+      }
+      // Prevent promoting to admin role (requires super-admin)
+      if (data.role === "admin") {
+        return errorResp("Cannot promote users to admin", 403, origin);
+      }
       const { error } = await admin
         .from("profiles")
         .update({ role: data.role })

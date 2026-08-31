@@ -4,7 +4,7 @@ import { getSupabaseAdmin, getCorsHeaders } from "../_shared/auth.ts";
 const PAYSTACK_SECRET = Deno.env.get("PAYSTACK_SECRET_KEY") ?? "";
 const PAYSTACK_BASE = "https://api.paystack.co";
 
-// Verify Paystack webhook signature (HMAC SHA512)
+// Verify Paystack webhook signature (HMAC SHA512) with constant-time comparison
 async function verifyWebhookSignature(
   body: string,
   signature: string | null,
@@ -29,7 +29,13 @@ async function verifyWebhookSignature(
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
 
-  return computedSignature === signature;
+  // Constant-time comparison to prevent timing attacks
+  if (computedSignature.length !== signature.length) return false;
+  let result = 0;
+  for (let i = 0; i < computedSignature.length; i++) {
+    result |= computedSignature.charCodeAt(i) ^ signature.charCodeAt(i);
+  }
+  return result === 0;
 }
 
 // Determine payment purpose from reference prefix
@@ -198,7 +204,7 @@ async function handleAgentApplication(
         return;
       }
 
-      // Payment confirmed — update application status
+      // Payment confirmed — update application status to pending for admin review
       await admin
         .from("agent_applications")
         .update({
@@ -208,50 +214,13 @@ async function handleAgentApplication(
         })
         .eq("id", existingApp.id);
 
-      // Check auto-approve setting
-      const { data: autoApproveRow } = await admin
-        .from("app_settings")
-        .select("value")
-        .eq("key", "agent_auto_approve")
-        .single();
-
-      const autoApprove = autoApproveRow?.value === "true";
-
-      if (autoApprove) {
-        // Auto-approve: generate agent_id and set role immediately
-        const { data: newAgentId } = await admin.rpc("generate_agent_id");
-
-        await admin
-          .from("profiles")
-          .update({
-            role: "agent",
-            agent_since: new Date().toISOString(),
-            agent_status: "active",
-            agent_verified: true,
-            agent_id: newAgentId,
-          })
-          .eq("id", existingApp.user_id);
-
-        await admin
-          .from("agent_applications")
-          .update({ status: "approved" })
-          .eq("id", existingApp.id);
-
-        await admin.from("notifications").insert({
-          user_id: existingApp.user_id,
-          title: "Agent Application Approved",
-          message: `Congratulations! Your agent account has been approved. Your Agent ID is ${newAgentId}.`,
-          type: "success",
-        });
-      } else {
-        // Not auto-approved — notify waiting for admin
-        await admin.from("notifications").insert({
-          user_id: existingApp.user_id,
-          title: "Agent Application Submitted",
-          message: "Your agent application has been submitted successfully. Waiting for admin approval.",
-          type: "info",
-        });
-      }
+      // Notify user that application is submitted and awaiting admin review
+      await admin.from("notifications").insert({
+        user_id: existingApp.user_id,
+        title: "Agent Application Submitted",
+        message: "Your agent application has been submitted successfully. Waiting for admin approval.",
+        type: "info",
+      });
 
       console.log(`Successfully processed agent application payment for reference ${reference}, user ${existingApp.user_id}`);
     } catch (err) {

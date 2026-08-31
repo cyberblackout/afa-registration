@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '../services/database';
+import { referralApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
+
+const STALE_1M = 60 * 1000;
+const STALE_2M = 2 * 60 * 1000;
+const STALE_5M = 5 * 60 * 1000;
 
 export function useProfile() {
   const { user } = useAuthStore();
@@ -11,6 +16,7 @@ export function useProfile() {
       return r.data;
     },
     enabled: !!user,
+    staleTime: STALE_1M,
   });
 }
 
@@ -23,12 +29,10 @@ export function useIsAdmin() {
       return r.data ?? false;
     },
     enabled: isAuthenticated && !!user,
-    staleTime: 60 * 1000,
-    // Use persisted role as initial data for instant rendering
+    staleTime: STALE_1M,
     initialData: role === 'admin' ? true : undefined,
   });
 }
-
 
 export function useUserRole() {
   const { user } = useAuthStore();
@@ -39,6 +43,7 @@ export function useUserRole() {
       return r.data;
     },
     enabled: !!user,
+    staleTime: STALE_2M,
   });
 }
 
@@ -49,6 +54,7 @@ export function useRegistrations(userId?: string) {
       const r = await db.getRegistrations(userId);
       return r.data || [];
     },
+    staleTime: STALE_1M,
   });
 }
 
@@ -60,6 +66,7 @@ export function useRegistration(id: string) {
       return r.data;
     },
     enabled: !!id,
+    staleTime: STALE_1M,
   });
 }
 
@@ -94,6 +101,7 @@ export function useWalletBalance() {
       return Number(r.data?.wallet_balance ?? 0);
     },
     enabled: !!user,
+    staleTime: STALE_1M,
   });
 }
 
@@ -104,6 +112,7 @@ export function useTransactions(userId?: string) {
       const r = await (userId ? db.getTransactions(userId) : db.getAllTransactions());
       return r.data || [];
     },
+    staleTime: STALE_1M,
   });
 }
 
@@ -128,6 +137,7 @@ export function useOrders(userId?: string) {
       const r = await db.getOrders(userId);
       return r.data || [];
     },
+    staleTime: STALE_1M,
   });
 }
 
@@ -140,6 +150,7 @@ export function useNotifications() {
       return r.data || [];
     },
     enabled: !!user,
+    staleTime: STALE_1M,
   });
 }
 
@@ -152,7 +163,8 @@ export function useUnreadCount() {
       return r.count ?? 0;
     },
     enabled: !!user,
-    refetchInterval: 30000,
+    refetchInterval: 60000,
+    staleTime: 30000,
   });
 }
 
@@ -197,7 +209,7 @@ export function usePricing() {
       const r = await db.getPricing();
       return r.data || [];
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: STALE_5M,
   });
 }
 
@@ -208,7 +220,7 @@ export function useSettings() {
       const r = await db.getSettings();
       return r.data || [];
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: STALE_5M,
   });
 }
 
@@ -219,6 +231,7 @@ export function useAllUsers() {
       const r = await db.getAllUsers();
       return r.data || [];
     },
+    staleTime: STALE_2M,
   });
 }
 
@@ -229,5 +242,60 @@ export function useAuditLogs() {
       const r = await db.getAuditLogs();
       return r.data || [];
     },
+    staleTime: STALE_2M,
+  });
+}
+
+// ============================================================
+// REFERRALS
+// ============================================================
+
+export function useReferralProfile() {
+  const { user } = useAuthStore();
+  return useQuery({
+    queryKey: ['referral_profile', user?.id],
+    queryFn: () => referralApi.getProfile(),
+    enabled: !!user?.id,
+    staleTime: STALE_1M,
+  });
+}
+
+export function useReferralStats() {
+  const { user } = useAuthStore();
+  return useQuery({
+    queryKey: ['referral_stats', user?.id],
+    queryFn: () => referralApi.getStats(),
+    enabled: !!user?.id,
+    staleTime: STALE_1M,
+  });
+}
+
+export function useReferralList() {
+  const { user } = useAuthStore();
+  return useQuery({
+    queryKey: ['my_referrals', user?.id],
+    queryFn: () => referralApi.getMyReferrals(),
+    enabled: !!user?.id,
+    staleTime: STALE_1M,
+  });
+}
+
+export function useReferralRewards() {
+  const { user } = useAuthStore();
+  return useQuery({
+    queryKey: ['referral_rewards', user?.id],
+    queryFn: () => referralApi.getMyRewards(),
+    enabled: !!user?.id,
+    staleTime: STALE_1M,
+  });
+}
+
+export function useReferralTransactions() {
+  const { user } = useAuthStore();
+  return useQuery({
+    queryKey: ['referral-reward-transactions', user?.id],
+    queryFn: () => referralApi.getMyReferralTransactions(),
+    enabled: !!user?.id,
+    staleTime: STALE_1M,
   });
 }
