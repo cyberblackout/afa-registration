@@ -4,6 +4,8 @@ const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_URL
   ? `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`
   : '';
 
+const INVOKE_TIMEOUT_MS = 15_000;
+
 async function getToken(): Promise<string> {
   const { data } = await supabase.auth.getSession();
   return data.session?.access_token || '';
@@ -21,20 +23,32 @@ async function invoke<T = unknown>(
   };
 
   const url = `${FUNCTIONS_URL}/${functionName}`;
-  const options: RequestInit = { method, headers };
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), INVOKE_TIMEOUT_MS);
+
+  const options: RequestInit = { method, headers, signal: controller.signal };
 
   if (method === 'POST' && body) {
     options.body = JSON.stringify(body);
   }
 
-  const res = await fetch(url, options);
-  const json = await res.json();
+  try {
+    const res = await fetch(url, options);
+    const json = await res.json();
 
-  if (!res.ok || json.success === false) {
-    throw new Error(json.error || `Request failed: ${res.status}`);
+    if (!res.ok || json.success === false) {
+      throw new Error(json.error || `Request failed: ${res.status}`);
+    }
+
+    return json.data !== undefined ? json.data : json;
+  } catch (err: any) {
+    if (err?.name === 'AbortError') {
+      throw new Error('Request timed out. Please check your connection and try again.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
   }
-
-  return json.data !== undefined ? json.data : json;
 }
 
 // ============================================================
