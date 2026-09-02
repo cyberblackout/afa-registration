@@ -22,7 +22,7 @@ const ReferralManagementPage: React.FC = () => {
     queryFn: () => referralApi.adminAnalytics() as any,
   });
 
-  const { data: referrals = [] } = useQuery({
+  const { data: referrals = [], isError: referralsError, refetch: refetchReferrals } = useQuery({
     queryKey: ['admin_all_referrals'],
     queryFn: () => referralApi.adminList() as any,
   });
@@ -112,6 +112,14 @@ const ReferralManagementPage: React.FC = () => {
           </div>
         )}
 
+        {referralsError ? (
+          <Card noPadding className="referrals-table-card">
+            <div className="empty-state">
+              <p>Failed to load referrals. Please try again.</p>
+              <IonButton fill="clear" onClick={() => refetchReferrals()}>Retry</IonButton>
+            </div>
+          </Card>
+        ) : (
         <Card noPadding className="referrals-table-card">
           <div className="table-header">
             <h3>All Referrals</h3>
@@ -158,6 +166,7 @@ const ReferralManagementPage: React.FC = () => {
             </div>
           )}
         </Card>
+        )}
       </div>
       <IonToast isOpen={toast.show} onDidDismiss={() => setToast({ show: false, msg: '' })} message={toast.msg} duration={2000} position="top" color="success" />
     </AdminLayout>

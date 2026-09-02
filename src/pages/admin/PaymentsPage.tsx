@@ -48,7 +48,7 @@ const PaymentsPage: React.FC = () => {
   const [toastMessage, setToastMessage] = useState('');
   const [refunding, setRefunding] = useState(false);
 
-  const { data: payments = [], isLoading } = useQuery({
+  const { data: payments = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_payments'],
     queryFn: () => adminPaymentApi.list() as any,
   });
@@ -180,6 +180,12 @@ const PaymentsPage: React.FC = () => {
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="empty-state">
                 <IonIcon icon={cardOutline} className="empty-icon" />
                 <p>Loading payments...</p>
+              </motion.div>
+            ) : isError ? (
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="empty-state">
+                <IonIcon icon={cardOutline} className="empty-icon" />
+                <p>Failed to load payments. Please try again.</p>
+                <IonButton fill="clear" onClick={() => refetch()}>Retry</IonButton>
               </motion.div>
             ) : filtered.length === 0 ? (
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="empty-state">

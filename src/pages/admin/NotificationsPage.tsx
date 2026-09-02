@@ -57,7 +57,7 @@ const NotificationsPage: React.FC = () => {
   const [logChannelFilter, setLogChannelFilter] = useState<string>('all');
 
   // Delivery log query
-  const { data: deliveryLog = [], isLoading: logLoading } = useQuery({
+  const { data: deliveryLog = [], isLoading: logLoading, isError: logError, refetch: refetchLog } = useQuery({
     queryKey: ['notifications_log', logChannelFilter],
     queryFn: async () => {
       let query = supabase
@@ -367,6 +367,11 @@ const NotificationsPage: React.FC = () => {
               <div className="log-list">
                 {logLoading ? (
                   <div className="empty-history">Loading log...</div>
+                ) : logError ? (
+                  <div className="empty-history">
+                    <p>Failed to load notification log.</p>
+                    <IonButton fill="clear" onClick={() => refetchLog()}>Retry</IonButton>
+                  </div>
                 ) : deliveryLog.length === 0 ? (
                   <div className="empty-history">No notifications sent yet</div>
                 ) : (

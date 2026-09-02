@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getCorsHeaders, jsonResp as sharedJsonResp, errorResp, successResp } from "../_shared/auth.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -8,35 +9,12 @@ function getAdmin() {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 }
 
-const ALLOWED_ORIGINS = [
-  "https://mt-naa-portal.netlify.app",
-  "http://localhost:5173",
-  "http://localhost:4173",
-  "https://localhost",
-];
-
 function getCors(origin: string | null): Record<string, string> {
-  const allowed = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
-  return {
-    "Access-Control-Allow-Origin": allowed,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-  };
+  return getCorsHeaders(origin);
 }
 
 function jsonResp(data: unknown, status: number, origin: string | null): Response {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { ...getCors(origin), "Content-Type": "application/json" },
-  });
-}
-
-function errResp(msg: string, status: number, origin: string | null): Response {
-  return jsonResp({ success: false, error: msg }, status, origin);
-}
-
-function okResp(data: unknown, origin: string | null): Response {
-  return jsonResp({ success: true, data }, 200, origin);
+  return sharedJsonResp(data, status, origin);
 }
 
 async function verifyUser(req: Request): Promise<{ id: string; email: string; role: string } | null> {
@@ -146,12 +124,12 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: getCors(origin) });
   }
-  if (req.method !== "POST") return errResp("Method not allowed", 405, origin);
+  if (req.method !== "POST") return errorResp("Method not allowed", 405, origin);
 
   const user = await verifyUser(req);
-  if (!user) return errResp("Unauthorized", 401, origin);
+  if (!user) return errorResp("Unauthorized", 401, origin);
   if (user.role !== "admin" && user.role !== "user" && user.role !== "agent") {
-    return errResp("Insufficient permissions", 403, origin);
+    return errorResp("Insufficient permissions", 403, origin);
   }
 
   // Rate limit: max 5 push sends per minute per user
@@ -163,14 +141,14 @@ Deno.serve(async (req) => {
     p_max_attempts: 5,
   });
   if (rateLimit === false) {
-    return errResp("Rate limit exceeded. Please wait before sending more notifications.", 429, origin);
+    return errorResp("Rate limit exceeded. Please wait before sending more notifications.", 429, origin);
   }
 
   let body: any;
   try {
     body = await req.json();
   } catch {
-    return errResp("Invalid request body", 400, origin);
+    return errorResp("Invalid request body", 400, origin);
   }
 
   const targetUserId: string | undefined = body.user_id;
@@ -180,12 +158,12 @@ Deno.serve(async (req) => {
   const notifType: string = body.type || "transactional";
 
   if (!title) {
-    return errResp("title is required", 400, origin);
+    return errorResp("title is required", 400, origin);
   }
 
   // Authorization: non-admins can only send push to themselves
   if (targetUserId && targetUserId !== user.id && user.role !== "admin") {
-    return errResp("You can only send notifications to yourself", 403, origin);
+    return errorResp("You can only send notifications to yourself", 403, origin);
   }
 
   if (targetUserId) {
@@ -197,10 +175,10 @@ Deno.serve(async (req) => {
 
     const prefs = profile?.notification_preferences || {};
     if (prefs.push === false) {
-      return okResp({ skipped: true, reason: "user_opted_out" }, origin);
+      return successResp({ skipped: true, reason: "user_opted_out" }, origin);
     }
     if (notifType === "marketing" && prefs.marketing === false) {
-      return okResp({ skipped: true, reason: "marketing_opted_out" }, origin);
+      return successResp({ skipped: true, reason: "marketing_opted_out" }, origin);
     }
   }
 
@@ -220,7 +198,7 @@ Deno.serve(async (req) => {
   const vapidPrivateKey = privKeyRow?.value;
 
   if (!vapidPublicKey || !vapidPrivateKey) {
-    return errResp("VAPID keys not configured", 500, origin);
+    return errorResp("VAPID keys not configured", 500, origin);
   }
 
   const targetUserIds: string[] = [];
@@ -239,7 +217,7 @@ Deno.serve(async (req) => {
   }
 
   if (targetUserIds.length === 0) {
-    return okResp({ sent: 0, reason: "no_recipients" }, origin);
+    return successResp({ sent: 0, reason: "no_recipients" }, origin);
   }
 
   const { data: subscriptions } = await admin
@@ -248,7 +226,7 @@ Deno.serve(async (req) => {
     .in("user_id", targetUserIds);
 
   if (!subscriptions || subscriptions.length === 0) {
-    return okResp({ sent: 0, reason: "no_subscriptions" }, origin);
+    return successResp({ sent: 0, reason: "no_subscriptions" }, origin);
   }
 
   let sentCount = 0;
@@ -325,5 +303,5 @@ Deno.serve(async (req) => {
     }
   }
 
-  return okResp({ sent: sentCount, failed: failedCount }, origin);
+  return successResp({ sent: sentCount, failed: failedCount }, origin);
 });

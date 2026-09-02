@@ -38,7 +38,7 @@ const SettingsPage: React.FC = () => {
 
   const setFeeValue = (key: string, value: string) => setFeeValues(prev => ({ ...prev, [key]: value }));
 
-  const { data: settingsData, isLoading } = useQuery({
+  const { data: settingsData, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_settings'],
     queryFn: async () => {
       const result = await adminSettingsApi.getAll() as any;
@@ -299,6 +299,11 @@ const SettingsPage: React.FC = () => {
           <div className="loading-state">
             <div className="loading-spinner" />
             <span>Loading settings...</span>
+          </div>
+        ) : isError ? (
+          <div className="loading-state">
+            <p>Failed to load settings. Please try again.</p>
+            <IonButton fill="clear" onClick={() => refetch()}>Retry</IonButton>
           </div>
         ) : (
           <div className="settings-sections">

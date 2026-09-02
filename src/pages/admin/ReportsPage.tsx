@@ -47,7 +47,7 @@ const ReportsPage: React.FC = () => {
     await queryClient.invalidateQueries({ queryKey: ['reports', dateRange] });
   };
 
-  const { data: report, isLoading } = useQuery({
+  const { data: report, isLoading, isError, refetch } = useQuery({
     queryKey: ['reports', dateRange],
     queryFn: async () => {
       const { start, end } = getDateRange(dateRange);
@@ -205,7 +205,12 @@ const ReportsPage: React.FC = () => {
         </div>
 
         <div className="reports-stats">
-          {statCards.map((stat, i) => (
+          {isError ? (
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem' }}>
+              <p>Failed to load reports. Please try again.</p>
+              <IonButton fill="clear" onClick={() => refetch()}>Retry</IonButton>
+            </div>
+          ) : statCards.map((stat, i) => (
             <Card key={stat.label} className="stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
               <div className="stat-card-left">
                 <div className="stat-card-icon">

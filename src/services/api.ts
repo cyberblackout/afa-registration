@@ -437,10 +437,21 @@ export const adminAuditApi = {
 // PUSH SUBSCRIPTIONS
 // ============================================================
 export const pushApi = {
-  getVapidKey: (): Promise<string> =>
-    fetch(`${FUNCTIONS_URL}/push-subscriptions?action=vapid_key`)
-      .then((r) => r.json())
-      .then((j) => j.data?.key),
+  getVapidKey: async (): Promise<string> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), INVOKE_TIMEOUT_MS);
+    try {
+      const res = await fetch(`${FUNCTIONS_URL}/push-subscriptions?action=vapid_key`, {
+        signal: controller.signal,
+      });
+      const json = await res.json();
+      return json.data?.key;
+    } catch {
+      return '';
+    } finally {
+      clearTimeout(timer);
+    }
+  },
 
   checkSubscription: (endpoint: string): Promise<any> =>
     invoke<any>('push-subscriptions', { action: 'check_subscription', endpoint }),

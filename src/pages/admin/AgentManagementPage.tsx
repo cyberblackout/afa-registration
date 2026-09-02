@@ -25,7 +25,7 @@ const AgentManagementPage: React.FC = () => {
   const [selectedApp, setSelectedApp] = useState<any>(null);
   const [adminNotes, setAdminNotes] = useState('');
 
-  const { data: agentResult, isLoading } = useQuery({
+  const { data: agentResult, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_agents'],
     queryFn: async () => {
       const data = await agentApi.adminGetApplications();
@@ -168,7 +168,12 @@ const AgentManagementPage: React.FC = () => {
 
         {segment === 'agents' && (
           <div className="am-table-wrapper">
-            {filteredAgents.length === 0 ? (
+            {isError ? (
+              <div className="am-empty">
+                <p>Failed to load agents. Please try again.</p>
+                <IonButton fill="clear" onClick={() => refetch()}>Retry</IonButton>
+              </div>
+            ) : filteredAgents.length === 0 ? (
               <div className="am-empty">
                 <IonIcon icon={peopleOutline} />
                 <p>{search ? 'No agents match your search' : 'No agents yet'}</p>

@@ -99,6 +99,7 @@ const BecomeAgentPage: React.FC = () => {
   };
 
   const isLoadingData = feeLoading || pricingLoading;
+  const hasError = feeError || pricingError;
 
   const agentFee = Number(agentFeeData ?? 100);
   const normalPrice = Number(afaPricingData?.normal_price ?? afaPricingData?.amount ?? 0);
@@ -219,6 +220,13 @@ const BecomeAgentPage: React.FC = () => {
             </div>
           </div>
         </section>
+
+        {hasError && !isLoadingData && (
+          <div className="ba-error-banner" style={{ padding: '1rem', textAlign: 'center', color: 'var(--ion-color-danger, #eb445b)' }}>
+            <p>Failed to load pricing data. Please try again.</p>
+            <IonButton fill="clear" onClick={handleRefresh}>Retry</IonButton>
+          </div>
+        )}
 
         {/* ===== BENEFITS ===== */}
         <section className="ba-section">

@@ -1,5 +1,5 @@
 import React from 'react';
-import { IonIcon, IonPage } from '@ionic/react';
+import { IonButton, IonIcon, IonPage } from '@ionic/react';
 import {
   peopleOutline,
   documentTextOutline,
@@ -66,7 +66,7 @@ const DashboardPage: React.FC = () => {
     await queryClient.invalidateQueries({ queryKey: ['admin_weekly_data'] });
   };
 
-  const { data: stats, isLoading } = useQuery({
+  const { data: stats, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_dashboard'],
     queryFn: () => adminDashboardApi.getStats(),
   });
@@ -116,7 +116,12 @@ const DashboardPage: React.FC = () => {
         </motion.div>
 
         <div className="stat-cards-row">
-          {statCards.map((card, i) => (
+          {isError ? (
+            <div className="empty-state" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem' }}>
+              <p>Failed to load dashboard. Please try again.</p>
+              <IonButton fill="clear" onClick={() => refetch()}>Retry</IonButton>
+            </div>
+          ) : statCards.map((card, i) => (
             <Card
               key={card.label}
               variant="accent"

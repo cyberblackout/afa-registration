@@ -11,6 +11,7 @@ const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:4173",
   "https://localhost",
+  "capacitor://localhost",
 ];
 
 export function getCorsHeaders(origin: string | null): Record<string, string> {
