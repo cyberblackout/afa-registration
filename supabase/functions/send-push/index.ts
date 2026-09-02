@@ -188,8 +188,6 @@ Deno.serve(async (req) => {
     return errResp("You can only send notifications to yourself", 403, origin);
   }
 
-  const admin = getAdmin();
-
   if (targetUserId) {
     const { data: profile } = await admin
       .from("profiles")
