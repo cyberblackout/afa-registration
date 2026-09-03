@@ -6,6 +6,7 @@ import { defineConfig } from 'vite'
 import path from 'path';
 
 export default defineConfig({
+  base: '/afa-registration/',
   plugins: [react()],
   resolve: {
     alias: {
