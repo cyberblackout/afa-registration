@@ -6,14 +6,6 @@ export interface AuthUser {
   role: string;
 }
 
-const ALLOWED_ORIGINS = [
-  "https://mt-naa-portal.netlify.app",
-  "http://localhost:5173",
-  "http://localhost:4173",
-  "https://localhost",
-  "capacitor://localhost",
-];
-
 function isDevOrigin(origin: string): boolean {
   try {
     const url = new URL(origin);
@@ -31,11 +23,45 @@ function isDevOrigin(origin: string): boolean {
   }
 }
 
+function isNetlifyDomain(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    return url.hostname.endsWith(".netlify.app");
+  } catch {
+    return false;
+  }
+}
+
+function isCapacitorOrigin(origin: string): boolean {
+  return origin.startsWith("capacitor://");
+}
+
+function getEnvAllowedOrigin(): string | null {
+  return Deno.env.get("ALLOWED_ORIGIN") ?? null;
+}
+
 export function getCorsHeaders(origin: string | null): Record<string, string> {
-  const allowed =
-    origin && (ALLOWED_ORIGINS.includes(origin) || isDevOrigin(origin))
-      ? origin
-      : ALLOWED_ORIGINS[0];
+  let allowed: string | null = null;
+
+  if (origin) {
+    if (
+      isDevOrigin(origin) ||
+      isNetlifyDomain(origin) ||
+      isCapacitorOrigin(origin)
+    ) {
+      allowed = origin;
+    } else {
+      const envOrigin = getEnvAllowedOrigin();
+      if (envOrigin && origin === envOrigin) {
+        allowed = origin;
+      }
+    }
+  }
+
+  if (!allowed) {
+    allowed = "null";
+  }
+
   return {
     "Access-Control-Allow-Origin": allowed,
     "Access-Control-Allow-Headers":
