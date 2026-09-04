@@ -30,3 +30,6 @@ yarn-error.log*
 
 # Optional eslint cache
 .eslintcache
+
+# Supabase CLI temp files
+supabase/**/.temp/
