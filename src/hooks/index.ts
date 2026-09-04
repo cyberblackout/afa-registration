@@ -1,7 +1,6 @@
 export {
   useProfile,
   useIsAdmin,
-  useUserRole,
   useRegistrations,
   useRegistration,
   useCreateRegistration,

@@ -271,8 +271,11 @@ export const adminCustomerApi = {
   updateProfile: (userId: string, data: Record<string, unknown>): Promise<any> =>
     invoke<any>('admin-customers', { action: 'update_profile', user_id: userId, ...data }),
 
-  updateRole: (userId: string, role: string): Promise<any> =>
-    invoke<any>('admin-customers', { action: 'update_role', user_id: userId, role }),
+  setRole: (userId: string, role: string): Promise<any> =>
+    invoke<any>('admin-set-user-role', { target_user_id: userId, new_role: role }),
+
+  deleteUser: (userId: string, reason?: string): Promise<any> =>
+    invoke<any>('admin-delete-user', { target_user_id: userId, reason }),
 };
 
 // ============================================================
@@ -495,16 +498,6 @@ export const settingsApi = {
 export const auditApi = {
   create: async (data: { entity: string; entity_id?: string; details?: Record<string, unknown> }): Promise<any> => {
     return invoke<any>('admin-audit', { action: 'create', ...data });
-  },
-};
-
-// ============================================================
-// ROLE PERMISSIONS
-// ============================================================
-export const rolePermissionsApi = {
-  get: async () => {
-    const { data } = await supabase.from('role_permissions').select('*');
-    return data || [];
   },
 };
 

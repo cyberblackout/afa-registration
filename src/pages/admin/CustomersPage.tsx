@@ -12,22 +12,28 @@ import {
   IonCardContent,
   IonToast,
   IonAlert,
-  IonTextarea,
+  IonActionSheet,
+  IonSpinner,
+  IonToggle,
+  IonNote,
 } from '@ionic/react';
 import {
   searchOutline,
   createOutline,
-  banOutline,
-  checkmarkCircle,
   trashOutline,
   chevronDownOutline,
   chevronUpOutline,
   walletOutline,
   cartOutline,
-  cardOutline,
-  logInOutline,
   closeOutline,
   peopleOutline,
+  swapHorizontalOutline,
+  personOutline,
+  briefcaseOutline,
+  shieldCheckmarkOutline,
+  warningOutline,
+  eyeOffOutline,
+  eyeOutline,
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -51,6 +57,15 @@ const CustomersPage: React.FC = () => {
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
+  const [roleActionTarget, setRoleActionTarget] = useState<any>(null);
+  const [showRoleSheet, setShowRoleSheet] = useState(false);
+  const [isChangingRole, setIsChangingRole] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
+  const [deleteReason, setDeleteReason] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeletedUsers, setShowDeletedUsers] = useState(false);
 
   const { data: customers = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_customers'],
@@ -69,11 +84,16 @@ const CustomersPage: React.FC = () => {
     enabled: !!expandedId,
   });
 
-  const filtered = customers.filter((c: any) =>
-    c.full_name?.toLowerCase().includes(search.toLowerCase()) ||
-    c.email?.toLowerCase().includes(search.toLowerCase()) ||
-    c.phone?.includes(search)
-  );
+  const filtered = customers
+    .filter((c: any) => showDeletedUsers ? true : !c.deleted_at)
+    .filter((c: any) =>
+      c.full_name?.toLowerCase().includes(search.toLowerCase()) ||
+      c.email?.toLowerCase().includes(search.toLowerCase()) ||
+      c.phone?.includes(search)
+    );
+
+  const activeCount = customers.filter((c: any) => !c.deleted_at).length;
+  const deletedCount = customers.filter((c: any) => c.deleted_at).length;
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
@@ -102,25 +122,33 @@ const CustomersPage: React.FC = () => {
     }
   };
 
-  const toggleRole = (c: any) => {
-    const isAdmin = c.role === 'admin';
-    const newRole = isAdmin ? 'user' : 'admin';
-    setAlertConfig({
-      header: `${isAdmin ? 'Demote' : 'Promote'} Customer`,
-      message: `Are you sure you want to ${isAdmin ? 'demote' : 'promote'} ${c.full_name} to ${newRole}?`,
-      action: async () => {
-        try {
-          await adminCustomerApi.updateRole(c.id, newRole);
-          queryClient.invalidateQueries({ queryKey: ['admin_customers'] });
-          setToastMessage(`${c.full_name} is now ${newRole}`);
-          setShowToast(true);
-        } catch (err: any) {
-          setToastMessage(err.message || 'Failed to update role');
-          setShowToast(true);
-        }
-      },
-    });
-    setShowAlert(true);
+  const setRole = async (targetUser: any) => {
+    setRoleActionTarget(targetUser);
+    setShowRoleSheet(true);
+  };
+
+  const confirmRoleChange = async (newRole: string) => {
+    if (!roleActionTarget) return;
+    if (roleActionTarget.role === newRole) {
+      setToastMessage(`${roleActionTarget.full_name} is already ${newRole}`);
+      setShowToast(true);
+      setRoleActionTarget(null);
+      return;
+    }
+    setIsChangingRole(true);
+    setShowRoleSheet(false);
+    try {
+      await adminCustomerApi.setRole(roleActionTarget.id, newRole);
+      queryClient.invalidateQueries({ queryKey: ['admin_customers'] });
+      setToastMessage(`${roleActionTarget.full_name} is now ${newRole}`);
+      setShowToast(true);
+    } catch (err: any) {
+      setToastMessage(err.message || 'Failed to update role');
+      setShowToast(true);
+    } finally {
+      setIsChangingRole(false);
+      setRoleActionTarget(null);
+    }
   };
 
   const showToastMsg = (msg: string) => {
@@ -128,8 +156,44 @@ const CustomersPage: React.FC = () => {
     setShowToast(true);
   };
 
+  const openDeleteConfirm = (c: any) => {
+    setDeleteTarget(c);
+    setDeleteConfirmEmail('');
+    setDeleteReason('');
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    if (deleteConfirmEmail !== deleteTarget.email) {
+      setToastMessage('Email does not match. Type the exact email to confirm.');
+      setShowToast(true);
+      return;
+    }
+    setIsDeleting(true);
+    setShowDeleteConfirm(false);
+    try {
+      const result = await adminCustomerApi.deleteUser(deleteTarget.id, deleteReason || undefined);
+      queryClient.invalidateQueries({ queryKey: ['admin_customers'] });
+      const authWarning = result?.data?.auth_ban_status === 'failed'
+        ? ' (Auth ban failed — user may still log in)'
+        : '';
+      setToastMessage(`${deleteTarget.full_name || 'User'} has been deleted${authWarning}`);
+      setShowToast(true);
+    } catch (err: any) {
+      setToastMessage(err.message || 'Failed to delete user');
+      setShowToast(true);
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
+      setDeleteConfirmEmail('');
+      setDeleteReason('');
+    }
+  };
+
   const getRoleLabel = (c: any): string => {
     if (c.role === 'admin') return 'Admin';
+    if (c.role === 'agent') return 'Agent';
     return 'User';
   };
 
@@ -147,12 +211,24 @@ const CustomersPage: React.FC = () => {
           <div className="page-title-row">
             <IonIcon icon={peopleOutline} className="page-icon" />
             <h1>Customers</h1>
-            <span className="customer-count">{customers.length} total</span>
+            <span className="customer-count">{activeCount} active{deletedCount > 0 ? ` / ${deletedCount} deleted` : ''}</span>
           </div>
           <div className="search-bar">
             <IonIcon icon={searchOutline} className="search-icon" />
             <input type="text" placeholder="Search by name, email or phone..." value={search} onChange={(e) => setSearch(e.target.value)} className="search-input" />
           </div>
+          {deletedCount > 0 && (
+            <div className="deleted-toggle">
+              <IonIcon icon={showDeletedUsers ? eyeOffOutline : eyeOutline} className="toggle-icon" />
+              <IonToggle
+                checked={showDeletedUsers}
+                onIonChange={(e) => setShowDeletedUsers(e.detail.checked)}
+                labelPlacement="end"
+              >
+                <span className="toggle-label">Show deleted users</span>
+              </IonToggle>
+            </div>
+          )}
         </motion.div>
 
         <div className="customers-list">
@@ -183,23 +259,45 @@ const CustomersPage: React.FC = () => {
                   >
                     <Card hover noPadding className="customer-card" onClick={() => toggleExpand(customer.id)}>
                       <div className="customer-main">
-                        <div className={`status-dot ${customer.role === 'admin' ? 'dot-active' : 'dot-suspended'}`} />
+                        <div className={`status-dot ${customer.role === 'admin' ? 'dot-active' : customer.role === 'agent' ? 'dot-agent' : 'dot-suspended'}`} />
                         <div className="customer-info">
                           <span className="customer-name">{customer.full_name || 'Unknown'}</span>
                           <span className="customer-email">{customer.email}</span>
                         </div>
                         <div className="customer-meta">
                           <span className="customer-phone">{customer.phone}</span>
-                          <span className={`customer-status ${customer.role === 'admin' ? 'status-active' : 'status-suspended'}`}>{roleLabel}</span>
+                          <span className={`customer-status ${customer.role === 'admin' ? 'status-active' : customer.role === 'agent' ? 'status-agent' : 'status-suspended'}`}>{roleLabel}</span>
                           <span className="customer-date">{formatGhanaDate(customer.created_at)}</span>
                         </div>
                         <div className="customer-actions">
-                          <button className="action-btn edit-btn" onClick={(e) => { e.stopPropagation(); openEdit(customer); }} title="Edit">
-                            <IonIcon icon={createOutline} />
-                          </button>
-                          <button className="action-btn toggle-role-btn" onClick={(e) => { e.stopPropagation(); toggleRole(customer); }} title={customer.role === 'admin' ? 'Demote to User' : 'Promote to Admin'}>
-                            <IonIcon icon={customer.role === 'admin' ? banOutline : checkmarkCircle} />
-                          </button>
+                          {!customer.deleted_at && (
+                            <>
+                              <button className="action-btn edit-btn" onClick={(e) => { e.stopPropagation(); openEdit(customer); }} title="Edit">
+                                <IonIcon icon={createOutline} />
+                              </button>
+                              <button
+                                className="action-btn toggle-role-btn"
+                                onClick={(e) => { e.stopPropagation(); setRole(customer); }}
+                                title="Change Role"
+                                disabled={isChangingRole}
+                              >
+                                {isChangingRole ? <IonSpinner name="crescent" /> : <IonIcon icon={swapHorizontalOutline} />}
+                              </button>
+                              {customer.role !== 'admin' && (
+                                <button
+                                  className="action-btn delete-btn"
+                                  onClick={(e) => { e.stopPropagation(); openDeleteConfirm(customer); }}
+                                  title="Delete User"
+                                  disabled={isDeleting}
+                                >
+                                  <IonIcon icon={trashOutline} />
+                                </button>
+                              )}
+                            </>
+                          )}
+                          {customer.deleted_at && (
+                            <IonNote className="deleted-badge">Deleted</IonNote>
+                          )}
                         </div>
                         <div className="expand-icon">
                           <IonIcon icon={expandedId === customer.id ? chevronUpOutline : chevronDownOutline} />
@@ -316,6 +414,72 @@ const CustomersPage: React.FC = () => {
         buttons={[
           { text: 'Cancel', role: 'cancel' },
           { text: 'Confirm', handler: () => { alertConfig.action(); } },
+        ]}
+      />
+
+      <IonModal isOpen={showDeleteConfirm} onDidDismiss={() => { setShowDeleteConfirm(false); setDeleteTarget(null); }} className="delete-confirm-modal">
+        <div className="modal-header danger-header">
+          <IonIcon icon={warningOutline} className="danger-icon" />
+          <h2>Delete User</h2>
+          <button className="modal-close-btn" onClick={() => { setShowDeleteConfirm(false); setDeleteTarget(null); }}>
+            <IonIcon icon={closeOutline} />
+          </button>
+        </div>
+        <div className="modal-body">
+          <div className="danger-warning">
+            <p><strong>This action is irreversible.</strong> The following will happen to <strong>{deleteTarget?.full_name || deleteTarget?.email}</strong>:</p>
+            <ul>
+              <li>Personal information permanently scrubbed</li>
+              <li>Account banned from logging in</li>
+              <li>Role reset to User, wallet zeroed</li>
+            </ul>
+            <p className="retain-note">Financial records retained for audit.</p>
+          </div>
+          <IonItem>
+            <IonLabel position="stacked">Type <strong>{deleteTarget?.email}</strong> to confirm</IonLabel>
+            <IonInput
+              value={deleteConfirmEmail}
+              onIonChange={(e) => setDeleteConfirmEmail(e.detail.value || '')}
+              placeholder={deleteTarget?.email}
+              className="confirm-email-input"
+            />
+          </IonItem>
+          <IonButton
+            expand="block"
+            className="delete-confirm-btn"
+            onClick={confirmDelete}
+            disabled={deleteConfirmEmail !== deleteTarget?.email || isDeleting}
+          >
+            {isDeleting ? <IonSpinner name="crescent" /> : 'Permanently Delete User'}
+          </IonButton>
+        </div>
+      </IonModal>
+
+      <IonActionSheet
+        isOpen={showRoleSheet}
+        onDidDismiss={() => { setShowRoleSheet(false); setRoleActionTarget(null); }}
+        header={`Change role for ${roleActionTarget?.full_name || ''}`}
+        buttons={[
+          {
+            text: 'Set as User',
+            icon: personOutline,
+            handler: () => confirmRoleChange('user'),
+          },
+          {
+            text: 'Set as Agent',
+            icon: briefcaseOutline,
+            handler: () => confirmRoleChange('agent'),
+          },
+          {
+            text: 'Set as Admin',
+            icon: shieldCheckmarkOutline,
+            role: 'destructive' as const,
+            handler: () => confirmRoleChange('admin'),
+          },
+          {
+            text: 'Cancel',
+            role: 'cancel' as const,
+          },
         ]}
       />
 

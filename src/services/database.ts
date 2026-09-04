@@ -18,7 +18,6 @@ import {
   pricingApi,
   settingsApi,
   auditApi,
-  rolePermissionsApi,
   whatsappConfigApi,
   announcementsApi,
 } from './api';
@@ -47,11 +46,6 @@ export const db = {
   },
 
   // AUTH / ROLES
-  getUserRole: async (userId: string) => {
-    const data = await profileApi.getUserRole(userId);
-    return { data };
-  },
-
   isAdmin: async () => {
     const data = await profileApi.isAdmin();
     return { data: data ?? false };
@@ -60,11 +54,6 @@ export const db = {
   getAllUsers: async () => {
     const data = await adminCustomerApi.list();
     return { data };
-  },
-
-  updateUserRole: async (userId: string, role: string) => {
-    await adminCustomerApi.updateRole(userId, role);
-    return { data: null };
   },
 
   // REGISTRATIONS
@@ -366,11 +355,6 @@ export const db = {
 
   getAgentApplication: async (userId: string) => {
     const data = await agentApi.getApplication(userId);
-    return { data };
-  },
-
-  getRolePermissions: async () => {
-    const data = await rolePermissionsApi.get();
     return { data };
   },
 

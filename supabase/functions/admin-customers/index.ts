@@ -24,11 +24,6 @@ const actionSchema = z.discriminatedUnion("action", [
     email: z.string().email().optional(),
     phone: z.string().optional(),
   }),
-  z.object({
-    action: z.literal("update_role"),
-    user_id: z.string().uuid(),
-    role: z.enum(["user", "agent", "admin"]),
-  }),
 ]);
 
 Deno.serve(async (req) => {
@@ -99,23 +94,6 @@ Deno.serve(async (req) => {
         .eq("id", data.user_id);
       if (error) return errorResp("Failed to update profile", 500, origin);
       return successResp({ message: "Profile updated" }, origin);
-    }
-
-    case "update_role": {
-      // Prevent admin from changing their own role
-      if (data.user_id === auth.user!.id) {
-        return errorResp("Cannot change your own role", 400, origin);
-      }
-      // Prevent promoting to admin role (requires super-admin)
-      if (data.role === "admin") {
-        return errorResp("Cannot promote users to admin", 403, origin);
-      }
-      const { error } = await admin
-        .from("profiles")
-        .update({ role: data.role })
-        .eq("id", data.user_id);
-      if (error) return errorResp("Failed to update role", 500, origin);
-      return successResp({ message: "Role updated" }, origin);
     }
 
     default:

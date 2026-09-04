@@ -34,19 +34,6 @@ export function useIsAdmin() {
   });
 }
 
-export function useUserRole() {
-  const { user } = useAuthStore();
-  return useQuery({
-    queryKey: ['userRole', user?.id],
-    queryFn: async () => {
-      const r = await db.getUserRole(user!.id);
-      return r.data;
-    },
-    enabled: !!user,
-    staleTime: STALE_2M,
-  });
-}
-
 export function useRegistrations(userId?: string) {
   return useQuery({
     queryKey: ['registrations', userId],
