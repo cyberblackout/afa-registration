@@ -22,6 +22,7 @@ import { adminDashboardApi, type AdminDashboardStats } from '../../services/api'
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate } from '../../utils/date';
 import Card from '../../components/Card';
+import { safeNumber, formatCurrency as fmtCurrency } from '../../utils/number';
 import './DashboardPage.css';
 
 const statusConfig = {
@@ -38,7 +39,7 @@ const cardVariants = {
 };
 
 const formatCurrency = (value: number) =>
-  `GH₵ ${value.toLocaleString()}`;
+  `GH₵ ${safeNumber(value).toLocaleString()}`;
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -121,6 +122,8 @@ const DashboardPage: React.FC = () => {
               <p>Failed to load dashboard. Please try again.</p>
               <IonButton fill="clear" onClick={() => refetch()}>Retry</IonButton>
             </div>
+          ) : isLoading ? (
+            Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} height="80px" />)
           ) : statCards.map((card, i) => (
             <Card
               key={card.label}

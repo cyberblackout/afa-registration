@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useHistory } from 'react-router-dom';
 import { IonIcon, IonContent, IonRefresher, IonRefresherContent } from '@ionic/react';
 import { useQueryClient } from '@tanstack/react-query';
@@ -59,6 +59,16 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
   const [whatsappNumber, setWhatsappNumber] = useState('');
   const [whatsappEnabled, setWhatsappEnabled] = useState(true);
   const [whatsappMessage, setWhatsappMessage] = useState('');
+  const contentRef = useRef<HTMLIonContentElement>(null);
+  const logoutRef = useRef(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  // Every admin page shares this single scroll container. Reset it on each
+  // navigation so no page can inherit a stuck/scrolled state from another
+  // page (or from a dismissed overlay) via route transitions.
+  useEffect(() => {
+    contentRef.current?.scrollToTop(0);
+  }, [location.pathname]);
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -84,11 +94,19 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
   const waLink = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}` : '#';
 
   const handleLogout = async () => {
+    if (logoutRef.current) return;
+    logoutRef.current = true;
+    setLoggingOut(true);
     localStorage.removeItem('remember_me');
     queryClient.clear();
-    await supabase.auth.signOut();
-    logout();
-    history.push('/login');
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // signOut failed outright (e.g. offline) — complete the logout UX anyway
+    } finally {
+      logout();
+      history.push('/login');
+    }
   };
 
   return (
@@ -138,7 +156,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
           })}
         </div>
         <div className="admin-sidebar-footer">
-          <button className="admin-menu-item logout" onClick={handleLogout}>
+          <button className="admin-menu-item logout" onClick={handleLogout} disabled={loggingOut}>
             <IonIcon icon={logOutOutline} />
             <span>Logout</span>
           </button>
@@ -163,14 +181,14 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
           ))}
         </div>
         <div className="admin-sidebar-footer">
-          <button className="admin-menu-item logout" onClick={handleLogout}>
+          <button className="admin-menu-item logout" onClick={handleLogout} disabled={loggingOut}>
             <IonIcon icon={logOutOutline} />
             <span>Logout</span>
           </button>
         </div>
       </aside>
 
-      <IonContent className="admin-main">
+      <IonContent ref={contentRef} scrollY={true} className="admin-main">
         <IonRefresher slot="fixed" onIonRefresh={async (e) => {
           try { if (onRefresh) await onRefresh(); } finally { (e.target as any).complete(); }
         }}>

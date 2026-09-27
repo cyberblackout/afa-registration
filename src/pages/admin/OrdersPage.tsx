@@ -22,6 +22,7 @@ import { supabase } from '../../services/supabase';
 import { orderApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate, formatGhanaDateTime } from '../../utils/date';
+import { safeNumber } from '../../utils/number';
 import './OrdersPage.css';
 
 const statusColors: Record<string, string> = {
@@ -72,7 +73,7 @@ const OrdersPage: React.FC = () => {
     setShowModal(true);
   };
 
-  const formatAmount = (amount: number) => `GH₵ ${Number(amount ?? 0).toFixed(2)}`;
+  const formatAmount = (amount: number) => `GH₵ ${safeNumber(amount).toFixed(2)}`;
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['admin_orders'] });
@@ -185,7 +186,9 @@ const OrdersPage: React.FC = () => {
           </AnimatePresence>
         </div>
       </div>
+    </AdminLayout>
 
+      {/* Overlays must live at IonPage level, outside IonContent's scroll container. */}
       <IonModal isOpen={showModal} onDidDismiss={() => setShowModal(false)} className="order-detail-modal">
         {selectedOrder && (
           <div className="order-modal-content">
@@ -266,7 +269,6 @@ const OrdersPage: React.FC = () => {
       </IonModal>
 
       <IonToast isOpen={showToast} onDidDismiss={() => setShowToast(false)} message={toastMessage} duration={3000} position="top" color="success" />
-    </AdminLayout>
     </IonPage>
   );
 };

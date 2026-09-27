@@ -13,7 +13,6 @@ const updateProfileSchema = z.object({
   user_id: z.string().uuid().optional(),
   full_name: z.string().min(1).optional(),
   phone: z.string().min(1).optional(),
-  address: z.string().optional(),
   avatar_url: z.string().url().optional(),
   notification_preferences: z
     .object({

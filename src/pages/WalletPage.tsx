@@ -1,18 +1,23 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   IonButton,
   IonIcon,
   IonPage,
+  IonSpinner,
 } from '@ionic/react';
 import {
   walletOutline,
   arrowUp,
   arrowDown,
+  arrowForward,
   searchOutline,
   downloadOutline,
   addOutline,
+  cardOutline,
+  chatbubbleOutline,
   checkmarkCircle,
   closeCircle,
+  flashOutline,
   shieldCheckmarkOutline,
   timeOutline,
 } from 'ionicons/icons';
@@ -54,6 +59,25 @@ const formatCurrency = (val: number): string => {
   if (isNaN(num)) return '0.00';
   return num.toFixed(2);
 };
+
+const PRESET_AMOUNTS = [50, 100, 200, 500, 1000] as const;
+
+/**
+ * Keep only what a top-up amount may contain: digits and a single decimal
+ * point with at most 2 decimals. Letters, currency symbols and thousands
+ * separators are stripped, so pasting "GH₵1,000.00" yields "1000.00".
+ */
+const sanitizeAmountInput = (raw: string): string => {
+  const digitsAndDots = raw.replace(/[^\d.]/g, '');
+  const dotIndex = digitsAndDots.indexOf('.');
+  if (dotIndex === -1) return digitsAndDots;
+  const head = digitsAndDots.slice(0, dotIndex + 1);
+  const decimals = digitsAndDots.slice(dotIndex + 1).replace(/\./g, '').slice(0, 2);
+  return head + decimals;
+};
+
+/** Distance under which a numeric amount counts as an exact preset match. */
+const PRESET_MATCH_TOLERANCE = 0.005;
 
 let paystackScriptLoaded = false;
 const loadPaystackScript = (): Promise<void> => {
@@ -110,8 +134,10 @@ const WalletPage: React.FC = () => {
   const [dateFilter, setDateFilter] = useState<string>('All');
   const [currentPage, setCurrentPage] = useState(1);
   const [showTopUp, setShowTopUp] = useState(false);
-  const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
-  const [customAmount, setCustomAmount] = useState('');
+  // Single source of truth for the payment amount: the raw custom input string.
+  // The selected preset, the formatted amount and the Pay button label are all
+  // derived from it, so they can never drift out of sync.
+  const [amountInput, setAmountInput] = useState('');
   const [topUpStep, setTopUpStep] = useState<'form' | 'processing' | 'success' | 'failed'>('form');
   const [topUpLoading, setTopUpLoading] = useState(false);
   const [topUpError, setTopUpError] = useState('');
@@ -124,16 +150,14 @@ const WalletPage: React.FC = () => {
     await queryClient.invalidateQueries({ queryKey: ['wallet-transactions', user?.id] });
   };
 
-  const presetAmounts = [50, 100, 200, 500, 1000];
-
   useEffect(() => { loadPaystackScript().catch(() => {}); }, []);
 
   const { data: topUpLimits } = useQuery({
     queryKey: ['topup-limits'],
     queryFn: async () => {
       const allPricing = await pricingApi.get();
-      const min = allPricing.find((r: any) => r.key === 'wallet_min_topup')?.amount ?? 10;
-      const max = allPricing.find((r: any) => r.key === 'wallet_max_topup')?.amount ?? 10000;
+      const min = allPricing.find((r) => r.key === 'wallet_min_topup')?.amount ?? 10;
+      const max = allPricing.find((r) => r.key === 'wallet_max_topup')?.amount ?? 10000;
       return { min: Number(min), max: Number(max) };
     },
     staleTime: 5 * 60 * 1000,
@@ -215,25 +239,62 @@ const WalletPage: React.FC = () => {
     return groups;
   }, [paginatedTransactions]);
 
+  /* ── Amount state — single source of truth ───────────────────────────────
+     amountInput (raw string)  →  paymentAmount (number)
+                              →  selectedPreset (derived)
+                              →  button label "Pay GH₵x.xx" (derived)
+     Selecting a preset writes into amountInput; typing only changes
+     amountInput. Nothing else is stored, so the four views above can
+     never disagree.                                                        */
+  const paymentAmount = useMemo(() => {
+    const parsed = parseFloat(amountInput);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }, [amountInput]);
+
+  const selectedPreset = useMemo<number | null>(
+    () => PRESET_AMOUNTS.find((amt) => Math.abs(amt - paymentAmount) < PRESET_MATCH_TOLERANCE) ?? null,
+    [paymentAmount]
+  );
+
+  const amountError = useMemo(() => {
+    if (amountInput.trim() === '') return '';
+    if (!Number.isFinite(parseFloat(amountInput))) return 'Enter a valid amount.';
+    if (paymentAmount <= 0) return 'Enter an amount greater than GH₵0.00.';
+    if (topUpLimits && paymentAmount < topUpLimits.min) {
+      return `Minimum top-up amount is GH₵${formatCurrency(topUpLimits.min)}`;
+    }
+    if (topUpLimits && paymentAmount > topUpLimits.max) {
+      return `Maximum top-up amount is GH₵${formatCurrency(topUpLimits.max)}`;
+    }
+    return '';
+  }, [amountInput, paymentAmount, topUpLimits]);
+
+  const isAmountValid = paymentAmount > 0 && amountError === '';
+  const payButtonDisabled = topUpLoading || !isAmountValid;
+
   const handlePresetClick = (amount: number) => {
-    setSelectedAmount(amount);
-    setCustomAmount('');
+    setAmountInput(amount.toFixed(2));
   };
 
-  const handleCustomAmountChange = (val: string) => {
-    setCustomAmount(val);
-    setSelectedAmount(null);
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const sanitized = sanitizeAmountInput(e.target.value);
+    if (sanitized !== e.target.value) {
+      // Invalid characters were stripped. Sync the DOM immediately, because
+      // React bails out of re-rendering when the state value is unchanged.
+      e.target.value = sanitized;
+    }
+    setAmountInput(sanitized);
   };
 
-  const getDisplayAmount = useCallback(() => {
-    if (selectedAmount) return selectedAmount;
-    if (customAmount) return parseFloat(customAmount) || 0;
-    return 0;
-  }, [selectedAmount, customAmount]);
+  const handleAmountBlur = () => {
+    if (amountInput.trim() === '') return;
+    const parsed = parseFloat(amountInput);
+    setAmountInput(Number.isFinite(parsed) ? parsed.toFixed(2) : '');
+  };
 
   const handleProceed = async () => {
     if (isProcessingRef.current) return;
-    const amount = getDisplayAmount();
+    const amount = paymentAmount;
     if (amount <= 0) return;
     if (topUpLimits) {
       if (amount < topUpLimits.min) {
@@ -265,11 +326,12 @@ const WalletPage: React.FC = () => {
       if (!PaystackPop || typeof PaystackPop.setup !== 'function') {
         throw new Error('Payment system failed to initialize. Please refresh and try again.');
       }
-      const handlePaymentCallback = (response: any) => {
+      const handlePaymentCallback = () => {
         setTopUpStep('processing');
         pollTransactionStatus(reference, amount)
-          .catch((err: any) => {
-            setTopUpError(err.message || 'Payment verification failed. Contact support.');
+          .catch((err: unknown) => {
+            const message = err instanceof Error ? err.message : '';
+            setTopUpError(message || 'Payment verification failed. Contact support.');
             setTopUpStep('failed');
           })
           .finally(() => {
@@ -314,8 +376,9 @@ const WalletPage: React.FC = () => {
         throw new Error('Payment system failed to initialize the checkout. Please try again.');
       }
       handler.openIframe();
-    } catch (err: any) {
-      setTopUpError(err.message || 'Failed to start payment. Please try again.');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '';
+      setTopUpError(message || 'Failed to start payment. Please try again.');
       setTopUpStep('failed');
       setTopUpLoading(false);
       isProcessingRef.current = false;
@@ -352,7 +415,7 @@ const WalletPage: React.FC = () => {
         '/wallet',
         'transactional',
       ).catch(() => {});
-    } catch (e) {
+    } catch {
       // push notifications are non-critical
     }
   };
@@ -360,8 +423,7 @@ const WalletPage: React.FC = () => {
   const resetTopUp = () => {
     setShowTopUp(false);
     setTopUpStep('form');
-    setSelectedAmount(null);
-    setCustomAmount('');
+    setAmountInput('');
     setTopUpLoading(false);
     setTopUpError('');
     setPaidAmount(0);
@@ -655,7 +717,7 @@ const WalletPage: React.FC = () => {
               onClick={resetTopUp}
             >
               <motion.div
-                className="modal-content"
+                className="modal-content top-up-modal"
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -666,76 +728,136 @@ const WalletPage: React.FC = () => {
                   <div className="top-up-form">
                     <div className="modal-header">
                       <h3>Top Up Wallet</h3>
-                      <button className="modal-close" onClick={resetTopUp}>
-                        <IonIcon icon={closeCircle} />
+                      <button type="button" className="modal-close" onClick={resetTopUp} aria-label="Close top up">
+                        <IonIcon icon={closeCircle} aria-hidden="true" />
                       </button>
                     </div>
 
+                    {/* ── Security indicator ── */}
                     <div className="paystack-badge">
-                      <IonIcon icon={shieldCheckmarkOutline} />
+                      <IonIcon icon={shieldCheckmarkOutline} aria-hidden="true" />
                       <span>Secured by Paystack</span>
                     </div>
 
+                    {/* ── Select Amount ── */}
                     <div className="preset-amounts">
-                      <label className="modal-label">Select Amount</label>
-                      <div className="preset-grid">
-                        {presetAmounts.map((amt) => (
-                          <button
-                            key={amt}
-                            className={`preset-btn ${selectedAmount === amt ? 'preset-active' : ''}`}
-                            onClick={() => handlePresetClick(amt)}
-                          >
-                            GH₵{amt}
-                          </button>
-                        ))}
+                      <span className="modal-label" id="preset-amount-label">Select Amount</span>
+                      <p className="section-subtext">Choose your preferred amount.</p>
+                      <div className="preset-grid" role="group" aria-labelledby="preset-amount-label">
+                        {PRESET_AMOUNTS.map((amt) => {
+                          const isSelected = selectedPreset === amt;
+                          return (
+                            <button
+                              key={amt}
+                              type="button"
+                              className={`preset-btn${isSelected ? ' preset-active' : ''}`}
+                              aria-pressed={isSelected}
+                              aria-label={isSelected ? `GH₵${amt}, selected` : `Select GH₵${amt}`}
+                              onClick={() => handlePresetClick(amt)}
+                            >
+                              <span className="preset-btn-label">GH₵{amt}</span>
+                              <IonIcon
+                                className="preset-btn-check"
+                                icon={checkmarkCircle}
+                                aria-hidden="true"
+                              />
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
+                    {/* ── Custom Amount ── */}
                     <div className="custom-amount">
-                      <label className="modal-label">Or enter custom amount</label>
-                      <div className="custom-input-wrap">
-                        <span className="currency-prefix">GH₵</span>
+                      <label className="modal-label" htmlFor="topup-amount-input">
+                        Or Enter Custom Amount
+                      </label>
+                      <div className={`custom-input-wrap${amountError ? ' custom-input-wrap--error' : ''}`}>
+                        <span className="currency-prefix" aria-hidden="true">GH₵</span>
                         <input
+                          id="topup-amount-input"
+                          className="custom-input"
                           type="text"
                           inputMode="decimal"
+                          autoComplete="off"
                           placeholder="0.00"
-                          value={customAmount}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            if (val === '' || /^\d*\.?\d{0,2}$/.test(val)) {
-                              handleCustomAmountChange(val);
-                            }
-                          }}
-                          className="custom-input"
+                          value={amountInput}
+                          onChange={handleAmountChange}
+                          onBlur={handleAmountBlur}
+                          aria-invalid={amountError ? true : undefined}
+                          aria-describedby={
+                            amountError
+                              ? 'topup-amount-error'
+                              : topUpLimits
+                                ? 'topup-amount-hint'
+                                : undefined
+                          }
                         />
                       </div>
-                      {topUpLimits && (
-                        <span className="custom-input-hint">
+                      {amountError ? (
+                        <span className="custom-input-hint custom-input-hint--error" id="topup-amount-error" role="alert">
+                          {amountError}
+                        </span>
+                      ) : topUpLimits ? (
+                        <span className="custom-input-hint" id="topup-amount-hint">
                           Min GH₵{formatCurrency(topUpLimits.min)} — Max GH₵{formatCurrency(topUpLimits.max)}
                         </span>
-                      )}
+                      ) : null}
                     </div>
 
+                    {/* ── Payment security information ── */}
                     <div className="payment-info">
                       <div className="payment-info-row">
-                        <IonIcon icon={shieldCheckmarkOutline} className="payment-info-icon" />
+                        <IonIcon icon={shieldCheckmarkOutline} className="payment-info-icon" aria-hidden="true" />
                         <p>Secure payment powered by Paystack. You'll be redirected to complete your payment.</p>
                       </div>
                     </div>
 
+                    {/* ── Primary payment button ── */}
                     <IonButton
                       expand="block"
                       className="proceed-btn"
                       onClick={handleProceed}
-                      disabled={getDisplayAmount() <= 0 || topUpLoading}
-                    >
-                      {topUpLoading
-                        ? 'Redirecting to secure payment...'
-                        : getDisplayAmount() > 0
-                          ? `Pay GH₵${formatCurrency(getDisplayAmount())}`
-                          : 'Enter an amount to continue'
+                      disabled={payButtonDisabled}
+                      aria-label={
+                        topUpLoading
+                          ? 'Redirecting to secure payment'
+                          : paymentAmount > 0
+                            ? `Pay GH₵${formatCurrency(paymentAmount)}`
+                            : 'Enter an amount to continue'
                       }
+                    >
+                      {topUpLoading ? (
+                        <>
+                          <IonSpinner className="proceed-btn-spinner" />
+                          <span className="proceed-btn-loading-text">Redirecting to secure payment...</span>
+                        </>
+                      ) : paymentAmount > 0 ? (
+                        <>
+                          <IonIcon icon={cardOutline} slot="start" />
+                          Pay GH₵{formatCurrency(paymentAmount)}
+                          <IonIcon icon={arrowForward} slot="end" />
+                        </>
+                      ) : (
+                        'Enter an amount to continue'
+                      )}
                     </IonButton>
+
+                    {/* ── Trust / support information ── */}
+                    <ul className="trust-row">
+                      <li className="trust-item">
+                        <IonIcon icon={shieldCheckmarkOutline} aria-hidden="true" />
+                        Safe &amp; Secure
+                      </li>
+                      <li className="trust-item">
+                        <IonIcon icon={flashOutline} aria-hidden="true" />
+                        Fast Processing
+                      </li>
+                      <li className="trust-item">
+                        <IonIcon icon={chatbubbleOutline} aria-hidden="true" />
+                        Support
+                      </li>
+                    </ul>
                   </div>
                 )}
 

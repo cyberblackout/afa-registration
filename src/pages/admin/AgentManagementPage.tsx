@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { IonContent, IonPage, IonCard, IonCardContent, IonButton, IonIcon,
+import { IonPage, IonCard, IonCardContent, IonButton, IonIcon,
   IonText, IonToast, IonLoading, IonChip, IonSearchbar, IonSegment, IonSegmentButton,
   IonLabel, IonModal, IonItem, IonTextarea,
 } from '@ionic/react';
@@ -14,6 +14,7 @@ import { agentApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import Card from '../../components/Card';
 import { formatGhanaDate, formatGhanaDateTime } from '../../utils/date';
+import { safeNumber } from '../../utils/number';
 import './AgentManagementPage.css';
 
 const AgentManagementPage: React.FC = () => {
@@ -168,7 +169,11 @@ const AgentManagementPage: React.FC = () => {
 
         {segment === 'agents' && (
           <div className="am-table-wrapper">
-            {isError ? (
+            {isLoading ? (
+              <div className="am-empty">
+                <p>Loading agents...</p>
+              </div>
+            ) : isError ? (
               <div className="am-empty">
                 <p>Failed to load agents. Please try again.</p>
                 <IonButton fill="clear" onClick={() => refetch()}>Retry</IonButton>
@@ -208,7 +213,7 @@ const AgentManagementPage: React.FC = () => {
                         {agent.agent_verified && <span className="verified-badge-sm">✓ Verified</span>}
                       </td>
                       <td>{agent.registrations_count || 0}</td>
-                      <td>GHS {Number(agent.earnings || 0).toFixed(2)}</td>
+                      <td>GHS {safeNumber(agent.earnings).toFixed(2)}</td>
                       <td>{agent.agent_since ? formatGhanaDate(agent.agent_since) : '—'}</td>
                       <td>
                         <div className="am-actions">
@@ -241,7 +246,16 @@ const AgentManagementPage: React.FC = () => {
 
         {segment === 'applications' && (
           <div className="am-table-wrapper">
-            {allFilteredApps.length === 0 ? (
+            {isLoading ? (
+              <div className="am-empty">
+                <p>Loading applications...</p>
+              </div>
+            ) : isError ? (
+              <div className="am-empty">
+                <p>Failed to load applications. Please try again.</p>
+                <IonButton fill="clear" onClick={() => refetch()}>Retry</IonButton>
+              </div>
+            ) : allFilteredApps.length === 0 ? (
               <div className="am-empty">
                 <IonIcon icon={timeOutline} />
                 <p>No applications found</p>
@@ -265,7 +279,7 @@ const AgentManagementPage: React.FC = () => {
                       <td>{app.user_name}</td>
                       <td>{app.user_email}</td>
                       <td>{app.user_phone}</td>
-                      <td>GHS {Number(app.amount_paid).toFixed(2)}</td>
+                      <td>GHS {safeNumber(app.amount_paid).toFixed(2)}</td>
                       <td>
                         <span className={`app-status-badge ${app.status}`}>
                           {app.status === 'pending' ? 'Pending' : app.status === 'approved' ? 'Approved' : 'Rejected'}
@@ -291,7 +305,10 @@ const AgentManagementPage: React.FC = () => {
             )}
           </div>
         )}
+      </div>
+    </AdminLayout>
 
+        {/* Overlays must live at IonPage level, outside IonContent's scroll container. */}
         <IonModal isOpen={!!selectedApp} onDidDismiss={() => { setSelectedApp(null); setAdminNotes(''); }}>
           <div className="am-modal">
             <h2>{selectedApp?.status === 'pending' ? 'Review Application' : 'Application Details'}</h2>
@@ -301,7 +318,7 @@ const AgentManagementPage: React.FC = () => {
                   <div><strong>Name:</strong> {selectedApp.user_name}</div>
                   <div><strong>Email:</strong> {selectedApp.user_email}</div>
                   <div><strong>Phone:</strong> {selectedApp.user_phone}</div>
-                  <div><strong>Amount Paid:</strong> GHS {Number(selectedApp.amount_paid).toFixed(2)}</div>
+                  <div><strong>Amount Paid:</strong> GHS {safeNumber(selectedApp.amount_paid).toFixed(2)}</div>
                   <div><strong>Applied:</strong> {formatGhanaDateTime(selectedApp.created_at)}</div>
                 </div>
                 <IonItem>
@@ -340,8 +357,6 @@ const AgentManagementPage: React.FC = () => {
           color={toast.color as any}
           onDidDismiss={() => setToast({ ...toast, show: false })}
         />
-      </div>
-    </AdminLayout>
     </IonPage>
   );
 };

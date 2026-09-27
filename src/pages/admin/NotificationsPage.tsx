@@ -400,9 +400,9 @@ const NotificationsPage: React.FC = () => {
           )}
         </AnimatePresence>
       </div>
+    </AdminLayout>
 
       <IonToast isOpen={showToast} onDidDismiss={() => setShowToast(false)} message={toastMessage} duration={4000} position="top" color={toastColor as any} />
-    </AdminLayout>
     </IonPage>
   );
 };

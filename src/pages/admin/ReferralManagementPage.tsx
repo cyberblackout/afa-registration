@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { IonContent, IonIcon, IonPage, IonToast, IonButton } from '@ionic/react';
+import { IonIcon, IonPage, IonToast, IonButton } from '@ionic/react';
 import {
   peopleOutline, checkmarkCircle, timeOutline, closeCircle,
   cashOutline, trendingUpOutline, refreshOutline,
@@ -11,6 +11,7 @@ import { referralApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import Card from '../../components/Card';
 import { formatGhanaDate } from '../../utils/date';
+import { safeNumber } from '../../utils/number';
 import './ReferralManagementPage.css';
 
 const ReferralManagementPage: React.FC = () => {
@@ -22,7 +23,7 @@ const ReferralManagementPage: React.FC = () => {
     queryFn: () => referralApi.adminAnalytics() as any,
   });
 
-  const { data: referrals = [], isError: referralsError, refetch: refetchReferrals } = useQuery({
+  const { data: referrals = [], isLoading: referralsLoading, isError: referralsError, refetch: refetchReferrals } = useQuery({
     queryKey: ['admin_all_referrals'],
     queryFn: () => referralApi.adminList() as any,
   });
@@ -42,7 +43,7 @@ const ReferralManagementPage: React.FC = () => {
     try {
       const result = await referralApi.adminRetryReward(referralId) as any;
       if (result?.success) {
-        setToast({ show: true, msg: `Reward granted: GH₵ ${Number(result.amount).toFixed(2)}` });
+        setToast({ show: true, msg: `Reward granted: GH₵ ${safeNumber(result.amount).toFixed(2)}` });
       } else {
         setToast({ show: true, msg: result?.error || 'Retry failed' });
       }
@@ -94,7 +95,7 @@ const ReferralManagementPage: React.FC = () => {
             { icon: checkmarkCircle, label: 'Successful', value: analyticsData.successful, color: '#059669' },
             { icon: timeOutline, label: 'Pending', value: analyticsData.pending, color: '#f59e0b' },
             { icon: closeCircle, label: 'Rejected', value: analyticsData.rejected, color: '#dc2626' },
-            { icon: cashOutline, label: 'Rewards Paid', value: `GH₵ ${Number(analyticsData.total_rewards_paid ?? 0).toFixed(2)}`, color: '#059669' },
+            { icon: cashOutline, label: 'Rewards Paid', value: `GH₵ ${safeNumber(analyticsData.total_rewards_paid).toFixed(2)}`, color: '#059669' },
             { icon: trendingUpOutline, label: 'Unique Referrers', value: analyticsData.unique_referrers, color: '#6366f1' },
           ].map((s, i) => (
             <Card key={s.label} className="analytics-card" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
@@ -117,6 +118,12 @@ const ReferralManagementPage: React.FC = () => {
             <div className="empty-state">
               <p>Failed to load referrals. Please try again.</p>
               <IonButton fill="clear" onClick={() => refetchReferrals()}>Retry</IonButton>
+            </div>
+          </Card>
+        ) : referralsLoading ? (
+          <Card noPadding className="referrals-table-card">
+            <div className="empty-state">
+              <p>Loading referrals...</p>
             </div>
           </Card>
         ) : (
@@ -148,7 +155,7 @@ const ReferralManagementPage: React.FC = () => {
                   <span className="ref-name">{r.referrer?.full_name || 'Unknown'}</span>
                   <span className="ref-name">{r.referred?.full_name || '---'}</span>
                   <span className="ref-code">{r.referral_code}</span>
-                  <span className="ref-amount">GH₵ {Number(r.reward_amount || 0).toFixed(2)}</span>
+                  <span className="ref-amount">GH₵ {safeNumber(r.reward_amount).toFixed(2)}</span>
                   <span>{statusBadge(r.status)}</span>
                   <span className="ref-date">{formatGhanaDate(r.created_at)}</span>
                   <span className="ref-actions">
@@ -168,8 +175,8 @@ const ReferralManagementPage: React.FC = () => {
         </Card>
         )}
       </div>
-      <IonToast isOpen={toast.show} onDidDismiss={() => setToast({ show: false, msg: '' })} message={toast.msg} duration={2000} position="top" color="success" />
     </AdminLayout>
+      <IonToast isOpen={toast.show} onDidDismiss={() => setToast({ show: false, msg: '' })} message={toast.msg} duration={2000} position="top" color="success" />
     </IonPage>
   );
 };

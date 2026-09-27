@@ -2,6 +2,7 @@ import React from 'react';
 import { IonIcon } from '@ionic/react';
 import { eyeOutline, eyeOffOutline } from 'ionicons/icons';
 import { useAmountVisibility } from '../store/amountVisibilityStore';
+import { safeNumber } from '../utils/number';
 import './AmountDisplay.css';
 
 interface AmountDisplayProps {
@@ -18,7 +19,7 @@ const AmountDisplay: React.FC<AmountDisplayProps> = ({
   showToggle = true,
 }) => {
   const { hidden, toggle } = useAmountVisibility();
-  const formatted = Number(value ?? 0).toFixed(2);
+  const formatted = safeNumber(value).toFixed(2);
 
   return (
     <span className={`amount-display ${className}`}>

@@ -64,6 +64,26 @@ const benefits = [
   { icon: Tag, title: 'Agent Badge & ID', desc: 'Get verified agent status with a professional Agent ID and badge.' },
 ];
 
+type CompareCell =
+  | { kind: 'check' }
+  | { kind: 'cross' }
+  | { kind: 'text'; value: string; accent?: boolean };
+
+const compareRows: { feature: string; normal: CompareCell; agent: CompareCell }[] = [
+  { feature: 'Registration Price', normal: { kind: 'text', value: 'Standard price' }, agent: { kind: 'text', value: 'Discounted agent price', accent: true } },
+  { feature: 'Register yourself', normal: { kind: 'check' }, agent: { kind: 'check' } },
+  { feature: 'Register customers', normal: { kind: 'cross' }, agent: { kind: 'check' } },
+  { feature: 'Earn commissions', normal: { kind: 'cross' }, agent: { kind: 'check' } },
+  { feature: 'Access agent tools', normal: { kind: 'cross' }, agent: { kind: 'check' } },
+  { feature: 'Agent dashboard', normal: { kind: 'cross' }, agent: { kind: 'check' } },
+];
+
+const renderCompareCell = (cell: CompareCell) => {
+  if (cell.kind === 'check') return <CheckCircle size={16} className="ba-check-green" />;
+  if (cell.kind === 'cross') return <span className="ba-cross">✗</span>;
+  return <span className={cell.accent ? 'ba-discounted' : undefined}>{cell.value}</span>;
+};
+
 const steps = [
   { icon: UserPlus, title: 'Create Agent Account', desc: 'Sign up and submit your agent application in minutes.' },
   { icon: CheckCircle, title: 'Get Approved', desc: 'Our team reviews and approves your application quickly.' },
@@ -202,17 +222,30 @@ const BecomeAgentPage: React.FC = () => {
     <IonPage>
     <DashboardLayout onRefresh={handleRefresh}>
       <div className="ba-page">
-        {/* ===== HERO ===== */}
+        {/* ===== HERO — Image 1 as responsive hero visual layer ===== */}
         <section className="ba-hero">
+          <div className="ba-hero-media">
+            <img
+              className="ba-hero-img"
+              src="/mtn-woman-afa-logo.png"
+              alt=""
+              aria-hidden="true"
+              decoding="async"
+            />
+          </div>
           <div className="ba-hero-content">
-            <h1 className="ba-hero-title">Become an MTN AFA Agent</h1>
+            <h1 className="ba-hero-title">
+              Become an
+              <br />
+              MTN AFA Agent
+            </h1>
             <p className="ba-hero-sub">
               Register customers at affordable agent prices and earn commissions on every successful registration.
             </p>
             <div className="ba-hero-actions">
               <IonButton className="ba-btn-primary" onClick={handleApply} disabled={loading}>
                 Become an Agent Now
-                <ArrowRight size={18} style={{ marginLeft: 8 }} />
+                <ArrowRight size={18} style={{ marginLeft: 8 }} aria-hidden="true" />
               </IonButton>
               <IonButton className="ba-btn-secondary" onClick={() => document.getElementById('ba-how')?.scrollIntoView({ behavior: 'smooth' })}>
                 How It Works
@@ -270,38 +303,54 @@ const BecomeAgentPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td className="ba-compare-feature">Registration Price</td>
-                  <td className="ba-compare-normal">Standard price</td>
-                  <td className="ba-compare-agent ba-discounted">Discounted agent price</td>
-                </tr>
-                <tr>
-                  <td className="ba-compare-feature">Register yourself</td>
-                  <td className="ba-compare-normal"><CheckCircle size={16} className="ba-check-green" /></td>
-                  <td className="ba-compare-agent"><CheckCircle size={16} className="ba-check-green" /></td>
-                </tr>
-                <tr>
-                  <td className="ba-compare-feature">Register customers</td>
-                  <td className="ba-compare-normal"><span className="ba-cross">✗</span></td>
-                  <td className="ba-compare-agent"><CheckCircle size={16} className="ba-check-green" /></td>
-                </tr>
-                <tr>
-                  <td className="ba-compare-feature">Earn commissions</td>
-                  <td className="ba-compare-normal"><span className="ba-cross">✗</span></td>
-                  <td className="ba-compare-agent"><CheckCircle size={16} className="ba-check-green" /></td>
-                </tr>
-                <tr>
-                  <td className="ba-compare-feature">Access agent tools</td>
-                  <td className="ba-compare-normal"><span className="ba-cross">✗</span></td>
-                  <td className="ba-compare-agent"><CheckCircle size={16} className="ba-check-green" /></td>
-                </tr>
-                <tr>
-                  <td className="ba-compare-feature">Agent dashboard</td>
-                  <td className="ba-compare-normal"><span className="ba-cross">✗</span></td>
-                  <td className="ba-compare-agent"><CheckCircle size={16} className="ba-check-green" /></td>
-                </tr>
+                {compareRows.map((row) => (
+                  <tr key={row.feature}>
+                    <td className="ba-compare-feature">{row.feature}</td>
+                    <td className="ba-compare-normal">{renderCompareCell(row.normal)}</td>
+                    <td className="ba-compare-agent">{renderCompareCell(row.agent)}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Stacked comparison for small Android screens (no page-level horizontal scroll) */}
+          <div className="ba-compare-stack">
+            {compareRows.map((row) => (
+              <div className="ba-compare-block" key={row.feature}>
+                <span className="ba-compare-block-title">{row.feature}</span>
+                <div className="ba-compare-line">
+                  <span className="ba-compare-line-label">Normal User</span>
+                  <span className="ba-compare-line-value">{renderCompareCell(row.normal)}</span>
+                </div>
+                <div className="ba-compare-line ba-compare-line--agent">
+                  <span className="ba-compare-line-label">AFA Agent</span>
+                  <span className="ba-compare-line-value">{renderCompareCell(row.agent)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ===== SECONDARY AFA PROMOTION — Image 2 ===== */}
+        <section className="ba-section ba-promo-section">
+          <div className="ba-section-header">
+            <h2>More From MTN AFA</h2>
+            <p>AFA services designed to provide flexible and affordable communication options.</p>
+          </div>
+          <div className="ba-promo-card">
+            <div className="ba-promo-media">
+              <img
+                className="ba-promo-img"
+                src="/mtn-afa-promo.jpg"
+                alt="MTN AFA promotional offer"
+                loading="lazy"
+                decoding="async"
+              />
+            </div>
+            <div className="ba-promo-caption">
+              <span className="ba-promo-eyebrow">MTN AFA Promo</span>
+            </div>
           </div>
         </section>
 

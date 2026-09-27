@@ -198,3 +198,26 @@ ion-item {
 .dark .error-state {
   color: #f87171;
 }
+
+/*
+ * Structural safeguard — closed Ionic overlays must never be visible.
+ *
+ * Incident: page-level host CSS (WalletPage.css `.tx-modal { display:flex }`)
+ * overrode the component's shadow-DOM `:host(.overlay-hidden){display:none}`
+ * because document-tree rules win the cascade over shadow-tree rules. The
+ * hidden modal then covered the full viewport inside `ion-app` and froze the
+ * entire admin site (3rd overlay incident). This global rule guarantees any
+ * overlay still in its hidden state stays display:none no matter what a page
+ * stylesheet declares; `!important` prevents page rules from re-breaking it.
+ * It only applies while `overlay-hidden` is present, so open overlays and
+ * their entry/exit animations are unaffected.
+ */
+ion-modal.overlay-hidden,
+ion-alert.overlay-hidden,
+ion-action-sheet.overlay-hidden,
+ion-picker.overlay-hidden,
+ion-loading.overlay-hidden,
+ion-popover.overlay-hidden,
+ion-toast.overlay-hidden {
+  display: none !important;
+}

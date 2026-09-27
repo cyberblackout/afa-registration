@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  IonContent,
   IonPage,
   IonButton,
   IonIcon,
@@ -42,6 +41,7 @@ import { adminCustomerApi, walletApi, orderApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate } from '../../utils/date';
 import Card from '../../components/Card';
+import { safeNumber } from '../../utils/number';
 import './CustomersPage.css';
 
 const CustomersPage: React.FC = () => {
@@ -245,7 +245,12 @@ const CustomersPage: React.FC = () => {
             </div>
           ) : (
             <AnimatePresence>
-              {filtered.map((customer: any, index: number) => {
+              {filtered.length === 0 ? (
+                <div className="empty-state">
+                  <IonIcon icon={peopleOutline} />
+                  <p>No customers found</p>
+                </div>
+              ) : filtered.map((customer: any, index: number) => {
                 const roleLabel = getRoleLabel(customer);
                 return (
                   <motion.div
@@ -317,7 +322,7 @@ const CustomersPage: React.FC = () => {
                                 <IonIcon icon={walletOutline} className="detail-icon" />
                                 <div>
                                   <span className="detail-label">Wallet Balance</span>
-                                  <span className="detail-value">GH₵ {Number(customer.wallet_balance || 0).toFixed(2)}</span>
+                                  <span className="detail-value">GH₵ {safeNumber(customer.wallet_balance).toFixed(2)}</span>
                                 </div>
                               </div>
                               <div className="detail-item">
@@ -338,7 +343,7 @@ const CustomersPage: React.FC = () => {
                                     <div key={t.id || i} className="detail-row">
                                       <span>{formatGhanaDate(t.created_at)}</span>
                                       <span className={t.type === 'credit' ? 'tx-credit' : 'tx-debit'}>
-                                        {t.type === 'credit' ? '+' : '-'}GH₵ {(t.amount || 0).toFixed(2)}
+                                        {t.type === 'credit' ? '+' : '-'}GH₵ {safeNumber(t.amount).toFixed(2)}
                                       </span>
                                       <span>{t.description}</span>
                                     </div>
@@ -355,7 +360,7 @@ const CustomersPage: React.FC = () => {
                                   {customerOrders.map((o: any, i: number) => (
                                     <div key={o.id || i} className="detail-row">
                                       <span>{o.id?.slice(0, 8)}</span>
-                                      <span>GH₵ {(o.amount || 0).toFixed(2)}</span>
+                                      <span>GH₵ {safeNumber(o.amount).toFixed(2)}</span>
                                       <span className={`order-status-dot ${o.status}`}>{o.status}</span>
                                     </div>
                                   ))}
@@ -371,15 +376,11 @@ const CustomersPage: React.FC = () => {
               })}
             </AnimatePresence>
           )}
-          {!isLoading && filtered.length === 0 && (
-            <div className="empty-state">
-              <IonIcon icon={peopleOutline} />
-              <p>No customers found</p>
-            </div>
-          )}
         </div>
       </div>
+    </AdminLayout>
 
+      {/* Overlays must live at IonPage level, outside IonContent's scroll container. */}
       <IonModal isOpen={showEditModal} onDidDismiss={() => setShowEditModal(false)} className="edit-modal">
         <div className="modal-header">
           <h2>Edit Customer</h2>
@@ -491,7 +492,6 @@ const CustomersPage: React.FC = () => {
         position="top"
         color="success"
       />
-    </AdminLayout>
     </IonPage>
   );
 };

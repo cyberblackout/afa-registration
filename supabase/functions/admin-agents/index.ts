@@ -68,7 +68,9 @@ Deno.serve(async (req) => {
     }
 
     case "get_applications": {
-      const { data: apps, error } = await admin.rpc("admin_get_agent_applications");
+      const { data: apps, error } = await admin.rpc("admin_get_agent_applications", {
+        p_caller_id: auth.user!.id,
+      });
       if (error) return errorResp("Failed to get applications", 500, origin);
       return successResp(apps, origin);
     }
@@ -78,6 +80,7 @@ Deno.serve(async (req) => {
         p_application_id: data.application_id,
         p_status: data.status,
         p_admin_notes: data.admin_notes,
+        p_caller_id: auth.user!.id,
       });
       if (error) return errorResp("Failed to approve/reject", 500, origin);
       return successResp(result, origin);
@@ -87,6 +90,7 @@ Deno.serve(async (req) => {
       const { data: result, error } = await admin.rpc("admin_toggle_agent_status", {
         p_user_id: data.user_id,
         p_status: data.status,
+        p_caller_id: auth.user!.id,
       });
       if (error) return errorResp("Failed to toggle status", 500, origin);
       return successResp(result, origin);

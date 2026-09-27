@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  IonContent,
   IonPage,
   IonButton,
   IonIcon,
@@ -25,6 +24,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminReportsApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import Card from '../../components/Card';
+import { safeNumber } from '../../utils/number';
 import './ReportsPage.css';
 
 type DateRange = 'Today' | 'This Week' | 'This Month' | 'This Year' | 'Custom';
@@ -32,7 +32,7 @@ type ReportType = 'Revenue' | 'Registration' | 'Payment' | 'User';
 
 const dateRanges: DateRange[] = ['Today', 'This Week', 'This Month', 'This Year', 'Custom'];
 
-const num = (v: unknown): number => (typeof v === 'number' && isFinite(v) ? v : 0);
+const num = (v: unknown): number => safeNumber(v);
 
 const ReportsPage: React.FC = () => {
   const [dateRange, setDateRange] = useState<DateRange>('This Month');
@@ -210,6 +210,10 @@ const ReportsPage: React.FC = () => {
               <p>Failed to load reports. Please try again.</p>
               <IonButton fill="clear" onClick={() => refetch()}>Retry</IonButton>
             </div>
+          ) : isLoading ? (
+            <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem' }}>
+              <p>Loading reports...</p>
+            </div>
           ) : statCards.map((stat, i) => (
             <Card key={stat.label} className="stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}>
               <div className="stat-card-left">
@@ -266,9 +270,9 @@ const ReportsPage: React.FC = () => {
           </div>
         </div>
       </div>
+    </AdminLayout>
 
       <IonToast isOpen={showToast} onDidDismiss={() => setShowToast(false)} message={toastMessage} duration={3000} position="top" color="success" />
-    </AdminLayout>
     </IonPage>
   );
 };

@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
     case "list_users": {
       const { data: users, error } = await admin
         .from("profiles")
-        .select("id, full_name, email, wallet_balance")
+        .select("id, full_name, email, wallet_balance, wallet_status")
         .order("created_at", { ascending: false });
       if (error) return errorResp("Failed to fetch users", 500, origin);
       return successResp(users, origin);
@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
 
     case "update_status": {
       const { error } = await admin.rpc("update_wallet_status", {
-        p_transaction_id: data.id,
+        p_user_id: data.id,
         p_status: data.status,
       });
       if (error) return errorResp("Failed to update status", 500, origin);

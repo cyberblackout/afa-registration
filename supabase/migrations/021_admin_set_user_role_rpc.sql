@@ -7,8 +7,14 @@
 --   4. Enum validation
 --   5. Approved transition matrix enforcement
 --   6. Audit logging
+--
+-- NOTE: This function accepts p_caller_id as an explicit parameter (NOT auth.uid())
+-- because it is called from Edge Functions via the service-role client, where
+-- auth.uid() resolves to NULL. The Edge Function verifies the caller's JWT
+-- and passes the authenticated user's ID as p_caller_id.
 
 CREATE OR REPLACE FUNCTION public.admin_set_user_role(
+  p_caller_id UUID,
   p_target_user_id UUID,
   p_new_role TEXT
 )
@@ -19,22 +25,20 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_caller_id UUID := auth.uid();
   v_caller_role TEXT;
   v_current_role TEXT;
   v_target_name TEXT;
   v_admin_count BIGINT;
-  v_result JSONB;
 BEGIN
-  -- 1. Verify caller is authenticated
-  IF v_caller_id IS NULL THEN
+  -- 1. Caller must be authenticated (Edge Function passes verified ID)
+  IF p_caller_id IS NULL THEN
     RAISE EXCEPTION 'Authentication required';
   END IF;
 
   -- 2. Read caller's role from profiles (server-side, never trusted from client)
   SELECT role INTO v_caller_role
   FROM profiles
-  WHERE id = v_caller_id;
+  WHERE id = p_caller_id;
 
   IF v_caller_role IS NULL THEN
     RAISE EXCEPTION 'Caller profile not found';
@@ -120,8 +124,8 @@ END;
 $$;
 
 -- Grant EXECUTE to service_role only (Edge Functions use service_role)
-GRANT EXECUTE ON FUNCTION public.admin_set_user_role(UUID, TEXT) TO service_role;
+GRANT EXECUTE ON FUNCTION public.admin_set_user_role(UUID, UUID, TEXT) TO service_role;
 
 -- Revoke from anon and authenticated (defense-in-depth)
-REVOKE EXECUTE ON FUNCTION public.admin_set_user_role(UUID, TEXT) FROM anon;
-REVOKE EXECUTE ON FUNCTION public.admin_set_user_role(UUID, TEXT) FROM authenticated;
+REVOKE EXECUTE ON FUNCTION public.admin_set_user_role(UUID, UUID, TEXT) FROM anon;
+REVOKE EXECUTE ON FUNCTION public.admin_set_user_role(UUID, UUID, TEXT) FROM authenticated;

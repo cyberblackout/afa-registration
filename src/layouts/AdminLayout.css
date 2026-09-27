@@ -188,6 +188,9 @@
 
 .admin-main {
   --background: var(--admin-bg);
+  /* This IonContent is the single vertical scroll container for every admin
+     page. Keep it scrollable; never set --overflow: hidden here. */
+  --overflow: auto;
   --padding-top: calc(var(--admin-navbar-height) + 1.5rem);
   --padding-bottom: 1.5rem;
   --padding-start: calc(var(--admin-sidebar-width) + 1.5rem);

@@ -544,6 +544,7 @@ const SettingsPage: React.FC = () => {
           </div>
         )}
       </div>
+    </AdminLayout>
 
       <IonToast
         isOpen={showToast}
@@ -553,7 +554,6 @@ const SettingsPage: React.FC = () => {
         position="top"
         color={toastColor}
       />
-      </AdminLayout>
     </IonPage>
   );
 };

@@ -8,7 +8,6 @@ import {
   personOutline,
   callOutline,
   mailOutline,
-  locationOutline,
   cameraOutline,
   lockClosedOutline,
   checkmarkOutline,
@@ -35,7 +34,7 @@ import { profileApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 import { useThemeStore } from '../store/themeStore';
 import { usePushNotifications } from '../hooks/usePushNotifications';
-import { useHistory, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { formatGhanaDate } from '../utils/date';
 import DashboardLayout from '../layouts/DashboardLayout';
 import './ProfilePage.css';
@@ -43,7 +42,6 @@ import './ProfilePage.css';
 const profileSchema = z.object({
   fullName: z.string().min(2, 'Full name must be at least 2 characters'),
   phone: z.string().min(10, 'Phone number must be at least 10 digits'),
-  address: z.string().min(5, 'Address must be at least 5 characters'),
   currentPassword: z.string().optional(),
   newPassword: z.string().optional(),
   confirmPassword: z.string().optional(),
@@ -104,13 +102,12 @@ const ProfilePage: React.FC = () => {
     register,
     handleSubmit,
     reset,
-    formState: { errors, isDirty },
+    formState: { errors },
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       fullName: '',
       phone: '',
-      address: '',
       currentPassword: '',
       newPassword: '',
       confirmPassword: '',
@@ -122,7 +119,6 @@ const ProfilePage: React.FC = () => {
       reset({
         fullName: profile.full_name || '',
         phone: profile.phone || '',
-        address: profile.address || '',
         currentPassword: '',
         newPassword: '',
         confirmPassword: '',
@@ -165,15 +161,18 @@ const ProfilePage: React.FC = () => {
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
       setToastMessage('Profile updated successfully!');
       setToastColor('success');
       setShowToast(true);
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       setToastMessage(err.message || 'Failed to update profile');
       setToastColor('danger');
       setShowToast(true);
+    },
+    onSettled: () => {
+      // Refresh cache even after partial failure so the UI reflects DB state
+      queryClient.invalidateQueries({ queryKey: ['profile', user?.id] });
     },
   });
 
@@ -198,7 +197,6 @@ const ProfilePage: React.FC = () => {
       reset({
         fullName: profile.full_name || '',
         phone: profile.phone || '',
-        address: profile.address || '',
         currentPassword: '',
         newPassword: '',
         confirmPassword: '',
@@ -335,21 +333,6 @@ const ProfilePage: React.FC = () => {
                           disabled
                           readOnly
                         />
-                      </div>
-
-                      <div className="pf-field pf-field--full">
-                        <label className="pf-label" htmlFor="address">
-                          <IonIcon icon={locationOutline} />
-                          Address
-                        </label>
-                        <textarea
-                          id="address"
-                          {...register('address')}
-                          className={`pf-input pf-textarea ${errors.address ? 'pf-input--error' : ''}`}
-                          placeholder="Enter your address"
-                          rows={3}
-                        />
-                        {errors.address && <span className="pf-error">{errors.address.message}</span>}
                       </div>
                     </div>
                   </div>

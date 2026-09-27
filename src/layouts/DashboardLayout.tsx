@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { Link, useLocation, useHistory } from 'react-router-dom';
 import { IonIcon, IonContent, IonRefresher, IonRefresherContent } from '@ionic/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -167,12 +167,23 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh, 
     ? `https://wa.me/${wa.agentNumber}?text=${encodeURIComponent(wa.agentMessage)}`
     : '#';
 
+  const logoutRef = useRef(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
   const handleLogout = useCallback(async () => {
+    if (logoutRef.current) return;
+    logoutRef.current = true;
+    setLoggingOut(true);
     localStorage.removeItem('remember_me');
     queryClient.clear();
-    await supabase.auth.signOut();
-    logout();
-    history.push('/login');
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      // signOut failed outright (e.g. offline) — complete the logout UX anyway
+    } finally {
+      logout();
+      history.push('/login');
+    }
   }, [logout, history, queryClient]);
 
   const waLinkForFloat = role === 'agent' ? agentWaLink : userWaLink;
@@ -192,9 +203,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh, 
               <span className="sb-brand-name">MTN AFA Portal</span>
             </div>
           </div>
-          <button className="sb-close-btn" onClick={close} aria-label="Close menu">
-            <IonIcon icon={closeOutline} />
-          </button>
         </div>
         <div className="sb-user-section">
           <p className="sb-welcome">Welcome back{capitalizedName ? `, ${capitalizedName}` : ''} <span className="sb-wave">👋</span></p>
@@ -233,6 +241,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh, 
                   </span>
                   <span className="sb-nav-label">{item.label}</span>
                   {hasBadge && <span className="sb-nav-badge">{unreadCount}</span>}
+                  <IonIcon icon={chevronForward} className="sb-nav-chevron" aria-hidden="true" />
                 </Link>
               );
             })}
@@ -270,13 +279,15 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh, 
               <IonIcon icon={logoWhatsapp} />
             </span>
             <span className="sb-promo-link-label">WhatsApp Support</span>
+            <IonIcon icon={chevronForward} className="sb-nav-chevron" aria-hidden="true" />
           </a>
         )}
 
         <div className="sb-logout-area">
-          <button className="sb-logout-btn" onClick={handleLogout}>
-            <IonIcon icon={logOutOutline} />
+          <button className="sb-logout-btn" onClick={handleLogout} disabled={loggingOut}>
+            <IonIcon icon={logOutOutline} className="sb-logout-icon" />
             <span>Logout</span>
+            <IonIcon icon={chevronForward} className="sb-nav-chevron" aria-hidden="true" />
           </button>
         </div>
       </div>
@@ -327,6 +338,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh, 
       <div
         className={`sidebar-overlay ${isOpen ? 'sidebar-overlay--open' : ''}`}
         onClick={close}
+        aria-hidden="true"
       />
 
       <aside className={`sidebar-mobile-drawer ${isOpen ? 'sidebar-mobile-drawer--open' : ''}`}>

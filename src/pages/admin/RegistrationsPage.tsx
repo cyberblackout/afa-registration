@@ -727,9 +727,9 @@ const RegistrationsPage: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+    </AdminLayout>
 
       <IonToast isOpen={showToast} onDidDismiss={() => setShowToast(false)} message={toastMessage} duration={3000} position="top" color="success" />
-    </AdminLayout>
     </IonPage>
   );
 };

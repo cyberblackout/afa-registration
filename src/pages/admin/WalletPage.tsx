@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
-  IonContent,
   IonPage,
   IonButton,
   IonIcon,
@@ -8,8 +7,6 @@ import {
   IonItem,
   IonLabel,
   IonModal,
-  IonCard,
-  IonCardContent,
   IonToast,
   IonTextarea,
   IonAlert,
@@ -26,7 +23,6 @@ import {
   arrowForwardOutline,
   arrowBackOutline,
   closeOutline,
-  timeOutline,
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -34,6 +30,7 @@ import { walletApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate } from '../../utils/date';
 import Card from '../../components/Card';
+import { safeNumber } from '../../utils/number';
 import './WalletPage.css';
 
 const WalletPage: React.FC = () => {
@@ -43,7 +40,12 @@ const WalletPage: React.FC = () => {
   const [showTxModal, setShowTxModal] = useState(false);
   const [selectedWallet, setSelectedWallet] = useState<any>(null);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<() => void>(() => {});
+  // A ref, NOT useState: passing an async function to a state setter makes
+  // React invoke it as an updater, firing the API call when the dialog merely
+  // opens and leaving a Promise in state (calling it on Confirm then throws
+  // "confirmAction is not a function", the dialog never dismisses and the
+  // body scroll lock + root aria-hidden leak site-wide).
+  const confirmActionRef = useRef<() => void>(() => {});
   const [confirmMsg, setConfirmMsg] = useState('');
   const [txType, setTxType] = useState<'credit' | 'debit'>('credit');
   const [txAmount, setTxAmount] = useState('');
@@ -63,7 +65,7 @@ const WalletPage: React.FC = () => {
     enabled: !!expandedId,
   });
 
-  const totalBalance = profiles.reduce((sum: number, p: any) => sum + Number(p.wallet_balance || 0), 0);
+  const totalBalance = profiles.reduce((sum: number, p: any) => sum + safeNumber(p.wallet_balance), 0);
 
   const filtered = profiles.filter((p: any) =>
     p.full_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -95,7 +97,7 @@ const WalletPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['admin_wallets'] });
       queryClient.invalidateQueries({ queryKey: ['admin_wallet_tx'] });
       setShowTxModal(false);
-      setToastMessage(`${txType === 'credit' ? 'Credited' : 'Debited'} GH₵ ${Number(amount ?? 0).toFixed(2)} ${txType === 'credit' ? 'to' : 'from'} ${selectedWallet.full_name}`);
+      setToastMessage(`${txType === 'credit' ? 'Credited' : 'Debited'} GH₵ ${safeNumber(amount).toFixed(2)} ${txType === 'credit' ? 'to' : 'from'} ${selectedWallet.full_name}`);
       setShowToast(true);
     } catch (err: any) {
       setToastMessage(err.message || 'Transaction failed');
@@ -107,7 +109,7 @@ const WalletPage: React.FC = () => {
 
   const toggleFreeze = (profile: any) => {
     setConfirmMsg(`Are you sure you want to ${profile.wallet_status === 'frozen' ? 'unfreeze' : 'freeze'} ${profile.full_name}'s wallet?`);
-    setConfirmAction(async () => {
+    confirmActionRef.current = async () => {
       try {
         const frozen = profile.wallet_status === 'frozen';
         await walletApi.adminUpdateStatus(profile.id, frozen ? 'active' : 'frozen');
@@ -118,13 +120,8 @@ const WalletPage: React.FC = () => {
         setToastMessage(err.message || 'Failed to update wallet status');
         setShowToast(true);
       }
-    });
+    };
     setShowConfirm(true);
-  };
-
-  const showToastMsg = (msg: string) => {
-    setToastMessage(msg);
-    setShowToast(true);
   };
 
   const handleRefresh = async () => {
@@ -132,44 +129,84 @@ const WalletPage: React.FC = () => {
     await queryClient.invalidateQueries({ queryKey: ['admin_wallet_tx'] });
   };
 
+  const activeWallets = profiles.filter((p: any) => p.wallet_status !== 'frozen').length;
+  const frozenWallets = profiles.filter((p: any) => p.wallet_status === 'frozen').length;
+
   return (
     <IonPage>
       <AdminLayout onRefresh={handleRefresh}>
         <div className="admin-wallet-page">
-        <Card
-          variant="hero"
-          className="wallet-total-card"
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <div className="wallet-total-top">
-            <IonIcon icon={walletOutline} className="wallet-total-icon" />
-            <span className="wallet-total-label">Total Wallet Balance</span>
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
+          <div className="page-title-row">
+            <IonIcon icon={walletOutline} className="page-icon" />
+            <h1>Wallets</h1>
+            <span className="page-count">{profiles.length} wallets</span>
           </div>
-          <div className="wallet-total-amount">GH₵ {totalBalance.toFixed(2)}</div>
-          <div className="wallet-total-sub">{profiles.length} wallets</div>
-        </Card>
-
-        <Card noPadding className="wallet-section">
           <div className="search-bar">
             <IonIcon icon={searchOutline} className="search-icon" />
             <input type="text" placeholder="Search by name or email..." value={search} onChange={(e) => setSearch(e.target.value)} className="search-input" />
           </div>
+        </motion.div>
 
-          <div className="wallets-list">
-            {isLoading ? (
-              <div className="empty-state">
-                <IonIcon icon={walletOutline} />
-                <p>Loading wallets...</p>
-              </div>
-            ) : isError ? (
-              <div className="empty-state">
-                <IonIcon icon={walletOutline} />
-                <p>Failed to load wallets. Please try again.</p>
-                <IonButton fill="clear" onClick={() => refetch()}>Retry</IonButton>
-              </div>
-            ) : (
+        <div className="wallet-summary">
+          <motion.div className="stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0 }}>
+            <div className="stat-card-icon" style={{ background: 'rgba(46, 125, 50, 0.08)', color: '#2e7d32' }}>
+              <IonIcon icon={walletOutline} />
+            </div>
+            <div className="stat-card-info">
+              <span className="stat-card-label">Total Balance</span>
+              <span className="stat-card-value">GH₵ {totalBalance.toFixed(2)}</span>
+            </div>
+          </motion.div>
+          <motion.div className="stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}>
+            <div className="stat-card-icon" style={{ background: 'rgba(21, 101, 192, 0.08)', color: '#1565c0' }}>
+              <IonIcon icon={sunnyOutline} />
+            </div>
+            <div className="stat-card-info">
+              <span className="stat-card-label">Active</span>
+              <span className="stat-card-value">{activeWallets}</span>
+            </div>
+          </motion.div>
+          <motion.div className="stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }}>
+            <div className="stat-card-icon" style={{ background: 'rgba(245, 158, 11, 0.08)', color: '#f57f17' }}>
+              <IonIcon icon={snowOutline} />
+            </div>
+            <div className="stat-card-info">
+              <span className="stat-card-label">Frozen</span>
+              <span className="stat-card-value">{frozenWallets}</span>
+            </div>
+          </motion.div>
+          <motion.div className="stat-card" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.24 }}>
+            <div className="stat-card-icon" style={{ background: 'rgba(255, 203, 5, 0.12)', color: '#b39500' }}>
+              <IonIcon icon={addOutline} />
+            </div>
+            <div className="stat-card-info">
+              <span className="stat-card-label">Total Wallets</span>
+              <span className="stat-card-value">{profiles.length}</span>
+            </div>
+          </motion.div>
+        </div>
+
+        <div className="wallets-section">
+          {isLoading ? (
+            <div className="empty-state">
+              <IonIcon icon={walletOutline} className="empty-icon" />
+              <p>Loading wallets...</p>
+            </div>
+          ) : isError ? (
+            <div className="empty-state">
+              <IonIcon icon={walletOutline} className="empty-icon" />
+              <p>Failed to load wallets. Please try again.</p>
+              <IonButton fill="clear" onClick={() => refetch()}>Retry</IonButton>
+            </div>
+          ) : (
+            <div className="wallets-list">
+              {filtered.length === 0 && (
+                <div className="empty-state">
+                  <IonIcon icon={walletOutline} className="empty-icon" />
+                  <p>No wallets found</p>
+                </div>
+              )}
               <AnimatePresence>
                 {filtered.map((profile: any, index: number) => (
                   <motion.div
@@ -189,7 +226,7 @@ const WalletPage: React.FC = () => {
                           <span className="wallet-email">{profile.email}</span>
                         </div>
                         <div className="wallet-meta">
-                          <span className="wallet-balance">GH₵ {Number(profile.wallet_balance || 0).toFixed(2)}</span>
+                          <span className="wallet-balance">GH₵ {safeNumber(profile.wallet_balance).toFixed(2)}</span>
                           <span className={`wallet-status ${profile.wallet_status !== 'frozen' ? 'ws-active' : 'ws-frozen'}`}>
                             {profile.wallet_status === 'frozen' ? 'Frozen' : 'Active'}
                           </span>
@@ -239,7 +276,7 @@ const WalletPage: React.FC = () => {
                                       </div>
                                     </div>
                                     <span className={`tx-amount ${tx.type === 'credit' ? 'tx-amount-credit' : 'tx-amount-debit'}`}>
-                                      {tx.type === 'credit' ? '+' : '-'}GH₵ {(tx.amount || 0).toFixed(2)}
+                                      {tx.type === 'credit' ? '+' : '-'}GH₵ {safeNumber(tx.amount).toFixed(2)}
                                     </span>
                                   </div>
                                 ))}
@@ -252,17 +289,15 @@ const WalletPage: React.FC = () => {
                   </motion.div>
                 ))}
               </AnimatePresence>
-            )}
-            {!isLoading && filtered.length === 0 && (
-              <div className="empty-state">
-                <IonIcon icon={walletOutline} />
-                <p>No wallets found</p>
-              </div>
-            )}
-          </div>
-        </Card>
+            </div>
+          )}
+        </div>
       </div>
+    </AdminLayout>
 
+      {/* Overlays must live at IonPage level, outside IonContent's scroll
+          container — nested overlays leave backdrops that trap pointer
+          events / lock scroll with no console error. */}
       <IonModal isOpen={showTxModal} onDidDismiss={() => setShowTxModal(false)} className="tx-modal">
         <div className="modal-header">
           <h2>{txType === 'credit' ? 'Credit Wallet' : 'Debit Wallet'}</h2>
@@ -275,7 +310,7 @@ const WalletPage: React.FC = () => {
             <div className="tx-user-avatar">{(selectedWallet?.full_name || 'U').charAt(0)}</div>
             <div>
               <span className="tx-user-name">{selectedWallet?.full_name}</span>
-              <span className="tx-user-balance">Current Balance: GH₵ {Number(selectedWallet?.wallet_balance || 0).toFixed(2)}</span>
+              <span className="tx-user-balance">Current Balance: GH₵ {safeNumber(selectedWallet?.wallet_balance).toFixed(2)}</span>
             </div>
           </div>
           <IonItem>
@@ -299,7 +334,18 @@ const WalletPage: React.FC = () => {
         message={confirmMsg}
         buttons={[
           { text: 'Cancel', role: 'cancel' },
-          { text: 'Confirm', handler: () => { confirmAction(); } },
+          {
+            text: 'Confirm',
+            handler: () => {
+              // Never let the action throw here: an exception in an Ionic
+              // button handler aborts dismiss() and strands the dialog.
+              try {
+                confirmActionRef.current();
+              } catch {
+                /* failures surface via the toast inside the action itself */
+              }
+            },
+          },
         ]}
       />
 
@@ -311,7 +357,6 @@ const WalletPage: React.FC = () => {
         position="top"
         color="success"
       />
-    </AdminLayout>
     </IonPage>
   );
 };

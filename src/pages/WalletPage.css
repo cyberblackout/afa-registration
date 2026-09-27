@@ -608,9 +608,49 @@
   font-weight: 700;
 }
 
-/* ===== TOP-UP MODAL (preserved from original) ===== */
+/* ===== TOP-UP MODAL (amount selection) ===== */
 .modal-content {
   max-width: 420px;
+}
+
+/* Scoped to the wallet top-up modal so other modals keep their own styling.
+   scroll-padding keeps the focused input clear of the Android keyboard. */
+.top-up-modal {
+  box-sizing: border-box;
+  overscroll-behavior: contain;
+  scroll-padding-bottom: 120px;
+}
+
+/* Vertical rhythm comes from the flex gap — no per-section margins needed. */
+.top-up-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.top-up-form .modal-header,
+.top-up-form .paystack-badge,
+.top-up-form .preset-amounts,
+.top-up-form .custom-amount,
+.top-up-form .payment-info,
+.top-up-form .proceed-btn {
+  margin: 0;
+}
+
+.top-up-form .modal-close {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.top-up-form .modal-close:active {
+  background: var(--card-bg-subtle, rgba(0, 0, 0, 0.04));
 }
 
 .modal-header {
@@ -640,11 +680,19 @@
 .modal-label {
   display: block;
   font-size: 0.78rem;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-secondary, #6b7280);
-  margin-bottom: 0.6rem;
+  margin-bottom: 6px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
+}
+
+.section-subtext {
+  margin: 0 0 10px;
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--text-secondary, #6b7280);
 }
 
 .preset-amounts {
@@ -653,39 +701,77 @@
 
 .preset-grid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 0.5rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  box-sizing: border-box;
 }
 
 .preset-btn {
-  border: 2px solid var(--card-border-color, rgba(0, 0, 0, 0.08));
-  background: var(--card-bg);
-  border-radius: 10px;
-  padding: 0.6rem 0;
-  font-size: 0.8rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 48px;
+  padding: 8px 6px;
+  border: 1.5px solid var(--card-border-color, rgba(0, 0, 0, 0.08));
+  background: var(--card-bg, #ffffff);
+  border-radius: 12px;
+  font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-secondary, #6b7280);
+  color: var(--text-primary, #1a1a2e);
   cursor: pointer;
-  transition: all 0.2s;
   font-family: inherit;
+  box-sizing: border-box;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
 }
 
 .preset-btn:hover {
   border-color: var(--mtn-yellow, #FFCB05);
-  color: var(--text-primary, #1a1a2e);
-  background: rgba(255, 203, 5, 0.04);
+  background: rgba(255, 203, 5, 0.06);
 }
 
 .preset-btn:active {
-  transform: scale(0.97);
+  transform: scale(0.98);
 }
 
-.preset-active {
-  border-color: var(--mtn-yellow, #FFCB05) !important;
-  background: rgba(255, 203, 5, 0.1) !important;
-  color: #1a1a2e !important;
+.preset-btn:focus-visible {
+  outline: 2px solid var(--mtn-yellow, #FFCB05);
+  outline-offset: 2px;
+}
+
+.preset-btn-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Check badge sits in the corner so selecting never shifts the layout. */
+.preset-btn-check {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  font-size: 14px;
+  color: #1a1a2e;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+}
+
+.preset-btn.preset-active {
+  border-color: var(--mtn-yellow, #FFCB05);
+  background: var(--mtn-yellow, #FFCB05);
+  color: #1a1a2e;
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(255, 203, 5, 0.2);
+  box-shadow: 0 2px 10px rgba(255, 203, 5, 0.35);
+}
+
+.preset-btn.preset-active .preset-btn-check {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .custom-amount {
@@ -695,22 +781,35 @@
 .custom-input-wrap {
   display: flex;
   align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 52px;
+  padding: 0 14px;
   background: var(--card-bg-subtle, #f5f5f5);
+  border: 1.5px solid var(--card-border-color, rgba(0, 0, 0, 0.08));
   border-radius: 12px;
-  padding: 0 1rem;
-  border: 2px solid var(--card-border-color, rgba(0, 0, 0, 0.08));
-  transition: border-color 0.2s;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .custom-input-wrap:focus-within {
   border-color: var(--mtn-yellow, #FFCB05);
+  box-shadow: 0 0 0 3px rgba(255, 203, 5, 0.18);
+}
+
+.custom-input-wrap--error,
+.custom-input-wrap--error:focus-within {
+  border-color: #ef4444;
+}
+
+.custom-input-wrap--error:focus-within {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
 }
 
 .currency-prefix {
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--text-primary, #1a1a2e);
-  margin-right: 0.25rem;
   flex-shrink: 0;
   user-select: none;
 }
@@ -719,9 +818,9 @@
   border: none;
   background: transparent;
   outline: none;
-  font-size: 1.1rem;
-  font-weight: 600;
-  padding: 0.8rem 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  padding: 12px 0;
   width: 100%;
   font-family: inherit;
   color: var(--text-primary, #1a1a2e);
@@ -730,7 +829,7 @@
 
 .custom-input::placeholder {
   color: var(--text-muted, #9ca3af);
-  font-weight: 400;
+  font-weight: 500;
 }
 
 .custom-input-hint {
@@ -739,6 +838,13 @@
   color: var(--text-muted, #9ca3af);
   margin-top: 6px;
   padding-left: 2px;
+  line-height: 1.4;
+}
+
+.custom-input-hint--error {
+  color: #ef4444;
+  font-size: 0.75rem;
+  font-weight: 600;
 }
 
 .payment-info {
@@ -771,17 +877,67 @@
 
 .proceed-btn {
   --background: var(--mtn-yellow, #FFCB05);
+  --background-activated: #eebc05;
   --color: #000000;
-  --border-radius: 12px;
+  --border-radius: 14px;
+  --box-shadow: 0 6px 18px rgba(255, 203, 5, 0.32);
+  box-sizing: border-box;
+  width: 100%;
+  height: 52px;
+  min-height: 48px;
   font-weight: 700;
   font-size: 1rem;
-  --box-shadow: 0 4px 16px rgba(255, 203, 5, 0.3);
-  height: 48px;
-  margin-top: 0.5rem;
+  letter-spacing: 0.1px;
+  text-transform: none;
+  touch-action: manipulation;
+  overflow: hidden;
 }
 
-.proceed-btn.ion-disabled {
+.proceed-btn ion-icon {
+  font-size: 20px;
+}
+
+.proceed-btn-spinner {
+  width: 20px;
+  height: 20px;
+  --color: #000000;
+}
+
+.proceed-btn-loading-text {
+  font-size: 0.92rem;
+}
+
+/* ion-button adds the `button-disabled` host class when disabled. */
+.proceed-btn.button-disabled {
   opacity: 0.5;
+  --box-shadow: none;
+}
+
+/* ===== TRUST / SUPPORT ===== */
+.trust-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  box-sizing: border-box;
+}
+
+.trust-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-secondary, #6b7280);
+}
+
+.trust-item ion-icon {
+  font-size: 13px;
+  color: #10b981;
 }
 
 .paystack-badge {
@@ -789,6 +945,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
+  box-sizing: border-box;
   padding: 0.5rem 1rem;
   background: rgba(16, 185, 129, 0.06);
   border: 1px solid rgba(16, 185, 129, 0.15);
@@ -994,10 +1151,14 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
+.dark .section-subtext {
+  color: rgba(255, 255, 255, 0.5);
+}
+
 .dark .preset-btn {
-  border-color: rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
-  color: rgba(255, 255, 255, 0.6);
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .dark .preset-btn:hover {
@@ -1005,16 +1166,22 @@
   color: #ffffff;
 }
 
-.dark .preset-active {
-  border-color: var(--mtn-yellow, #FFCB05) !important;
-  background: rgba(255, 203, 5, 0.15) !important;
-  color: #ffffff !important;
-  box-shadow: 0 2px 8px rgba(255, 203, 5, 0.25);
+/* Yellow fill keeps dark text so contrast stays readable in dark mode too. */
+.dark .preset-btn.preset-active {
+  border-color: var(--mtn-yellow, #FFCB05);
+  background: var(--mtn-yellow, #FFCB05);
+  color: #1a1a2e;
+  box-shadow: 0 2px 10px rgba(255, 203, 5, 0.3);
 }
 
 .dark .custom-input-wrap {
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .custom-input-wrap--error,
+.dark .custom-input-wrap--error:focus-within {
+  border-color: #ef4444;
 }
 
 .dark .custom-input,
@@ -1028,6 +1195,14 @@
 
 .dark .custom-input-hint {
   color: rgba(255, 255, 255, 0.35);
+}
+
+.dark .custom-input-hint--error {
+  color: #f87171;
+}
+
+.dark .trust-item {
+  color: rgba(255, 255, 255, 0.5);
 }
 
 .dark .payment-info-row {
@@ -1138,12 +1313,8 @@
     padding: 0 16px;
   }
 
-  .preset-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
   .custom-input-wrap {
-    padding: 0 0.8rem;
+    padding: 0 12px;
   }
 
   .custom-input {
@@ -1169,23 +1340,35 @@
     flex: 1 1 100%;
   }
 
-  .preset-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .custom-input-wrap {
-    padding: 0 0.75rem;
-  }
-
   .currency-prefix {
-    font-size: 0.9rem;
-  }
-
-  .custom-input {
     font-size: 0.95rem;
   }
 
   .wallet-txns-header-actions span {
     display: none;
+  }
+}
+
+/* Very narrow Android phones (320px): drop to two preset columns. */
+@media (max-width: 340px) {
+  .top-up-form {
+    gap: 14px;
+  }
+
+  .preset-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .preset-btn {
+    font-size: 0.82rem;
+  }
+
+  .proceed-btn {
+    font-size: 0.9rem;
+    height: 50px;
+  }
+
+  .trust-row {
+    gap: 4px 12px;
   }
 }

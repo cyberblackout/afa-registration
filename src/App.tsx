@@ -1,7 +1,7 @@
-import { Redirect, Route } from 'react-router-dom';
+import { Redirect, Route, useLocation } from 'react-router-dom';
 import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from './store/authStore';
 import { useIsAdmin } from './hooks/useData';
@@ -59,6 +59,35 @@ const queryClient = new QueryClient({
 });
 
 setupIonicReact();
+
+/**
+ * Route-change safety net for leaked overlay locks.
+ *
+ * An open overlay unmounted by a route change (browser back/forward with a
+ * dialog open) skips its dismiss() lifecycle, leaving behind
+ * body.backdrop-no-scroll (site-wide scroll lock) and ion-router-outlet's
+ * aria-hidden. After each navigation, release those locks once every overlay
+ * reports presented=false.
+ */
+const OverlayLeakGuard: React.FC = () => {
+  const location = useLocation();
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const anyPresented = Array.from(
+        document.querySelectorAll(
+          'ion-alert, ion-modal, ion-action-sheet, ion-picker, ion-loading, ion-popover',
+        ),
+      ).some((el) => (el as { presented?: boolean }).presented === true);
+      if (anyPresented) return;
+      document.body.classList.remove('backdrop-no-scroll');
+      document.querySelector('ion-router-outlet')?.removeAttribute('aria-hidden');
+    }, 400);
+    return () => window.clearTimeout(timer);
+    // The location object identity changes on every navigation (history v4
+    // leaves location.key undefined on POP transitions, so key is unreliable).
+  }, [location]);
+  return null;
+};
 
 const LoadingSpinner: React.FC<{ message?: string }> = ({ message }) => (
   <div
@@ -206,6 +235,7 @@ const App: React.FC = () => (
       <AuthProvider>
         <IonApp>
           <IonReactRouter>
+            <OverlayLeakGuard />
             <IonRouterOutlet>
               <ErrorBoundary>
                 <Suspense fallback={<LoadingSpinner message="Loading..." />}>

@@ -48,6 +48,24 @@ Deno.serve(async (req) => {
 
   // If already paid, return current status
   if (app.payment_status === "paid") {
+    // If already approved, include agent_id
+    if (app.status === "approved") {
+      const { data: profile } = await admin
+        .from("profiles")
+        .select("agent_id")
+        .eq("id", app.user_id)
+        .single();
+      return successResp(
+        {
+          payment_status: "paid",
+          status: "approved",
+          application_id: app.id,
+          agent_id: profile?.agent_id,
+          amount_paid: app.amount_paid,
+        },
+        origin
+      );
+    }
     return successResp(
       {
         payment_status: app.payment_status,
@@ -86,7 +104,7 @@ Deno.serve(async (req) => {
       const verifyData = await verifyRes.json();
 
       if (verifyData.status && verifyData.data?.status === "success") {
-        // Payment confirmed — update application
+        // Payment confirmed — mark as paid, pending admin review
         const { error: updateError } = await admin
           .from("agent_applications")
           .update({
@@ -106,7 +124,7 @@ Deno.serve(async (req) => {
             status: "pending",
             application_id: app.id,
             amount_paid: app.amount_paid,
-            message: "Payment received! Your application is under admin review.",
+            message: "Payment received. Your application is under admin review.",
           },
           origin
         );

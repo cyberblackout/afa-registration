@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import {
-  IonContent,
   IonPage,
   IonButton,
   IonIcon,
@@ -34,6 +33,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminPaymentApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate, formatGhanaDateTime } from '../../utils/date';
+import { safeNumber } from '../../utils/number';
 import './PaymentsPage.css';
 
 const PaymentsPage: React.FC = () => {
@@ -53,9 +53,9 @@ const PaymentsPage: React.FC = () => {
     queryFn: () => adminPaymentApi.list() as any,
   });
 
-  const totalCollected = payments.filter((p: any) => p.status === 'completed').reduce((s: number, p: any) => s + (p.amount || 0), 0);
-  const pendingTotal = payments.filter((p: any) => p.status === 'pending').reduce((s: number, p: any) => s + (p.amount || 0), 0);
-  const failedTotal = payments.filter((p: any) => p.status === 'failed').reduce((s: number, p: any) => s + (p.amount || 0), 0);
+  const totalCollected = payments.filter((p: any) => p.status === 'completed').reduce((s: number, p: any) => s + safeNumber(p.amount), 0);
+  const pendingTotal = payments.filter((p: any) => p.status === 'pending').reduce((s: number, p: any) => s + safeNumber(p.amount), 0);
+  const failedTotal = payments.filter((p: any) => p.status === 'failed').reduce((s: number, p: any) => s + safeNumber(p.amount), 0);
   const completedTotal = totalCollected;
 
   const filtered = payments.filter((p: any) => {
@@ -94,7 +94,7 @@ const PaymentsPage: React.FC = () => {
     }
   };
 
-  const formatAmount = (amount: number) => `GH₵ ${Number(amount ?? 0).toFixed(2)}`;
+  const formatAmount = (amount: number) => `GH₵ ${safeNumber(amount).toFixed(2)}`;
 
   const statCards = [
     { label: 'Total Collected', value: formatAmount(totalCollected), icon: cashOutline, color: '#2e7d32' },
@@ -237,7 +237,9 @@ const PaymentsPage: React.FC = () => {
           </AnimatePresence>
         </div>
       </div>
+    </AdminLayout>
 
+      {/* Overlays must live at IonPage level, outside IonContent's scroll container. */}
       <IonModal isOpen={showModal} onDidDismiss={() => setShowModal(false)} className="payment-detail-modal">
         {selectedPayment && (
           <div className="payment-modal-content">
@@ -307,7 +309,6 @@ const PaymentsPage: React.FC = () => {
       </IonModal>
 
       <IonToast isOpen={showToast} onDidDismiss={() => setShowToast(false)} message={toastMessage} duration={3000} position="top" color="success" />
-    </AdminLayout>
     </IonPage>
   );
 };
