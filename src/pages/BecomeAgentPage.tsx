@@ -237,7 +237,7 @@ const BecomeAgentPage: React.FC = () => {
             <h1 className="ba-hero-title">
               Become an
               <br />
-              MTN AFA Agent
+              <span className="ba-hero-title-accent">MTN AFA Agent</span>
             </h1>
             <p className="ba-hero-sub">
               Register customers at affordable agent prices and earn commissions on every successful registration.

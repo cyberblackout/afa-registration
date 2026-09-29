@@ -51,15 +51,17 @@
   border-radius: 26px;
   overflow: hidden;
   background: var(--ba-navy);
-  box-shadow: 0 18px 40px rgba(11, 16, 36, 0.18);
+  box-shadow:
+    0 18px 40px rgba(11, 16, 36, 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07);
   isolation: isolate;
 }
 
-/* Image 1 as a responsive hero visual layer (never a plain img above the text) */
+/* Promotional image band — sized so the MTN logo + face stay in frame on Android */
 .ba-hero-media {
   position: relative;
   flex: 0 0 auto;
-  height: clamp(152px, 40vw, 176px);
+  height: clamp(176px, 46vw, 196px);
   min-height: 0;
   overflow: hidden;
 }
@@ -71,7 +73,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 22%;
+  object-position: center 42%;
 }
 
 /* Gradient: image → hero content (keeps MTN/AFA + face crisp at the top) */
@@ -81,39 +83,24 @@
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(11, 16, 36, 0.18) 0%,
+    rgba(11, 16, 36, 0.16) 0%,
     rgba(11, 16, 36, 0) 32%,
-    rgba(11, 16, 36, 0.5) 72%,
+    rgba(11, 16, 36, 0.07) 72%,
+    rgba(11, 16, 36, 0.3) 88%,
+    rgba(11, 16, 36, 0.72) 96%,
     rgba(11, 16, 36, 1) 100%
   );
   pointer-events: none;
 }
 
-/* Gradient: hero → page content */
-.ba-hero::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 40px;
-  z-index: 1;
-  background: linear-gradient(180deg, rgba(245, 245, 249, 0) 0%, var(--ba-bg) 100%);
-  pointer-events: none;
-}
-
-.dark .ba-hero::after {
-  background: linear-gradient(180deg, rgba(15, 15, 26, 0) 0%, var(--ba-bg) 100%);
-}
-
 .ba-hero-content {
   position: relative;
   z-index: 2;
-  padding: 10px 16px 12px;
+  padding: 14px 16px 14px;
 }
 
 .ba-hero-title {
-  font-size: clamp(27px, 7.6vw, 30px);
+  font-size: clamp(26px, 6.6vw, 30px);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0;
@@ -122,11 +109,15 @@
   line-height: 1.05;
 }
 
+.ba-hero-title-accent {
+  color: #ffcb05;
+}
+
 .ba-hero-sub {
   font-size: 15px;
-  line-height: 1.4;
-  color: rgba(255, 255, 255, 0.86);
-  margin: 0 0 10px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.88);
+  margin: 0 0 12px;
   max-width: 520px;
 }
 
@@ -683,6 +674,19 @@
 }
 
 /* ===== RESPONSIVE ===== */
+
+/* Wider single-column (large phones / small tablets): a taller band so the
+   MTN logo + full face stay in frame instead of a thin horizontal slice */
+@media (min-width: 480px) and (max-width: 768px) {
+  .ba-hero-media {
+    height: clamp(242px, 46vw, 330px);
+  }
+
+  .ba-hero-img {
+    object-position: center 17%;
+  }
+}
+
 @media (min-width: 769px) {
   /* Desktop: two-column hero — LEFT content / RIGHT Image 1 */
   .ba-hero {
@@ -713,10 +717,6 @@
     grid-row: 1;
     align-self: center;
     padding: 40px 40px;
-  }
-
-  .ba-hero::after {
-    display: none;
   }
 
   .ba-hero-title {
@@ -919,14 +919,6 @@
     padding: 0 var(--ba-gutter) 96px;
   }
 
-  .ba-hero-title {
-    font-size: 27px;
-  }
-
-  .ba-hero-content {
-    padding: 10px 14px 12px;
-  }
-
   .ba-cta-card {
     padding: 20px 14px;
     border-radius: 18px;
@@ -942,6 +934,34 @@
 
   .ba-includes-item {
     font-size: 13px;
+    gap: 8px;
+  }
+}
+
+/* Short Android viewports: compact the hero so both CTAs always sit above
+   the fixed WhatsApp float (kept safe-area aware in DashboardLayout) */
+@media (max-width: 768px) and (max-height: 660px) {
+  .ba-hero-media {
+    height: clamp(140px, 40vw, 170px);
+  }
+
+  .ba-hero-img {
+    object-position: center 42%;
+  }
+
+  .ba-hero-content {
+    padding: 12px 16px 12px;
+  }
+
+  .ba-hero-title {
+    margin-bottom: 4px;
+  }
+
+  .ba-hero-sub {
+    margin-bottom: 10px;
+  }
+
+  .ba-hero-actions {
     gap: 8px;
   }
 }
