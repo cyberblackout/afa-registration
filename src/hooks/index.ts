@@ -14,7 +14,7 @@ export {
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
   useDeleteNotification,
-  usePricing,
+  useAfaPricing,
   useSettings,
   useAllUsers,
   useAuditLogs,

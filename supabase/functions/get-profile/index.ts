@@ -7,7 +7,7 @@ import {
   successResp,
   getCorsHeaders,
 } from "../_shared/auth.ts";
-import { z, validateBody } from "../_shared/validation.ts";
+import { z, validateBody, toNumeric, differenceInCents } from "../_shared/validation.ts";
 
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
@@ -18,6 +18,7 @@ const actionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("get_wallet_balance"), user_id: z.string().uuid().optional() }),
   z.object({ action: z.literal("upload_avatar"), file_name: z.string().min(1), file_content: z.string().min(1) }),
   z.object({ action: z.literal("get_registration"), id: z.string().uuid() }),
+  z.object({ action: z.literal("get_afa_pricing") }),
 ]);
 
 Deno.serve(async (req) => {
@@ -159,6 +160,58 @@ Deno.serve(async (req) => {
       }
 
       return successResp(reg, origin);
+    }
+
+    // Resolves the caller's OWN AFA price from their real role in the database.
+    // The other tier's price is never returned to a non-admin.
+    case "get_afa_pricing": {
+      const [{ data: profile }, { data: priceRows }] = await Promise.all([
+        admin.from("profiles").select("role").eq("id", auth.user!.id).single(),
+        admin
+          .from("pricing")
+          .select("key, amount, normal_price, agent_price")
+          .in("key", ["afa_registration", "wallet_max_topup"]),
+      ]);
+
+      if (!profile) {
+        return errorResp("Profile not found", 404, origin);
+      }
+
+      const rows = priceRows || [];
+      const afa = rows.find((r: any) => r.key === "afa_registration");
+      const maxTopup = rows.find((r: any) => r.key === "wallet_max_topup");
+
+      const tier: "normal" | "agent" = profile.role === "agent" ? "agent" : "normal";
+      const price = tier === "agent" ? afa?.agent_price : afa?.normal_price;
+      const priceNumeric = toNumeric(price);
+
+      if (!afa || priceNumeric === null || priceNumeric <= 0) {
+        return errorResp(
+          "AFA registration pricing is not configured. Please contact support.",
+          500,
+          origin
+        );
+      }
+
+      // Raw numeric strings are passed through untouched; the client parses
+      // them with safeNumber()/formatCurrency() from src/utils/number.ts.
+      const payload: Record<string, unknown> = {
+        tier,
+        price,
+        max_topup: maxTopup?.amount ?? null,
+      };
+
+      if (profile.role === "admin") {
+        payload.normal_price = afa.normal_price ?? null;
+        payload.agent_price = afa.agent_price ?? null;
+      }
+
+      const profitCents = differenceInCents(afa?.normal_price, afa?.agent_price);
+      if (profitCents !== null) {
+        payload.profit_margin = Math.max(profitCents, 0) / 100;
+      }
+
+      return successResp(payload, origin);
     }
 
     default:

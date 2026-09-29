@@ -19,22 +19,64 @@ import {
 } from 'ionicons/icons';
 import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { z } from 'zod';
 import { adminSettingsApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import Card from '../../components/Card';
 import './SettingsPage.css';
 
+// Must stay identical to the server schema in
+// supabase/functions/admin-settings/index.ts (afaPriceSchema).
+const MAX_AFA_PRICE = 1000000;
+
+const afaPriceSchema = (label: string) =>
+  z.unknown().transform((v, ctx): number => {
+    if (v === undefined || v === null || (typeof v === 'string' && v.trim() === '')) {
+      ctx.addIssue({ code: 'custom', message: 'Both prices are required' });
+      return z.NEVER;
+    }
+    const n = typeof v === 'number' ? v : Number(v);
+    if (!Number.isFinite(n)) {
+      ctx.addIssue({ code: 'custom', message: `${label} must be a number` });
+      return z.NEVER;
+    }
+    if (n <= 0) {
+      ctx.addIssue({ code: 'custom', message: `${label} must be greater than 0` });
+      return z.NEVER;
+    }
+    if (Math.round(n * 100) / 100 !== n) {
+      ctx.addIssue({ code: 'custom', message: `${label} supports a maximum of 2 decimal places` });
+      return z.NEVER;
+    }
+    if (n > MAX_AFA_PRICE) {
+      ctx.addIssue({ code: 'custom', message: `${label} cannot exceed 1,000,000.00` });
+      return z.NEVER;
+    }
+    return n;
+  });
+
+const afaPricingSchema = z.object({
+  normal_price: afaPriceSchema('Normal user price'),
+  agent_price: afaPriceSchema('Agent price'),
+});
+
 const SettingsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [feeValues, setFeeValues] = useState<Record<string, string>>({});
+  const [afaValues, setAfaValues] = useState<{ normal_price: string; agent_price: string }>({
+    normal_price: '',
+    agent_price: '',
+  });
+  const [afaInitialSnapshot, setAfaInitialSnapshot] = useState<string>('');
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [toastColor, setToastColor] = useState<'success' | 'danger'>('success');
   const [saving, setSaving] = useState<string | null>(null);
   const [initialSnapshot, setInitialSnapshot] = useState<string>('');
 
-  const FEE_PRICING_KEYS = ['afa_registration', 'wallet_max_topup', 'wallet_min_topup', 'referral_bonus'];
+  // AFA prices deliberately excluded: they have their own action below.
+  const FEE_PRICING_KEYS = ['wallet_max_topup', 'wallet_min_topup', 'referral_bonus'];
 
   const setFeeValue = (key: string, value: string) => setFeeValues(prev => ({ ...prev, [key]: value }));
 
@@ -83,6 +125,27 @@ const SettingsPage: React.FC = () => {
     }
   }, [feePricing]);
 
+  const { data: afaPricingRow, isLoading: afaPricingLoading, isError: afaPricingError } = useQuery({
+    queryKey: ['admin_settings_afa'],
+    queryFn: async () => {
+      const result = await adminSettingsApi.getAll() as any;
+      return ((result.pricing || []).find((p: any) => p.key === 'afa_registration') ?? null) as any;
+    },
+  });
+
+  useEffect(() => {
+    if (afaPricingRow) {
+      const next = {
+        normal_price: afaPricingRow.normal_price?.toString() ?? '',
+        agent_price: afaPricingRow.agent_price?.toString() ?? '',
+      };
+      setAfaValues(next);
+      setAfaInitialSnapshot(JSON.stringify(next));
+    }
+  }, [afaPricingRow]);
+
+  const afaDirty = afaInitialSnapshot !== '' && JSON.stringify(afaValues) !== afaInitialSnapshot;
+
   const isDirty = useMemo(() => {
     if (!initialSnapshot) return false;
     try {
@@ -126,10 +189,37 @@ const SettingsPage: React.FC = () => {
 
   const parseFee = (key: string): number => parseFloat(feeValues[key] ?? get(key, ''));
 
+  const saveAfaPricing = async () => {
+    const parsed = afaPricingSchema.safeParse(afaValues);
+    if (!parsed.success) {
+      setToastColor('danger');
+      setToastMessage(parsed.error.issues.map(i => i.message).join('; ') || 'Invalid price');
+      setShowToast(true);
+      return;
+    }
+
+    setSaving('AFA Pricing');
+    try {
+      await adminSettingsApi.saveAfaPrices(parsed.data);
+      await queryClient.invalidateQueries({ queryKey: ['admin_settings_afa'] });
+      await queryClient.invalidateQueries({ queryKey: ['admin_settings_fees'] });
+      await queryClient.invalidateQueries({ queryKey: ['afa-pricing'] });
+      setToastColor('success');
+      setToastMessage('AFA pricing saved successfully');
+      setShowToast(true);
+      setAfaInitialSnapshot(JSON.stringify(afaValues));
+    } catch (err: any) {
+      setToastColor('danger');
+      setToastMessage(err.message || 'Save failed');
+      setShowToast(true);
+    } finally {
+      setSaving(null);
+    }
+  };
+
   const saveFees = async () => {
     const fields: { key: string; label: string }[] = [
       { key: 'agent_fee', label: 'Agent Registration Fee' },
-      { key: 'afa_registration', label: 'AFA Registration Fee' },
       { key: 'wallet_max_topup', label: 'Wallet Max Top-up' },
       { key: 'wallet_min_topup', label: 'Wallet Min Top-up' },
       { key: 'referral_bonus', label: 'Referral Bonus' },
@@ -158,14 +248,13 @@ const SettingsPage: React.FC = () => {
     try {
       await adminSettingsApi.saveFees({
         agent_fee: values['agent_fee'],
-        afa_registration: values['afa_registration'],
         wallet_max_topup: values['wallet_max_topup'],
         wallet_min_topup: values['wallet_min_topup'],
         referral_bonus: values['referral_bonus'],
       });
       queryClient.invalidateQueries({ queryKey: ['admin_settings'] });
       queryClient.invalidateQueries({ queryKey: ['admin_settings_fees'] });
-      queryClient.invalidateQueries({ queryKey: ['pricing'] });
+      queryClient.invalidateQueries({ queryKey: ['afa-pricing'] });
       setToastColor('success');
       setToastMessage('Fees saved successfully');
       setShowToast(true);
@@ -201,13 +290,11 @@ const SettingsPage: React.FC = () => {
     }
 
     const agentFee = parseFee('agent_fee');
-    const afaFee = parseFee('afa_registration');
 
     setSaving('Wallet & Referral');
     try {
       await adminSettingsApi.saveFees({
         agent_fee: isNaN(agentFee) ? 0 : agentFee,
-        afa_registration: isNaN(afaFee) ? 0 : afaFee,
         wallet_max_topup: values['wallet_max_topup'],
         wallet_min_topup: values['wallet_min_topup'],
         referral_bonus: values['referral_bonus'],
@@ -224,7 +311,7 @@ const SettingsPage: React.FC = () => {
 
       queryClient.invalidateQueries({ queryKey: ['admin_settings'] });
       queryClient.invalidateQueries({ queryKey: ['admin_settings_fees'] });
-      queryClient.invalidateQueries({ queryKey: ['pricing'] });
+      queryClient.invalidateQueries({ queryKey: ['afa-pricing'] });
       setToastColor('success');
       setToastMessage('Wallet & Referral settings saved successfully');
       setShowToast(true);
@@ -279,7 +366,8 @@ const SettingsPage: React.FC = () => {
       <AdminLayout onRefresh={async () => {
         await queryClient.invalidateQueries({ queryKey: ['admin_settings'] });
         await queryClient.invalidateQueries({ queryKey: ['admin_settings_fees'] });
-        await queryClient.invalidateQueries({ queryKey: ['pricing'] });
+        await queryClient.invalidateQueries({ queryKey: ['admin_settings_afa'] });
+        await queryClient.invalidateQueries({ queryKey: ['afa-pricing'] });
       }}>
         <div className="admin-settings-page">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
@@ -343,7 +431,10 @@ const SettingsPage: React.FC = () => {
                 </div>
                 <div className="settings-fields">
                   {renderField('Agent Registration Fee', feeValues['agent_fee'] ?? get('agent_fee', '100'), (v) => setFeeValue('agent_fee', v), { type: 'number', currency: true, min: 0, step: '0.1' })}
-                  {renderField('AFA Registration Fee', feeValues['afa_registration'] ?? '', (v) => setFeeValue('afa_registration', v), { type: 'number', currency: true, min: 0, step: '0.1' })}
+                  <div className="field-helper">
+                    <IonIcon icon={informationCircleOutline} />
+                    <span>The one-time fee a user pays to become an agent. Unrelated to the AFA registration price below.</span>
+                  </div>
                 </div>
                 <div className="section-save-row">
                   <IonButton className="section-save-btn" onClick={saveFees} disabled={saving === 'Fees'}>
@@ -354,8 +445,49 @@ const SettingsPage: React.FC = () => {
               </Card>
             </motion.div>
 
-            {/* ── Wallet & Referral ── */}
+            {/* ── AFA Registration Pricing ── */}
             <motion.div custom={2} variants={sectionVariants} initial="hidden" animate="visible">
+              <Card variant="accent" noPadding className="settings-card">
+                <div className="settings-card-header">
+                  <div className="section-icon-wrapper">
+                    <IonIcon icon={pricetagOutline} className="section-icon" />
+                  </div>
+                  <h2>AFA Registration Pricing</h2>
+                </div>
+                <div className="settings-fields">
+                  {afaPricingError ? (
+                    <div className="field-helper">
+                      <IonIcon icon={informationCircleOutline} />
+                      <span>Failed to load AFA pricing. Use the pull-to-refresh gesture and try again.</span>
+                    </div>
+                  ) : afaPricingLoading ? (
+                    <div className="field-helper">
+                      <IonIcon icon={informationCircleOutline} />
+                      <span>Loading AFA pricing…</span>
+                    </div>
+                  ) : null}
+
+                  {renderField('Normal User Price', afaValues.normal_price, (v) => setAfaValues(prev => ({ ...prev, normal_price: v })), { type: 'number', currency: true, min: 0, step: '0.01', placeholder: '0.00' })}
+                  {renderField('Agent Price', afaValues.agent_price, (v) => setAfaValues(prev => ({ ...prev, agent_price: v })), { type: 'number', currency: true, min: 0, step: '0.01', placeholder: '0.00' })}
+                  <div className="field-helper">
+                    <IonIcon icon={informationCircleOutline} />
+                    <span>
+                      The price each account is charged is resolved on the server from its role at submit time.
+                      Prices must be greater than 0, support up to 2 decimal places, and cannot exceed 1,000,000.00.
+                    </span>
+                  </div>
+                </div>
+                <div className="section-save-row">
+                  <IonButton className="section-save-btn" onClick={saveAfaPricing} disabled={saving === 'AFA Pricing' || !afaDirty}>
+                    <IonIcon icon={saveOutline} slot="start" />
+                    {saving === 'AFA Pricing' ? 'Saving...' : 'Save AFA Pricing'}
+                  </IonButton>
+                </div>
+              </Card>
+            </motion.div>
+
+            {/* ── Wallet & Referral ── */}
+            <motion.div custom={3} variants={sectionVariants} initial="hidden" animate="visible">
               <Card variant="accent" noPadding className="settings-card">
                 <div className="settings-card-header">
                   <div className="section-icon-wrapper">
@@ -412,7 +544,7 @@ const SettingsPage: React.FC = () => {
             </motion.div>
 
             {/* ── Notifications (WhatsApp + Email + SMS) ── */}
-            <motion.div custom={3} variants={sectionVariants} initial="hidden" animate="visible">
+            <motion.div custom={4} variants={sectionVariants} initial="hidden" animate="visible">
               <Card variant="accent" noPadding className="settings-card">
                 <div className="settings-card-header">
                   <div className="section-icon-wrapper">
@@ -486,7 +618,7 @@ const SettingsPage: React.FC = () => {
             </motion.div>
 
             {/* ── Agent System ── */}
-            <motion.div custom={4} variants={sectionVariants} initial="hidden" animate="visible">
+            <motion.div custom={5} variants={sectionVariants} initial="hidden" animate="visible">
               <Card variant="accent" noPadding className="settings-card">
                 <div className="settings-card-header">
                   <div className="section-icon-wrapper">

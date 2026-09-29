@@ -8,7 +8,9 @@ import {
   Tag, Wallet, Users, TrendingUp, ShieldCheck,
   CheckCircle, ArrowRight, UserPlus, DollarSign,
 } from 'lucide-react';
-import { settingsApi, pricingApi, agentApi } from '../services/api';
+import { settingsApi, agentApi } from '../services/api';
+import { useAfaPricing } from '../hooks/useData';
+import { safeNumber } from '../utils/number';
 import { useAuthStore } from '../store/authStore';
 import DashboardLayout from '../layouts/DashboardLayout';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -104,27 +106,25 @@ const BecomeAgentPage: React.FC = () => {
     staleTime: 300000,
   });
 
-  const { data: afaPricingData, isLoading: pricingLoading, isError: pricingError } = useQuery({
-    queryKey: ['afa_registration_price'],
-    queryFn: async () => {
-      const allPricing = await pricingApi.get();
-      return (allPricing as any[]).find((p) => p.key === 'afa_registration') || null;
-    },
-    staleTime: 300000,
-  });
+  // Server-computed profit figure for the caller's own tier. The raw agent
+  // price is never fetched on this page, so it cannot leak to a normal user.
+  const {
+    data: afaPricing,
+    isLoading: pricingLoading,
+    isError: pricingError,
+  } = useAfaPricing();
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['agent_fee'] });
-    await queryClient.invalidateQueries({ queryKey: ['afa_registration_price'] });
+    await queryClient.invalidateQueries({ queryKey: ['afa-pricing'] });
   };
 
   const isLoadingData = feeLoading || pricingLoading;
   const hasError = feeError || pricingError;
+  const profitAvailable = afaPricing != null && afaPricing.profit_margin != null;
 
-  const agentFee = Number(agentFeeData ?? 100);
-  const normalPrice = Number(afaPricingData?.normal_price ?? afaPricingData?.amount ?? 0);
-  const agentPrice = Number(afaPricingData?.agent_price ?? 0);
-  const profitPerRegistration = Math.max(normalPrice - agentPrice, 0);
+  const agentFee = safeNumber(agentFeeData ?? 100);
+  const profitPerRegistration = safeNumber(afaPricing?.profit_margin);
   const profitExampleCustomers = 100;
   const estimatedEarnings = profitPerRegistration * profitExampleCustomers;
 
@@ -256,7 +256,7 @@ const BecomeAgentPage: React.FC = () => {
 
         {hasError && !isLoadingData && (
           <div className="ba-error-banner" style={{ padding: '1rem', textAlign: 'center', color: 'var(--ion-color-danger, #eb445b)' }}>
-            <p>Failed to load pricing data. Please try again.</p>
+            <p>Failed to load the latest pricing data. Please try again.</p>
             <IonButton fill="clear" onClick={handleRefresh}>Retry</IonButton>
           </div>
         )}
@@ -369,12 +369,28 @@ const BecomeAgentPage: React.FC = () => {
               <div className="ba-profit-divider" />
               <div className="ba-profit-item">
                 <span className="ba-profit-label">Profit per registration</span>
-                <span className="ba-profit-value ba-profit-accent"><AmountDisplay value={profitPerRegistration ?? 0} showToggle={false} /></span>
+                <span className="ba-profit-value ba-profit-accent">
+                  {profitAvailable ? (
+                    <AmountDisplay value={profitPerRegistration} showToggle={false} />
+                  ) : pricingLoading ? (
+                    '…'
+                  ) : (
+                    '—'
+                  )}
+                </span>
               </div>
               <div className="ba-profit-divider" />
               <div className="ba-profit-item">
                 <span className="ba-profit-label">Estimated earnings</span>
-                <span className="ba-profit-value ba-profit-highlight"><AmountDisplay value={estimatedEarnings ?? 0} showToggle={false} /></span>
+                <span className="ba-profit-value ba-profit-highlight">
+                  {profitAvailable ? (
+                    <AmountDisplay value={estimatedEarnings} showToggle={false} />
+                  ) : pricingLoading ? (
+                    '…'
+                  ) : (
+                    '—'
+                  )}
+                </span>
               </div>
             </div>
             <p className="ba-profit-note">The more customers you register, the more you earn.</p>
@@ -432,7 +448,7 @@ const BecomeAgentPage: React.FC = () => {
               </IonButton>
               <p className="ba-cta-disclaimer">
                 Payment will be deducted from your wallet balance.
-                {user && <span> Current balance: <AmountDisplay value={user.wallet_balance || 0} showToggle={false} /></span>}
+                {user && <span> Current balance: <AmountDisplay value={safeNumber(user.wallet_balance)} showToggle={false} /></span>}
               </p>
             </div>
           </div>

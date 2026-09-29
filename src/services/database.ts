@@ -15,7 +15,6 @@ import {
   adminConfigApi,
   adminAuditApi,
   pushApi,
-  pricingApi,
   settingsApi,
   auditApi,
   whatsappConfigApi,
@@ -165,11 +164,7 @@ export const db = {
     return { data: null };
   },
 
-  // PRICING
-  getPricing: async () => {
-    const data = await pricingApi.get();
-    return { data };
-  },
+  // PRICING — see pricingApi.get() / pricingApi.getAfa() in api.ts
 
   // SETTINGS
   getSettings: async () => {

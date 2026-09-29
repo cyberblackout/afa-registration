@@ -140,6 +140,8 @@ const CustomersPage: React.FC = () => {
     try {
       await adminCustomerApi.setRole(roleActionTarget.id, newRole);
       queryClient.invalidateQueries({ queryKey: ['admin_customers'] });
+      // A role change re-resolves the AFA price for that user.
+      queryClient.invalidateQueries({ queryKey: ['afa-pricing'] });
       setToastMessage(`${roleActionTarget.full_name} is now ${newRole}`);
       setShowToast(true);
     } catch (err: any) {

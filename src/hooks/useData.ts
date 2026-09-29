@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { db } from '../services/database';
-import { referralApi } from '../services/api';
+import { referralApi, pricingApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
 
 const STALE_1M = 60 * 1000;
@@ -189,14 +189,20 @@ export function useDeleteNotification() {
   });
 }
 
-export function usePricing() {
+/**
+ * The AFA registration price for the logged-in user, resolved server-side from
+ * their real role. staleTime is 0 so every screen always sees the current
+ * price; after a role change or a PRICE_CHANGED rejection the query is
+ * invalidated and the new figure is picked up immediately.
+ */
+export function useAfaPricing() {
+  const { user, role } = useAuthStore();
   return useQuery({
-    queryKey: ['pricing'],
-    queryFn: async () => {
-      const r = await db.getPricing();
-      return r.data || [];
-    },
-    staleTime: STALE_5M,
+    queryKey: ['afa-pricing', user?.id, role],
+    queryFn: () => pricingApi.getAfa(),
+    enabled: !!user,
+    staleTime: 0,
+    retry: 1,
   });
 }
 

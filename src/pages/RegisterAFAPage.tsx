@@ -23,7 +23,8 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useHistory } from 'react-router-dom';
 import { registrationApi } from '../services/api';
 import { useAuthStore } from '../store/authStore';
-import { usePricing, useWalletBalance } from '../hooks/useData';
+import { useAfaPricing, useWalletBalance } from '../hooks/useData';
+import { safeNumber } from '../utils/number';
 import DashboardLayout from '../layouts/DashboardLayout';
 import Card from '../components/Card';
 import AmountDisplay from '../components/AmountDisplay';
@@ -31,7 +32,12 @@ import './RegisterAFAPage.css';
 
 const RegisterAFAPage: React.FC = () => {
   const { user } = useAuthStore();
-  const { data: pricing, isLoading: pricingLoading, isError: pricingError } = usePricing();
+  const {
+    data: afaPricing,
+    isLoading: pricingLoading,
+    isError: pricingError,
+    isFetching: pricingFetching,
+  } = useAfaPricing();
   const { data: walletBalance, isLoading: balanceLoading, isError: balanceError } = useWalletBalance();
   const queryClient = useQueryClient();
   const history = useHistory();
@@ -49,22 +55,28 @@ const RegisterAFAPage: React.FC = () => {
   const [toast, setToast] = useState({ show: false, message: '', color: '' as 'success' | 'danger' | '' });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
+  // Set when the server rejects a submit because the displayed fee changed.
+  const [priceChanged, setPriceChanged] = useState(false);
 
   const handleRefresh = async () => {
-    await queryClient.invalidateQueries({ queryKey: ['pricing'] });
+    await queryClient.invalidateQueries({ queryKey: ['afa-pricing'] });
+    await queryClient.invalidateQueries({ queryKey: ['walletBalance', user?.id] });
     await queryClient.invalidateQueries({ queryKey: ['orders', user?.id] });
   };
 
-  // Pricing
-  const afaPricing = pricing?.find(
-    (p: any) => p.key === 'afa_registration' || p.label?.toLowerCase().includes('afa')
-  );
-  const registrationPrice = Number(afaPricing?.normal_price ?? afaPricing?.amount ?? 150);
+  // ─── PRICING ───
+  // Resolved server-side from the caller's role. No local fallback: if the
+  // price cannot be loaded the submit button stays disabled rather than
+  // charging an assumed amount.
+  const pricingReady = !pricingLoading && !pricingError && afaPricing != null;
+  const registrationPrice = safeNumber(afaPricing?.price);
+  const maxTopup = safeNumber(afaPricing?.max_topup);
+  const exceedsMaxTopup = pricingReady && maxTopup > 0 && registrationPrice > maxTopup;
 
   // Balance
-  const currentBalance = walletBalance ?? Number(user?.wallet_balance ?? 0);
-  const canAfford = currentBalance >= registrationPrice;
-  const balanceReady = !pricingLoading && !balanceLoading;
+  const currentBalance = walletBalance ?? safeNumber(user?.wallet_balance);
+  const canAfford = pricingReady && currentBalance >= registrationPrice;
+  const balanceReady = pricingReady && !balanceLoading;
 
   // Validation
   const validate = (showAll = false): Record<string, string> => {
@@ -120,12 +132,18 @@ const RegisterAFAPage: React.FC = () => {
     setFieldErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
+    if (!pricingReady) {
+      setToast({ show: true, message: 'Loading the current fee. Please wait a moment and try again.', color: 'danger' });
+      return;
+    }
+
     if (!canAfford) {
       setToast({ show: true, message: 'Insufficient wallet balance. Please top up first.', color: 'danger' });
       return;
     }
 
     setLoading(true);
+    setPriceChanged(false);
     try {
       const result = await registrationApi.create({
         full_name: fullName.trim(),
@@ -134,14 +152,34 @@ const RegisterAFAPage: React.FC = () => {
         address: location.trim(),
         date_of_birth: dateOfBirth,
         occupation: occupation.trim(),
+        // The amount currently displayed on screen. The server uses it ONLY to
+        // detect that the price changed; it never decides what is charged.
+        expected_amount: registrationPrice,
       });
 
       setSubmissionData(result);
       setSubmitted(true);
       queryClient.invalidateQueries({ queryKey: ['orders', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['walletBalance', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['afa-pricing'] });
     } catch (err: any) {
-      setToast({ show: true, message: err.message || 'Submission failed. Please try again.', color: 'danger' });
+      if (err?.code === 'PRICE_CHANGED') {
+        // Never charge an amount the user has not seen: refresh the price and
+        // ask them to confirm the new figure before resubmitting.
+        setPriceChanged(true);
+        await queryClient.invalidateQueries({ queryKey: ['afa-pricing'] });
+        await queryClient.invalidateQueries({ queryKey: ['walletBalance', user?.id] });
+        setToast({
+          show: true,
+          message: err.message || 'The registration fee has changed. Please review the new amount and confirm.',
+          color: 'danger',
+        });
+      } else if (err?.code === 'INSUFFICIENT_BALANCE') {
+        await queryClient.invalidateQueries({ queryKey: ['walletBalance', user?.id] });
+        setToast({ show: true, message: err.message || 'Insufficient wallet balance. Please top up first.', color: 'danger' });
+      } else {
+        setToast({ show: true, message: err.message || 'Submission failed. Please try again.', color: 'danger' });
+      }
     } finally {
       setLoading(false);
     }
@@ -178,12 +216,12 @@ const RegisterAFAPage: React.FC = () => {
                 </div>
                 <div className="afa-success-detail">
                   <CreditCard size={16} />
-                  <span>Fee charged: <strong><AmountDisplay value={Number(submissionData?.fee_charged ?? registrationPrice)} showToggle={false} /></strong></span>
+                  <span>Fee charged: <strong><AmountDisplay value={safeNumber(submissionData?.fee_charged) || registrationPrice} showToggle={false} /></strong></span>
                 </div>
                 {submissionData?.new_balance != null && (
                   <div className="afa-success-detail">
                     <Wallet size={16} />
-                    <span>New balance: <strong><AmountDisplay value={Number(submissionData.new_balance)} showToggle={false} /></strong></span>
+                    <span>New balance: <strong><AmountDisplay value={safeNumber(submissionData.new_balance)} showToggle={false} /></strong></span>
                   </div>
                 )}
               </div>
@@ -228,7 +266,11 @@ const RegisterAFAPage: React.FC = () => {
             <Card className="afa-balance-card afa-balance-card--insufficient">
               <div className="afa-insufficient">
                 <AlertTriangle size={16} />
-                <span>Failed to load pricing data. </span>
+                <span>
+                  {pricingError
+                    ? 'Failed to load the current registration fee. Submission stays disabled until it loads. '
+                    : 'Failed to load your wallet balance. '}
+                </span>
                 <button className="afa-topup-btn" onClick={handleRefresh}>Retry</button>
               </div>
             </Card>
@@ -243,7 +285,15 @@ const RegisterAFAPage: React.FC = () => {
                 </div>
                 <div className="afa-balance-data">
                   <span className="afa-balance-label">Registration Fee</span>
-                  <span className="afa-balance-amount"><AmountDisplay value={registrationPrice} showToggle={false} /></span>
+                  <span className="afa-balance-amount">
+                    {pricingLoading ? (
+                      '…'
+                    ) : pricingError || !pricingReady ? (
+                      '—'
+                    ) : (
+                      <AmountDisplay value={registrationPrice} showToggle={false} />
+                    )}
+                  </span>
                 </div>
               </div>
 
@@ -276,6 +326,15 @@ const RegisterAFAPage: React.FC = () => {
               <div className="afa-balance-ok">
                 <CheckCircle size={15} />
                 <span>Balance sufficient — <AmountDisplay value={currentBalance} showToggle={false} /> available</span>
+              </div>
+            )}
+
+            {exceedsMaxTopup && (
+              <div className="afa-insufficient">
+                <AlertTriangle size={16} />
+                <span>
+                  This fee is above your normal top-up limit. Contact support if you cannot top up this amount.
+                </span>
               </div>
             )}
           </Card>
@@ -425,16 +484,33 @@ const RegisterAFAPage: React.FC = () => {
               <span>Your information is encrypted and handled securely in compliance with Ghana data protection regulations.</span>
             </div>
 
+            {/* Fee changed while the form was open: the user must re-confirm */}
+            {priceChanged && pricingReady && (
+              <div className="afa-insufficient" role="alert">
+                <AlertTriangle size={16} />
+                <span>
+                  The fee changed to <AmountDisplay value={registrationPrice} showToggle={false} />. Confirm the new amount to continue.
+                </span>
+              </div>
+            )}
+
             {/* Submit */}
             <button
               type="submit"
-              className={`afa-submit-btn ${!canAfford && balanceReady ? 'afa-submit-btn--disabled' : ''}`}
-              disabled={loading || (!canAfford && balanceReady)}
+              className={`afa-submit-btn ${(!canAfford && balanceReady) || !pricingReady || pricingFetching ? 'afa-submit-btn--disabled' : ''}`}
+              disabled={loading || !pricingReady || pricingFetching || (!canAfford && balanceReady)}
             >
               {loading ? (
                 <>
                   <span className="afa-spinner" />
                   Submitting Registration…
+                </>
+              ) : !pricingReady || pricingFetching ? (
+                <>Loading fee…</>
+              ) : priceChanged ? (
+                <>
+                  Confirm Updated Fee — <AmountDisplay value={registrationPrice} showToggle={false} />
+                  <ArrowRight size={18} />
                 </>
               ) : (
                 <>
@@ -443,6 +519,13 @@ const RegisterAFAPage: React.FC = () => {
                 </>
               )}
             </button>
+
+            {pricingReady === false && !pricingError && (
+              <p className="afa-submit-note">Loading the current registration fee…</p>
+            )}
+            {pricingError && (
+              <p className="afa-submit-note">Registration fee unavailable — tap Retry above.</p>
+            )}
 
             {!canAfford && balanceReady && (
               <p className="afa-submit-note">Top up your wallet to proceed with registration.</p>

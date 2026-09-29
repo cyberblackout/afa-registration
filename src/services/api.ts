@@ -37,7 +37,11 @@ async function invoke<T = unknown>(
     const json = await res.json();
 
     if (!res.ok || json.success === false) {
-      throw new Error(json.error || `Request failed: ${res.status}`);
+      const error: any = new Error(json.error || `Request failed: ${res.status}`);
+      error.code = json.code;
+      error.status = res.status;
+      error.data = json.data;
+      throw error;
     }
 
     return json.data !== undefined ? json.data : json;
@@ -250,12 +254,15 @@ export const adminSettingsApi = {
 
   saveFees: (fees: {
     agent_fee: number;
-    afa_registration: number;
     wallet_max_topup: number;
     wallet_min_topup: number;
     referral_bonus: number;
   }): Promise<any> =>
     invoke<any>('admin-settings', { action: 'save_fees', ...fees }),
+
+  // AFA prices have their own action so there is exactly one write path per price.
+  saveAfaPrices: (prices: { normal_price: number; agent_price: number }): Promise<any> =>
+    invoke<any>('admin-settings', { action: 'save_afa_prices', ...prices }),
 };
 
 // ============================================================
@@ -471,10 +478,30 @@ export const pushApi = {
 // ============================================================
 export const pricingApi = {
   get: async () => {
-    // Pricing is public read via RLS - use direct Supabase for this
-    const { data } = await supabase.from('pricing').select('*').eq('active', true);
+    // Public read via RLS. Columns are listed explicitly: migration 029 takes
+    // SELECT on the whole table away from anon/authenticated and grants only
+    // these, so `select('*')` would start failing.
+    // normal_price / agent_price are deliberately absent - the tier prices are
+    // only reachable through getAfa() (own tier) or admin-settings (admin).
+    const { data, error } = await supabase
+      .from('pricing')
+      .select('key, label, amount, type, category, active, updated_at')
+      .eq('active', true);
+    if (error) throw new Error(error.message || 'Failed to load pricing');
     return data || [];
   },
+
+  // The caller's OWN AFA price, resolved from their real role in the database.
+  // For a normal user this returns `price` + `profit_margin` but never the raw
+  // agent price; for an admin it also returns both tier prices.
+  getAfa: (): Promise<{
+    tier: 'normal' | 'agent';
+    price: string | number;
+    max_topup: string | number | null;
+    profit_margin?: number;
+    normal_price?: string | number | null;
+    agent_price?: string | number | null;
+  }> => invoke('get-profile', { action: 'get_afa_pricing' }),
 };
 
 // ============================================================

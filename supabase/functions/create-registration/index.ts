@@ -2,21 +2,34 @@ import "https://deno.land/std@0.177.0/dotenv/load.ts";
 import {
   verifyAuth,
   getSupabaseAdmin,
-  jsonResp,
   errorResp,
   successResp,
+  jsonResp,
   getCorsHeaders,
 } from "../_shared/auth.ts";
 import { z, validateBody } from "../_shared/validation.ts";
 
+// NOTE: no price, role or user id is accepted from the client. The amount is
+// resolved server-side inside create_afa_registration from profiles.role.
+// `expected_amount` is optional and used ONLY to detect that the price the
+// user was shown has changed; it never decides what is charged.
 const createRegistrationSchema = z.object({
   full_name: z.string().min(1, "Full name is required"),
   phone: z.string().regex(/^\d{10}$/, "Phone must be 10 digits"),
   ghana_card_id: z.string().min(1, "Ghana Card number is required"),
   address: z.string().min(1, "Location is required"),
-  date_of_birth: z.string().min(1, "Date of birth is required"),
+  date_of_birth: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date of birth must be in YYYY-MM-DD format"),
   occupation: z.string().min(1, "Occupation is required"),
+  expected_amount: z.number().optional(),
 });
+
+const KNOWN_RPC_ERRORS = new Set([
+  "Authentication required",
+  "Caller profile not found",
+  "Registration fee is not configured",
+]);
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -38,129 +51,79 @@ Deno.serve(async (req) => {
   const data = validation.data!;
   const admin = getSupabaseAdmin();
 
-  // ─── WALLET GATE: fetch pricing + check balance before creating registration ───
+  // ─── ATOMIC: role -> price -> lock wallet -> verify -> debit -> insert ───
+  const { data: result, error: rpcError } = await admin.rpc(
+    "create_afa_registration",
+    {
+      p_caller_id: auth.user!.id,
+      p_full_name: data.full_name,
+      p_phone: data.phone,
+      p_email: auth.user!.email,
+      p_ghana_card_id: data.ghana_card_id,
+      p_address: data.address,
+      p_date_of_birth: data.date_of_birth,
+      p_occupation: data.occupation,
+      p_expected_amount: data.expected_amount ?? null,
+    }
+  );
 
-  // Fetch AFA registration pricing
-  const { data: pricingRow } = await admin
-    .from("pricing")
-    .select("normal_price, agent_price, amount")
-    .eq("key", "afa_registration")
-    .eq("active", true)
-    .maybeSingle();
-
-  // Determine fee based on caller's role: agents get agent_price, users get normal_price
-  const userRole = auth.user!.role ?? "user";
-  const feeAmount = userRole === "agent"
-    ? Number(pricingRow?.agent_price ?? pricingRow?.amount ?? 0)
-    : Number(pricingRow?.normal_price ?? pricingRow?.amount ?? 0);
-
-  if (!feeAmount || feeAmount <= 0) {
-    return errorResp("Registration fee is not configured. Please contact support.", 500, origin);
-  }
-
-  // Fetch user's current wallet balance
-  const { data: profile, error: profileError } = await admin
-    .from("profiles")
-    .select("wallet_balance")
-    .eq("id", auth.user!.id)
-    .single();
-
-  if (profileError || !profile) {
-    return errorResp("Failed to verify wallet balance", 500, origin);
-  }
-
-  const currentBalance = Number(profile.wallet_balance ?? 0);
-
-  if (currentBalance < feeAmount) {
+  if (rpcError) {
+    const message = rpcError.message || "";
+    if (KNOWN_RPC_ERRORS.has(message)) {
+      return errorResp(message, 400, origin);
+    }
+    if (message.includes("invalid input syntax for type date")) {
+      return errorResp("Date of birth is not a valid date", 400, origin);
+    }
+    // Any other failure rolled the whole transaction back: nothing was charged.
+    console.error("create-registration rpc error:", message);
     return errorResp(
-      `Insufficient wallet balance. Registration fee: GHS ${feeAmount.toFixed(2)}, Your balance: GHS ${currentBalance.toFixed(2)}. Please top up your wallet.`,
-      402,
+      "Failed to create registration. You have not been charged. Please try again.",
+      500,
       origin
     );
   }
 
-  // ─── ATOMIC DEBIT: deduct fee from wallet ───
-  const { data: debitResult, error: debitError } = await admin.rpc("debit_wallet", {
-    p_user_id: auth.user!.id,
-    p_amount: feeAmount,
-    p_description: `AFA Registration Fee – ${data.full_name}`,
-  });
+  const res = result as any;
 
-  if (debitError) {
-    console.error("create-registration debit error:", debitError);
-    return errorResp("Failed to process payment. Please try again.", 500, origin);
-  }
-
-  const debit = debitResult as any;
-  if (!debit?.success) {
-    return errorResp(
-      debit?.error || "Insufficient wallet balance. Please top up your wallet.",
-      402,
-      origin
-    );
-  }
-
-  // ─── CREATE REGISTRATION (only after successful debit) ───
-
-  const { data: regData, error: regError } = await admin
-    .from("registrations")
-    .insert({
-      user_id: auth.user!.id,
-      full_name: data.full_name,
-      phone: data.phone,
-      email: auth.user!.email,
-      ghana_card_id: data.ghana_card_id,
-      address: data.address,
-      date_of_birth: data.date_of_birth,
-      occupation: data.occupation,
-      status: "pending",
-    })
-    .select("id")
-    .single();
-
-  if (regError) {
-    // Registration failed after debit — this is a critical error
-    // Refund the wallet immediately
-    console.error("create-registration error:", regError);
-    await admin.rpc("credit_wallet", {
-      p_user_id: auth.user!.id,
-      p_amount: feeAmount,
-      p_description: "Refund – AFA Registration failed",
-      p_reference: `REF-REG-FAIL-${Date.now()}`,
-    });
-    return errorResp("Failed to create registration. You have been refunded.", 500, origin);
-  }
-
-  // Add timeline entry
-  await admin.from("registration_timeline").insert({
-    registration_id: regData.id,
-    changed_by: auth.user!.id,
-    status: "pending",
-    note: "Registration submitted – awaiting admin validation",
-  });
-
-  // Create a linked order so the registration appears in the user's Orders feed
-  const { error: orderError } = await admin.from("orders").insert({
-    user_id: auth.user!.id,
-    amount: feeAmount,
-    description: `AFA Registration – ${data.full_name}`,
-    status: "pending",
-    payment_status: "paid",
-    source_type: "afa_registration",
-    source_id: regData.id,
-  });
-
-  if (orderError) {
-    console.error("create-registration order insert error:", orderError);
-    // Order creation is non-critical; registration + debit succeeded
+  if (!res?.success) {
+    if (res?.code === "PRICE_CHANGED") {
+      return jsonResp(
+        {
+          success: false,
+          code: "PRICE_CHANGED",
+          error: res.error,
+          data: {
+            current_price: res.current_price,
+            tier: res.tier,
+          },
+        },
+        409,
+        origin
+      );
+    }
+    if (res?.code === "INSUFFICIENT_BALANCE") {
+      return jsonResp(
+        {
+          success: false,
+          code: "INSUFFICIENT_BALANCE",
+          error: res.error,
+          data: { required: res.required, balance: res.balance },
+        },
+        402,
+        origin
+      );
+    }
+    return errorResp(res?.error || "Registration failed", 400, origin);
   }
 
   return successResp(
     {
-      id: regData.id,
-      message: "Registration submitted successfully",
-      fee_charged: feeAmount,
-      new_balance: debit.new_balance,
+      id: res.id,
+      message: res.message,
+      fee_charged: res.fee_charged,
+      pricing_tier: res.pricing_tier,
+      new_balance: res.new_balance,
     },
     origin
   );
