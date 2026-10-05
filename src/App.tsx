@@ -234,7 +234,7 @@ const App: React.FC = () => (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <IonApp>
-          <IonReactRouter>
+          <IonReactRouter basename={import.meta.env.BASE_URL}>
             <OverlayLeakGuard />
             <IonRouterOutlet>
               <ErrorBoundary>

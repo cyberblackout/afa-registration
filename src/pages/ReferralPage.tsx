@@ -86,7 +86,7 @@ const ReferralPage: React.FC = () => {
   });
 
   const referralCode = (profile as any)?.referral_code || '';
-  const referralLink = `${window.location.origin}/register?ref=${referralCode}`;
+  const referralLink = `${window.location.origin}${import.meta.env.BASE_URL}register?ref=${referralCode}`;
 
   const { data: stats, isLoading: statsLoading, isError: statsError } = useQuery({
     queryKey: [REFERRAL_STATS_KEY, user?.id],

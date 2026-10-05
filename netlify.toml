@@ -1,3 +1,9 @@
+# RETIRED — Netlify is no longer the production target.
+# Canonical deployment is GitHub Pages (.github/workflows/deploy.yml), which cannot
+# read this file: its SPA fallback lives in public/404.html and its CSP in index.html.
+# This file is kept only so https://afa-register.netlify.app (fallback mirror) can
+# still be rebuilt with the same security headers. Delete it together with the mirror.
+
 [build]
   command = "npm run build"
   publish = "dist"
