@@ -32,6 +32,26 @@ function isNetlifyDomain(origin: string): boolean {
   }
 }
 
+// Own stable production domains. Exact hostname match only: rejects
+// "afaregister.com.evil.com", "evilafaregister.com" and any other suffix/prefix trick.
+const OWNED_HOSTNAMES = new Set([
+  "afaregister.com",
+  "www.afaregister.com",
+  "cyberblackout.github.io",
+]);
+
+function isOwnedDomain(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    return (
+      url.protocol === "https:" &&
+      OWNED_HOSTNAMES.has(url.hostname.toLowerCase())
+    );
+  } catch {
+    return false;
+  }
+}
+
 function isCapacitorOrigin(origin: string): boolean {
   return origin.startsWith("capacitor://");
 }
@@ -47,6 +67,7 @@ export function getCorsHeaders(origin: string | null): Record<string, string> {
     if (
       isDevOrigin(origin) ||
       isNetlifyDomain(origin) ||
+      isOwnedDomain(origin) ||
       isCapacitorOrigin(origin)
     ) {
       allowed = origin;
