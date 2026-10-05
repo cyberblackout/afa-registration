@@ -58,7 +58,6 @@ const Register: React.FC = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '' });
-  const [referralFailed, setReferralFailed] = useState(false);
   const [passwordMismatch, setPasswordMismatch] = useState(false);
 
   const handleConfirmPasswordChange = (value: string) => {
@@ -99,6 +98,7 @@ const Register: React.FC = () => {
       return;
     }
     setLoading(true);
+    let referralFailedLocal = false;
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -131,12 +131,20 @@ const Register: React.FC = () => {
         });
 
         if (refCode) {
-          await referralApi.createReferral(refCode, deviceFingerprint).catch(() => {
-            setReferralFailed(true);
-          });
+          try {
+            const redemption = await referralApi.createReferral(refCode, deviceFingerprint);
+            // The Edge Function answers logical declines (invalid code,
+            // self-referral, duplicate redemption) with HTTP 200 +
+            // success:false, so only checking for a throw would miss them.
+            if (redemption && redemption.success === false) {
+              referralFailedLocal = true;
+            }
+          } catch {
+            referralFailedLocal = true;
+          }
         }
       }
-      const successMsg = referralFailed
+      const successMsg = referralFailedLocal
         ? 'Account created! Your referral link could not be applied, but you can still sign in.'
         : 'Account created successfully! You can now sign in.';
       setToast({ show: true, message: successMsg });

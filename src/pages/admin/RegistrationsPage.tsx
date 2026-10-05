@@ -77,6 +77,7 @@ const RegistrationsPage: React.FC = () => {
   const [statusLoading, setStatusLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
+  const [toastColor, setToastColor] = useState<'success' | 'danger'>('success');
 
   const { data: registrations = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_registrations'],
@@ -127,14 +128,17 @@ const RegistrationsPage: React.FC = () => {
   const updateStatus = async (id: string, status: string) => {
     setStatusLoading(true);
     try {
-      await registrationApi.adminUpdateStatus(id, status, adminNotes, userMessage || undefined);
+      const result = await registrationApi.adminUpdateStatus(id, status, adminNotes, userMessage || undefined);
       queryClient.invalidateQueries({ queryKey: ['admin_registrations'] });
       queryClient.invalidateQueries({ queryKey: ['admin_orders'] });
       setSelectedReg(null);
-      setToastMessage(`Registration ${status}`);
+      const warning = result?.referral_warning;
+      setToastColor(warning ? 'danger' : 'success');
+      setToastMessage(warning || `Registration ${status}`);
       setShowToast(true);
     } catch (err: any) {
       console.error('Status update error:', err);
+      setToastColor('danger');
       setToastMessage(err.message || 'Failed to update status');
       setShowToast(true);
     } finally {
@@ -185,10 +189,12 @@ const RegistrationsPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['admin_registrations'] });
       queryClient.invalidateQueries({ queryKey: ['admin_orders'] });
       setBulkSelected(new Set());
+      setToastColor('success');
       setToastMessage('Selected registrations updated');
       setShowToast(true);
     },
     onError: (err: any) => {
+      setToastColor('danger');
       setToastMessage(err.message || 'Bulk update failed');
       setShowToast(true);
     },
@@ -712,6 +718,7 @@ const RegistrationsPage: React.FC = () => {
                               a.click();
                               document.body.removeChild(a);
                               URL.revokeObjectURL(url);
+                              setToastColor('success');
                               setToastMessage('Registration details downloaded');
                               setShowToast(true);
                             }}>
@@ -729,7 +736,7 @@ const RegistrationsPage: React.FC = () => {
       </AnimatePresence>
     </AdminLayout>
 
-      <IonToast isOpen={showToast} onDidDismiss={() => setShowToast(false)} message={toastMessage} duration={3000} position="top" color="success" />
+      <IonToast isOpen={showToast} onDidDismiss={() => setShowToast(false)} message={toastMessage} duration={3000} position="top" color={toastColor} />
     </IonPage>
   );
 };

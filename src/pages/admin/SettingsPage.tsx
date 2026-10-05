@@ -76,7 +76,7 @@ const SettingsPage: React.FC = () => {
   const [initialSnapshot, setInitialSnapshot] = useState<string>('');
 
   // AFA prices deliberately excluded: they have their own action below.
-  const FEE_PRICING_KEYS = ['wallet_max_topup', 'wallet_min_topup', 'referral_bonus'];
+  const FEE_PRICING_KEYS = ['wallet_max_topup', 'wallet_min_topup'];
 
   const setFeeValue = (key: string, value: string) => setFeeValues(prev => ({ ...prev, [key]: value }));
 
@@ -222,7 +222,6 @@ const SettingsPage: React.FC = () => {
       { key: 'agent_fee', label: 'Agent Registration Fee' },
       { key: 'wallet_max_topup', label: 'Wallet Max Top-up' },
       { key: 'wallet_min_topup', label: 'Wallet Min Top-up' },
-      { key: 'referral_bonus', label: 'Referral Bonus' },
     ];
 
     const values: Record<string, number> = {};
@@ -250,7 +249,6 @@ const SettingsPage: React.FC = () => {
         agent_fee: values['agent_fee'],
         wallet_max_topup: values['wallet_max_topup'],
         wallet_min_topup: values['wallet_min_topup'],
-        referral_bonus: values['referral_bonus'],
       });
       queryClient.invalidateQueries({ queryKey: ['admin_settings'] });
       queryClient.invalidateQueries({ queryKey: ['admin_settings_fees'] });
@@ -269,7 +267,7 @@ const SettingsPage: React.FC = () => {
   };
 
   const saveWalletReferral = async () => {
-    const walletFeeFields = ['wallet_max_topup', 'wallet_min_topup', 'referral_bonus'];
+    const walletFeeFields = ['wallet_max_topup', 'wallet_min_topup'];
     const values: Record<string, number> = {};
     for (const key of walletFeeFields) {
       const v = parseFee(key);
@@ -297,13 +295,11 @@ const SettingsPage: React.FC = () => {
         agent_fee: isNaN(agentFee) ? 0 : agentFee,
         wallet_max_topup: values['wallet_max_topup'],
         wallet_min_topup: values['wallet_min_topup'],
-        referral_bonus: values['referral_bonus'],
       });
 
       const sectionSettings: Record<string, string> = {
         referral_enabled: String(get('referral_enabled', 'true')),
         referral_reward_amount: String(get('referral_reward_amount', '1')),
-        referral_min_withdrawal: String(get('referral_min_withdrawal', '20')),
         referral_max_daily: String(get('referral_max_daily', '50')),
         referral_fraud_protection: String(get('referral_fraud_protection', 'true')),
       };
@@ -517,9 +513,7 @@ const SettingsPage: React.FC = () => {
                       />
                     </div>
 
-                    {renderField('Referral Bonus', feeValues['referral_bonus'] ?? '', (v) => setFeeValue('referral_bonus', v), { type: 'number', currency: true, min: 0, step: '0.1' })}
                     {renderField('Reward Amount', get('referral_reward_amount', '1'), (v) => set('referral_reward_amount', v), { type: 'number', currency: true })}
-                    {renderField('Minimum Withdrawal', get('referral_min_withdrawal', '20'), (v) => set('referral_min_withdrawal', v), { type: 'number', currency: true })}
                     {renderField('Max Daily Rewards', get('referral_max_daily', '50'), (v) => set('referral_max_daily', v), { type: 'number', currency: true })}
 
                     <div className="settings-toggle-row">

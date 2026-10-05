@@ -1,0 +1,21 @@
+-- ============================================================
+-- 038 drop admin_retry_referral_reward (dead code)
+--
+-- Audit B13's retry path is implemented properly in the
+-- admin-referrals Edge Function: it resolves the real completed
+-- registration for the referred user and calls
+-- process_referral_reward(registration_id).
+--
+-- public.admin_retry_referral_reward(uuid) has no caller left:
+--   * no Edge Function references it,
+--   * no frontend code references it (the admin Retry button goes
+--     through the Edge Function),
+--   * no view, trigger or other function depends on it.
+-- It also still authenticated itself with auth.uid(), which is NULL
+-- under the service role it is now restricted to, so it could only
+-- ever answer "Unauthorized". Keeping it would leave a second,
+-- unreachable implementation of the money-granting logic next to the
+-- live one - drop it instead.
+-- ============================================================
+
+DROP FUNCTION IF EXISTS public.admin_retry_referral_reward(uuid);

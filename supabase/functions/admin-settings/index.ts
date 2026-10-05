@@ -70,7 +70,6 @@ const actionSchema = z.discriminatedUnion("action", [
     agent_fee: z.number().min(0),
     wallet_max_topup: z.number().min(0),
     wallet_min_topup: z.number().min(0),
-    referral_bonus: z.number().min(0),
   }),
 ]);
 
@@ -92,7 +91,6 @@ Deno.serve(async (req) => {
         "afa_registration",
         "wallet_max_topup",
         "wallet_min_topup",
-        "referral_bonus",
       ]),
     ]);
 
@@ -220,7 +218,6 @@ Deno.serve(async (req) => {
       const pricingUpdates = [
         { key: "wallet_max_topup", amount: data.wallet_max_topup },
         { key: "wallet_min_topup", amount: data.wallet_min_topup },
-        { key: "referral_bonus", amount: data.referral_bonus },
       ];
 
       for (const p of pricingUpdates) {

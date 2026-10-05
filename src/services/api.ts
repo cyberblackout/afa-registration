@@ -256,7 +256,6 @@ export const adminSettingsApi = {
     agent_fee: number;
     wallet_max_topup: number;
     wallet_min_topup: number;
-    referral_bonus: number;
   }): Promise<any> =>
     invoke<any>('admin-settings', { action: 'save_fees', ...fees }),
 

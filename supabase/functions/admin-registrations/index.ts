@@ -641,6 +641,7 @@ Deno.serve(async (req) => {
 
   switch (data.action) {
     case "update_status": {
+      let referralWarning: string | undefined;
       const updatePayload: Record<string, unknown> = {
         status: data.status,
         admin_notes: data.admin_notes,
@@ -683,27 +684,50 @@ Deno.serve(async (req) => {
           console.error("Notification send error:", err);
         });
 
-        // Process referral reward when registration is completed
+        // Process referral reward when registration is completed.
+        // B17: failures used to vanish into an empty catch, so an admin could
+        // see "Status updated" while the reward silently never happened. Every
+        // failure is logged server-side AND reported back in the response.
         if (data.status === "completed") {
+          const BENIGN = new Set([
+            "No valid referral found",
+            "Fraud detected",
+            "Reward already granted",
+            "Registration not completed yet",
+          ]);
           try {
-            const { data: reward } = await admin.rpc("process_referral_reward", {
+            const { data: reward, error: rewardError } = await admin.rpc("process_referral_reward", {
               registration_id: data.id,
             });
-            if (reward?.success && reward?.referrer_id) {
+            if (rewardError) {
+              console.error("process_referral_reward rpc error:", rewardError.message);
+              referralWarning =
+                "Registration marked completed, but the referral reward could not be granted (RPC error). Check the referral manually.";
+            } else if (reward?.success && reward?.referrer_id) {
               await admin.from("notifications").insert({
                 user_id: reward.referrer_id,
                 title: "Referral Reward Earned!",
                 message: `You earned GH\u20B5 ${reward.amount} from a successful registration referral.`,
                 type: "success",
               });
+            } else if (reward?.error && !BENIGN.has(String(reward.error))) {
+              console.warn("process_referral_reward declined:", reward.error);
+              referralWarning =
+                `Registration marked completed, but the referral reward could not be granted (${reward.error}). Check the referral manually.`;
+            } else if (reward?.error) {
+              console.warn("process_referral_reward declined:", reward.error);
             }
-          } catch {
-            // referral reward processing is non-critical
+          } catch (err) {
+            console.error("referral reward processing failed:", err);
+            referralWarning =
+              "Registration marked completed, but the referral reward could not be granted. Check the referral manually.";
           }
         }
       }
 
-      return successResp({ message: "Status updated" }, origin);
+      const payload: Record<string, unknown> = { message: "Status updated" };
+      if (referralWarning) payload.referral_warning = referralWarning;
+      return successResp(payload, origin);
     }
 
     case "bulk_update": {
