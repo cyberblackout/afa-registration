@@ -40,14 +40,14 @@ const cardVariants = {
 const formatCurrency = (value: number) =>
   `GH₵ ${safeNumber(value).toLocaleString()}`;
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { color?: string; name?: string; value?: number | string }[]; label?: string | number }) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="chart-tooltip">
       <p className="chart-tooltip-label">{label}</p>
-      {payload.map((entry: any, idx: number) => (
+      {payload?.map((entry, idx) => (
         <p key={idx} className="chart-tooltip-value" style={{ color: entry.color }}>
-          {entry.name === 'revenue' ? formatCurrency(entry.value) : entry.value}
+          {entry.name === 'revenue' ? formatCurrency(Number(entry.value ?? 0)) : entry.value}
         </p>
       ))}
     </div>
@@ -235,7 +235,7 @@ const DashboardPage: React.FC = () => {
               ) : stats.recent_registrations.length === 0 ? (
                 <p className="no-data-text">No recent registrations</p>
               ) : (
-                stats.recent_registrations.map((reg: any, i: number) => {
+                stats.recent_registrations.map((reg, i) => {
                   const status = statusConfig[reg.status as keyof typeof statusConfig] || statusConfig.pending;
                   return (
                     <div key={reg.id || i} className="recent-row">

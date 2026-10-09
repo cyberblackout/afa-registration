@@ -327,7 +327,12 @@ export interface AdminDashboardStats {
   pending_registrations: number;
   revenue: number;
   total_wallet_balance: number;
-  recent_registrations: unknown[];
+  recent_registrations: {
+    id: string;
+    status: string;
+    created_at: string;
+    profiles?: { full_name?: string | null; phone?: string | null } | null;
+  }[];
   approved_registrations: number;
   rejected_registrations: number;
   completed_registrations: number;
