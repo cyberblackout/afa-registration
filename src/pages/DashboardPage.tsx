@@ -73,7 +73,7 @@ const DashboardPage: React.FC = () => {
     staleTime: 60000,
   });
 
-  const balance = Number((profile as any)?.wallet_balance ?? 0);
+  const balance = Number(profile?.wallet_balance ?? 0);
   const orders = ordersData ?? [];
   const recentOrdersCount = orders.length;
 
@@ -91,7 +91,7 @@ const DashboardPage: React.FC = () => {
   const displayName = useMemo(() => profile?.full_name || user?.full_name || '', [profile, user]);
   const firstName = displayName ? displayName.split(' ')[0] : '';
   const capitalizedName = firstName ? firstName.charAt(0).toUpperCase() + firstName.slice(1) : '';
-  const isAgent = (profile as any)?.role === 'agent' || user?.role === 'agent';
+  const isAgent = profile?.role === 'agent' || user?.role === 'agent';
 
   if (isLoadingInitial) {
     return (
@@ -208,7 +208,7 @@ const DashboardPage: React.FC = () => {
           </div>
 
           {/* ── REFERRAL CARD ── */}
-          {(referralStats as any)?.total_earned > 0 && (
+          {!!referralStats && referralStats.total_earned > 0 && (
             <div className="db-section">
               <div className="db-referral-card">
                 <div className="db-referral-top">
@@ -218,18 +218,18 @@ const DashboardPage: React.FC = () => {
                   <div className="db-referral-info">
                     <span className="db-referral-title">Referral Earnings</span>
                     <span className="db-referral-amount">
-                      <AmountDisplay value={(referralStats as any)?.total_earned ?? 0} showToggle={false} className="amount-display--dark" />
+                      <AmountDisplay value={(referralStats)?.total_earned ?? 0} showToggle={false} className="amount-display--dark" />
                     </span>
                   </div>
                 </div>
                 <div className="db-referral-stats">
                   <span className="db-referral-stat">
                     <IonIcon icon={checkmarkCircleOutline} />
-                    {(referralStats as any)?.successful || 0} successful
+                    {(referralStats)?.successful || 0} successful
                   </span>
                   <span className="db-referral-stat">
                     <IonIcon icon={timeOutline} />
-                    {(referralStats as any)?.pending || 0} pending
+                    {(referralStats)?.pending || 0} pending
                   </span>
                 </div>
                 <Link to="/referrals" className="db-referral-link">
