@@ -12,7 +12,7 @@ export async function sendSms(
     });
     if (error) console.error('SMS send failed:', error);
     return { error };
-  } catch (err: any) {
+  } catch (err) {
     console.error('SMS send error:', err);
     return { error: err };
   }

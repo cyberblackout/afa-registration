@@ -149,8 +149,8 @@ const Register: React.FC = () => {
         : 'Account created successfully! You can now sign in.';
       setToast({ show: true, message: successMsg });
       setTimeout(() => history.push('/login'), 2000);
-    } catch (error: any) {
-      setToast({ show: true, message: error.message || 'Registration failed' });
+    } catch (error) {
+      setToast({ show: true, message: (error instanceof Error ? error.message : null) || 'Registration failed' });
     } finally {
       setLoading(false);
     }

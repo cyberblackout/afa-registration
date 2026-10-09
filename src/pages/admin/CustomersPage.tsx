@@ -35,7 +35,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminCustomerApi, walletApi, orderApi } from '../../services/api';
-import type { AdminCustomer, Transaction, Order } from '../../types';
+import type { AdminCustomer } from '../../types';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate } from '../../utils/date';
 import Card from '../../components/Card';

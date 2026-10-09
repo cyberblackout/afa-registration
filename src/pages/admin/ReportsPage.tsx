@@ -48,7 +48,7 @@ const ReportsPage: React.FC = () => {
     queryKey: ['reports', dateRange],
     queryFn: async () => {
       const { start, end } = getDateRange(dateRange);
-      return adminReportsApi.get(start, end) as any;
+      return adminReportsApi.get(start, end);
     },
   });
 

@@ -12,7 +12,7 @@ export async function sendEmail(
     });
     if (error) console.error('Email send failed:', error);
     return { error };
-  } catch (err: any) {
+  } catch (err) {
     console.error('Email send error:', err);
     return { error: err };
   }

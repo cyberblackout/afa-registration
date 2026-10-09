@@ -350,12 +350,30 @@ export const adminDashboardApi = {
 // ============================================================
 // ADMIN REPORTS
 // ============================================================
+export interface AdminReportsData {
+  revenue: number;
+  registration_stats: {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+    completed: number;
+  };
+  payment_stats: {
+    total: number;
+    total_amount: number;
+    by_method: Record<string, number>;
+  };
+  new_users: number;
+  total_users: number;
+}
+
 export const adminReportsApi = {
-  get: (startDate?: string, endDate?: string): Promise<unknown> => {
+  get: (startDate?: string, endDate?: string): Promise<AdminReportsData> => {
     if (startDate || endDate) {
-      return invoke<unknown>('admin-reports', { start_date: startDate, end_date: endDate });
+      return invoke<AdminReportsData>('admin-reports', { start_date: startDate, end_date: endDate });
     }
-    return invoke<unknown>('admin-reports', undefined, 'GET');
+    return invoke<AdminReportsData>('admin-reports', undefined, 'GET');
   },
 };
 

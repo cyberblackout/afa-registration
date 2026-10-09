@@ -107,8 +107,8 @@ const ResetPassword: React.FC = () => {
         supabase.auth.signOut();
         history.push('/login');
       }, 2000);
-    } catch (err: any) {
-      setToast({ show: true, message: err.message || 'Failed to update password' });
+    } catch (err) {
+      setToast({ show: true, message: (err instanceof Error ? err.message : null) || 'Failed to update password' });
     } finally {
       setLoading(false);
     }

@@ -60,7 +60,7 @@ export function useRegistration(id: string) {
 export function useCreateRegistration() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: Record<string, unknown>) => {
       const r = await db.createRegistration(data);
       return r.data;
     },
