@@ -149,7 +149,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh, 
   useEffect(() => {
     if (!systemSettings) return;
     const map: Record<string, string> = {};
-    systemSettings.forEach((s: any) => { map[s.setting_name] = s.setting_value; });
+    systemSettings.forEach((s) => { map[s.setting_name] = s.setting_value; });
     setWa({
       enabled: map['whatsapp_enabled'] !== 'false',
       userNumber: (map['whatsapp_user_number'] || '').replace(/[^0-9]/g, ''),
@@ -347,7 +347,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onRefresh, 
 
       <IonContent className={`main-content ${noScroll ? 'main-content--no-scroll' : ''}`}>
         <IonRefresher slot="fixed" onIonRefresh={async (e) => {
-          try { if (onRefresh) await onRefresh(); } finally { (e.target as any).complete(); }
+          try { if (onRefresh) await onRefresh(); } finally { (e.target as HTMLIonRefresherElement)?.complete(); }
         }}>
           <IonRefresherContent />
         </IonRefresher>

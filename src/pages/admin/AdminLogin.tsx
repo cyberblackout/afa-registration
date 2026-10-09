@@ -70,10 +70,10 @@ const AdminLogin: React.FC = () => {
       try {
         const result = await db.isAdmin();
         adminCheck = result.data;
-      } catch (err: any) {
+      } catch (err) {
         console.error('Admin check error:', err);
         await supabase.auth.signOut();
-        setToast({ show: true, message: `Admin check failed: ${err.message}` });
+        setToast({ show: true, message: `Admin check failed: ${err instanceof Error ? err.message : String(err)}` });
         setLoading(false);
         return;
       }
@@ -98,8 +98,8 @@ const AdminLogin: React.FC = () => {
       // Pre-populate the isAdmin cache so ProtectedRoute renders instantly
       queryClient.setQueryData(['isAdmin', authData.user.id], true);
       history.push('/cyberin/dashboard');
-    } catch (err: any) {
-      setToast({ show: true, message: err.message || 'Login failed' });
+    } catch (err) {
+      setToast({ show: true, message: (err instanceof Error ? err.message : null) || 'Login failed' });
     } finally {
       setLoading(false);
     }

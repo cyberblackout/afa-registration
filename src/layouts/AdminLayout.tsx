@@ -76,7 +76,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
         const data = await adminConfigApi.getSystemSettings();
         if (!data) return;
         const map: Record<string, string> = {};
-        data.forEach((s: any) => { map[s.setting_name] = s.setting_value; });
+        data.forEach((s) => { map[s.setting_name] = s.setting_value; });
         const enabled = map['whatsapp_enabled'] !== 'false';
         const number = (map['whatsapp_user_number'] || '').replace(/[^0-9]/g, '');
         const message = map['whatsapp_user_message'] || 'Hello, I need help with my account.';
@@ -189,7 +189,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
 
       <IonContent ref={contentRef} scrollY={true} className="admin-main">
         <IonRefresher slot="fixed" onIonRefresh={async (e) => {
-          try { if (onRefresh) await onRefresh(); } finally { (e.target as any).complete(); }
+          try { if (onRefresh) await onRefresh(); } finally { (e.target as HTMLIonRefresherElement)?.complete(); }
         }}>
           <IonRefresherContent />
         </IonRefresher>

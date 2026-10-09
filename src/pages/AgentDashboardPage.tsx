@@ -35,7 +35,7 @@ const AgentDashboardPage: React.FC = () => {
 
   const { data: dashboard, isLoading, isError } = useQuery({
     queryKey: ['agent_dashboard', user?.id],
-    queryFn: () => agentApi.getDashboard() as any,
+    queryFn: () => agentApi.getDashboard(),
     enabled: !!user?.id,
     staleTime: 60000,
   });
@@ -53,7 +53,7 @@ const AgentDashboardPage: React.FC = () => {
   };
 
   const isLoadingAll = isLoading || profileLoading;
-  const balance = Number((profile as any)?.wallet_balance ?? user?.wallet_balance ?? 0);
+  const balance = Number(profile?.wallet_balance ?? user?.wallet_balance ?? 0);
   const displayName = profile?.full_name || user?.full_name || '';
   const firstName = displayName ? displayName.split(' ')[0] : '';
   const capitalizedName = firstName ? firstName.charAt(0).toUpperCase() + firstName.slice(1) : '';

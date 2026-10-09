@@ -120,8 +120,8 @@ export const profileApi = {
 // REGISTRATIONS
 // ============================================================
 export const registrationApi = {
-  create: (data: Record<string, unknown>): Promise<{ id: string; [k: string]: unknown }> =>
-    invoke<{ id: string }>('create-registration', data),
+  create: (data: Record<string, unknown>): Promise<{ id: string; fee_charged?: number; new_balance?: number | null }> =>
+    invoke<{ id: string; fee_charged?: number; new_balance?: number | null }>('create-registration', data),
 
   adminList: (status?: string, userId?: string): Promise<AdminRegistrationRow[]> => {
     const params = new URLSearchParams();

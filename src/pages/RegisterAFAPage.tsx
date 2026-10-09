@@ -46,7 +46,7 @@ const RegisterAFAPage: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [submissionData, setSubmissionData] = useState<any>(null);
+  const [submissionData, setSubmissionData] = useState<{ id: string; fee_charged?: number; new_balance?: number | null } | null>(null);
   const [toast, setToast] = useState({ show: false, message: '', color: '' as 'success' | 'danger' | '' });
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -157,8 +157,9 @@ const RegisterAFAPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['orders', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['walletBalance', user?.id] });
       queryClient.invalidateQueries({ queryKey: ['afa-pricing'] });
-    } catch (err: any) {
-      if (err?.code === 'PRICE_CHANGED') {
+    } catch (err) {
+      const e = err as { code?: string; message?: string } | null;
+      if (e?.code === 'PRICE_CHANGED') {
         // Never charge an amount the user has not seen: refresh the price and
         // ask them to confirm the new figure before resubmitting.
         setPriceChanged(true);
@@ -166,14 +167,14 @@ const RegisterAFAPage: React.FC = () => {
         await queryClient.invalidateQueries({ queryKey: ['walletBalance', user?.id] });
         setToast({
           show: true,
-          message: err.message || 'The registration fee has changed. Please review the new amount and confirm.',
+          message: e.message || 'The registration fee has changed. Please review the new amount and confirm.',
           color: 'danger',
         });
-      } else if (err?.code === 'INSUFFICIENT_BALANCE') {
+      } else if (e?.code === 'INSUFFICIENT_BALANCE') {
         await queryClient.invalidateQueries({ queryKey: ['walletBalance', user?.id] });
-        setToast({ show: true, message: err.message || 'Insufficient wallet balance. Please top up first.', color: 'danger' });
+        setToast({ show: true, message: e.message || 'Insufficient wallet balance. Please top up first.', color: 'danger' });
       } else {
-        setToast({ show: true, message: err.message || 'Submission failed. Please try again.', color: 'danger' });
+        setToast({ show: true, message: (e instanceof Error ? e.message : null) || 'Submission failed. Please try again.', color: 'danger' });
       }
     } finally {
       setLoading(false);

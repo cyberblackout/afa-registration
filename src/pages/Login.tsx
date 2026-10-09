@@ -96,9 +96,9 @@ const Login: React.FC = () => {
         }, role);
         history.push(role === 'agent' ? '/agent/dashboard' : '/dashboard');
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error('Login error:', error);
-      setToast({ show: true, message: error.message || 'Login failed' });
+      setToast({ show: true, message: (error instanceof Error ? error.message : null) || 'Login failed' });
     } finally {
       setLoading(false);
     }
@@ -122,8 +122,8 @@ const Login: React.FC = () => {
       if (error) throw error;
       setToast({ show: true, message: 'Password reset link sent to your email.' });
       setShowForgotModal(false);
-    } catch (err: any) {
-      setToast({ show: true, message: err.message || 'Failed to send reset link' });
+    } catch (err) {
+      setToast({ show: true, message: (err instanceof Error ? err.message : null) || 'Failed to send reset link' });
     } finally {
       setResetLoading(false);
     }
