@@ -7,6 +7,7 @@ import {
   getCorsHeaders,
 } from "../_shared/auth.ts";
 import { z, validateBody } from "../_shared/validation.ts";
+import { loadEmailConfig, sendViaResend } from "../_shared/email.ts";
 const actionSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("list"),
@@ -229,23 +230,12 @@ async function sendRegistrationStatusNotifications(
     message: inAppMessage,
     type: notifType,
   });
-  // 3. Email
+  // 3. Email — via the shared Resend helper (single source of truth)
   if (profile.email && prefs.email !== false) {
     const subject = buildEmailSubject(status);
     const html = buildEmailHtml(userName, regNumber, status, userMessage);
-    const { data: keyRow } = await admin
-      .from("system_settings")
-      .select("setting_value")
-      .eq("setting_name", "resend_api_key")
-      .single();
-    const { data: fromRow } = await admin
-      .from("system_settings")
-      .select("setting_value")
-      .eq("setting_name", "email_from")
-      .single();
-    const apiKey = keyRow?.setting_value;
-    const fromEmail = fromRow?.setting_value || "MTN AFA Portal <noreply@afa-portal.com>";
-    if (apiKey) {
+    const loaded = await loadEmailConfig(admin);
+    if (!loaded.error) {
       const { data: logEntry } = await admin
         .from("notifications_log")
         .insert({
@@ -259,50 +249,25 @@ async function sendRegistrationStatusNotifications(
         })
         .select("id")
         .single();
-      try {
-        const res = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: fromEmail,
-            to: [profile.email],
-            subject,
-            html,
-          }),
-        });
-        const data = await res.json();
-        if (!res.ok || !data.id) {
-          if (logEntry) {
-            await admin
-              .from("notifications_log")
-              .update({
-                status: "failed",
-                provider_response: data,
-                error_message: data.message || "Resend API error",
-              })
-              .eq("id", logEntry.id);
-          }
-        } else {
-          if (logEntry) {
-            await admin
-              .from("notifications_log")
-              .update({
-                status: "sent",
-                provider_message_id: data.id,
-                provider_response: data,
-                sent_at: new Date().toISOString(),
-              })
-              .eq("id", logEntry.id);
-          }
-        }
-      } catch (err) {
-        if (logEntry) {
+      const result = await sendViaResend(loaded.config, {
+        to: profile.email,
+        subject,
+        html,
+      });
+      if (logEntry) {
+        if (result.ok) {
           await admin
             .from("notifications_log")
-            .update({ status: "failed", error_message: String(err) })
+            .update({
+              status: "sent",
+              provider_message_id: result.id,
+              sent_at: new Date().toISOString(),
+            })
+            .eq("id", logEntry.id);
+        } else {
+          await admin
+            .from("notifications_log")
+            .update({ status: "failed", error_message: result.error || "send failed" })
             .eq("id", logEntry.id);
         }
       }

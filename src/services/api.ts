@@ -27,6 +27,8 @@ import type {
   AdminRegistrationRow,
   ReferralAdminAnalytics,
   ReferralRetryRewardResult,
+  SaveEmailConfigInput,
+  SendTestEmailResult,
 } from '../types';
 
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_URL
@@ -295,6 +297,12 @@ export const adminSettingsApi = {
   // AFA prices have their own action so there is exactly one write path per price.
   saveAfaPrices: (prices: { normal_price: number; agent_price: number }): Promise<ActionResult> =>
     invoke<ActionResult>('admin-settings', { action: 'save_afa_prices', ...prices }),
+
+  saveEmailConfig: (config: SaveEmailConfigInput): Promise<ActionResult> =>
+    invoke<ActionResult>('admin-settings', { action: 'save_email_config', ...config }),
+
+  sendTestEmail: (): Promise<SendTestEmailResult> =>
+    invoke<SendTestEmailResult>('admin-settings', { action: 'send_test_email' }),
 };
 
 // ============================================================
@@ -423,12 +431,6 @@ export const notificationApi = {
 
   sendPush: (userId: string | null, title: string, body: string, url?: string, type?: string): Promise<SendPushResult> =>
     invoke<SendPushResult>('send-push', { user_id: userId, title, body, url, type }),
-
-  // Delivery log
-  getDeliveryLog: (channel?: string): Promise<unknown[]> => {
-    const params = channel ? `?channel=${channel}` : '';
-    return invoke<unknown[]>(`send-email${params}`, undefined, 'GET');
-  },
 };
 
 // ============================================================

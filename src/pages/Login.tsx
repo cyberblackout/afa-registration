@@ -122,8 +122,9 @@ const Login: React.FC = () => {
       if (error) throw error;
       setToast({ show: true, message: 'Password reset link sent to your email.' });
       setShowForgotModal(false);
-    } catch (err) {
-      setToast({ show: true, message: (err instanceof Error ? err.message : null) || 'Failed to send reset link' });
+    } catch {
+      // Generic message — never expose internal errors (email enumeration, provider details).
+      setToast({ show: true, message: 'If an account exists for this email, a reset link has been sent.' });
     } finally {
       setResetLoading(false);
     }
