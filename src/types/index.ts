@@ -15,6 +15,12 @@ export interface Profile {
   agent_since?: string;
   agent_status?: 'active' | 'inactive' | 'suspended';
   agent_verified?: boolean;
+  notification_preferences?: {
+    email?: boolean;
+    sms?: boolean;
+    push?: boolean;
+    marketing?: boolean;
+  };
   created_at: string;
 }
 
@@ -186,4 +192,55 @@ export interface WhatsAppConfig {
   userMessage: string;
   agentMessage: string;
   enabled: boolean;
+}
+
+// ============================================================
+// API response shapes (derived from edge-function successResp payloads)
+// ============================================================
+
+/** Referral transactions returned by referrals edge fn
+ *  (select: id, amount, description, reference, created_at, status) */
+export interface ReferralTransaction {
+  id: string;
+  amount: number;
+  description: string | null;
+  reference: string | null;
+  created_at: string;
+  status: string;
+}
+
+/** Generic ok/err envelope returned by most action-style edge endpoints */
+export interface ActionResult {
+  message?: string;
+  [key: string]: unknown;
+}
+
+/** Audit log row returned by admin-audit list */
+export interface AuditLog {
+  id: string;
+  admin_id?: string | null;
+  action: string;
+  entity?: string | null;
+  entity_id?: string | null;
+  details?: Record<string, unknown> | null;
+  created_at: string;
+}
+
+/** Result of adminCustomerApi.deleteUser — may carry auth-ban warning */
+export interface DeleteUserResult extends ActionResult {
+  data?: {
+    auth_ban_status?: string;
+    [key: string]: unknown;
+  };
+}
+
+/** Result of notificationApi.sendPush — delivery counters */
+export interface SendPushResult extends ActionResult {
+  sent?: number;
+  skipped?: number;
+}
+
+/** Result of registrationApi.adminUpdateStatus — may carry a referral warning */
+export interface UpdateRegistrationStatusResult extends ActionResult {
+  referral_warning?: string;
 }
