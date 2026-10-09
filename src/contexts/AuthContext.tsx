@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../services/supabase';
 import { useAuthStore } from '../store/authStore';
+import type { User, UserRole } from '../types';
 
 const AUTH_INIT_TIMEOUT_MS = 12_000;
 const RPC_TIMEOUT_MS = 10_000;
@@ -16,7 +18,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 }
 
 interface AuthContextType {
-  user: any;
+  user: User | null;
   loading: boolean;
   error: string | null;
   signOut: () => Promise<void>;
@@ -37,7 +39,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       supabase.rpc('get_my_profile').then(r => ({ data: r.data, error: r.error })) as Promise<unknown>,
       RPC_TIMEOUT_MS,
       'get_my_profile',
-    ) as { data: any[] | null };
+    ) as { data: User[] | null };
     const profile = res.data?.[0] ?? null;
     return profile;
   }, []);
@@ -54,7 +56,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           supabase.auth.getSession(),
           AUTH_INIT_TIMEOUT_MS,
           'getSession',
-        ) as { data: { session: any } };
+        ) as { data: { session: Session | null } };
 
         if (cancelled) return;
         const { session } = sessionRes.data;
@@ -72,13 +74,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (cancelled) return;
             profileFetched.current = true;
             if (profile) {
-              setUser(profile as any, (profile.role ?? 'user') as 'user' | 'agent' | 'admin');
+              setUser(profile, (profile.role ?? 'user') as UserRole);
               setError(null);
             } else {
               setUser(null);
               setError('Profile not found. Please log in again.');
             }
-          } catch (_profileErr: any) {
+          } catch (_profileErr) {
             if (cancelled) return;
             profileFetched.current = true;
             setUser(null);
@@ -88,7 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           profileFetched.current = true;
           setUser(null);
         }
-      } catch (_initErr: any) {
+      } catch (_initErr) {
         if (cancelled) return;
         profileFetched.current = true;
         setLoading(false);
@@ -119,10 +121,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (cancelled) return;
             profileFetched.current = true;
             if (profile) {
-              setUser(profile as any, (profile.role ?? 'user') as 'user' | 'agent' | 'admin');
+              setUser(profile, (profile.role ?? 'user') as UserRole);
               setError(null);
             }
-          } catch (_err: any) {
+          } catch (_err) {
             if (cancelled) return;
             profileFetched.current = true;
           }
@@ -139,9 +141,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const profile = await fetchProfile();
             if (cancelled) return;
             if (profile) {
-              setUser(profile as any, (profile.role ?? 'user') as 'user' | 'agent' | 'admin');
+              setUser(profile, (profile.role ?? 'user') as UserRole);
             }
-          } catch (_err: any) {
+          } catch (_err) {
             // Token refresh profile fetch failed — non-critical
           }
         }
