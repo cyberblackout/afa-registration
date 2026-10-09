@@ -6,7 +6,9 @@ const getInitialDark = (): boolean => {
   try {
     const stored = localStorage.getItem(THEME_KEY);
     if (stored !== null) return stored === 'dark';
-  } catch {}
+  } catch {
+    // localStorage unavailable (private mode / blocked) — fall through to default light theme
+  }
   return false;
 };
 
@@ -17,7 +19,9 @@ const applyDark = (dark: boolean) => {
 const persist = (dark: boolean) => {
   try {
     localStorage.setItem(THEME_KEY, dark ? 'dark' : 'light');
-  } catch {}
+  } catch {
+    // localStorage write failed — theme just won't persist this session, non-critical
+  }
 };
 
 interface ThemeStore {

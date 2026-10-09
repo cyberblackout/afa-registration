@@ -89,7 +89,7 @@ const OrdersPage: React.FC = () => {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, [user?.id]);
+  }, [user?.id, queryClient]);
 
   const filteredOrders = useMemo(() => orders.filter((order) => {
     const query = searchTerm.toLowerCase();
