@@ -78,11 +78,18 @@ const sanitizeAmountInput = (raw: string): string => {
 /** Distance under which a numeric amount counts as an exact preset match. */
 const PRESET_MATCH_TOLERANCE = 0.005;
 
+// Paystack Inline injects a global PaystackPop on window.
+interface PaystackPopInstance {
+  setup: (opts: Record<string, unknown>) => { openIframe: () => void } | null | undefined;
+}
+type PaystackWindow = Window & { PaystackPop?: PaystackPopInstance };
+const getPaystackPop = (): PaystackPopInstance | undefined => (window as PaystackWindow).PaystackPop;
+
 let paystackScriptLoaded = false;
 const loadPaystackScript = (): Promise<void> => {
-  if (paystackScriptLoaded && (window as any).PaystackPop) return Promise.resolve();
+  if (paystackScriptLoaded && getPaystackPop()) return Promise.resolve();
   return new Promise((resolve, reject) => {
-    if ((window as any).PaystackPop) {
+    if (getPaystackPop()) {
       paystackScriptLoaded = true;
       resolve();
       return;
@@ -90,14 +97,14 @@ const loadPaystackScript = (): Promise<void> => {
     const existingScript = document.querySelector('script[src*="paystack"]');
     if (existingScript) {
       const checkReady = () => {
-        if ((window as any).PaystackPop) {
+        if (getPaystackPop()) {
           paystackScriptLoaded = true;
           resolve();
         }
       };
       existingScript.addEventListener('load', checkReady);
       const interval = setInterval(() => {
-        if ((window as any).PaystackPop) {
+        if (getPaystackPop()) {
           clearInterval(interval);
           paystackScriptLoaded = true;
           resolve();
@@ -111,7 +118,7 @@ const loadPaystackScript = (): Promise<void> => {
     script.async = true;
     script.onload = () => {
       const waitForPop = setInterval(() => {
-        if ((window as any).PaystackPop) {
+        if (getPaystackPop()) {
           clearInterval(waitForPop);
           paystackScriptLoaded = true;
           resolve();
@@ -326,7 +333,7 @@ const WalletPage: React.FC = () => {
       const { access_code, reference } = initResult;
       if (!access_code || !reference) throw new Error('Failed to initialize payment');
       await loadPaystackScript();
-      const PaystackPop = (window as any).PaystackPop;
+      const PaystackPop = getPaystackPop();
       if (!PaystackPop || typeof PaystackPop.setup !== 'function') {
         throw new Error('Payment system failed to initialize. Please refresh and try again.');
       }
