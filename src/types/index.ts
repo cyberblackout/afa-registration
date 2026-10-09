@@ -216,6 +216,25 @@ export interface AgentApplicationVerify {
   error?: string;
 }
 
+/** Nested profile on an admin payment row */
+export interface AdminPaymentProfile {
+  full_name?: string | null;
+  email?: string | null;
+}
+
+/** Payment row returned by adminPaymentApi.list() */
+export interface AdminPaymentRow {
+  id: string;
+  user_id?: string | null;
+  reference?: string | null;
+  amount?: number | string | null;
+  status?: string | null;
+  payment_method?: string | null;
+  description?: string | null;
+  created_at?: string | null;
+  profiles?: AdminPaymentProfile | null;
+}
+
 export interface AgentPricing {
   id: string;
   key: string;

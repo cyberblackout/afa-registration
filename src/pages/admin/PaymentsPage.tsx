@@ -23,6 +23,7 @@ import { adminPaymentApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate, formatGhanaDateTime } from '../../utils/date';
 import { safeNumber } from '../../utils/number';
+import type { AdminPaymentRow } from '../../types';
 import './PaymentsPage.css';
 
 const PaymentsPage: React.FC = () => {
@@ -31,7 +32,7 @@ const PaymentsPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [methodFilter, setMethodFilter] = useState('All');
-  const [selectedPayment, setSelectedPayment] = useState<any>(null);
+  const [selectedPayment, setSelectedPayment] = useState<AdminPaymentRow | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
@@ -39,15 +40,15 @@ const PaymentsPage: React.FC = () => {
 
   const { data: payments = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_payments'],
-    queryFn: () => adminPaymentApi.list() as any,
+    queryFn: () => adminPaymentApi.list(),
   });
 
-  const totalCollected = payments.filter((p: any) => p.status === 'completed').reduce((s: number, p: any) => s + safeNumber(p.amount), 0);
-  const pendingTotal = payments.filter((p: any) => p.status === 'pending').reduce((s: number, p: any) => s + safeNumber(p.amount), 0);
-  const failedTotal = payments.filter((p: any) => p.status === 'failed').reduce((s: number, p: any) => s + safeNumber(p.amount), 0);
+  const totalCollected = payments.filter((p) => p.status === 'completed').reduce((s, p) => s + safeNumber(p.amount), 0);
+  const pendingTotal = payments.filter((p) => p.status === 'pending').reduce((s, p) => s + safeNumber(p.amount), 0);
+  const failedTotal = payments.filter((p) => p.status === 'failed').reduce((s, p) => s + safeNumber(p.amount), 0);
   const completedTotal = totalCollected;
 
-  const filtered = payments.filter((p: any) => {
+  const filtered = payments.filter((p) => {
     const ref = p.reference || p.id || '';
     const name = p.profiles?.full_name || '';
     const matchSearch = ref.toLowerCase().includes(search.toLowerCase()) || name.toLowerCase().includes(search.toLowerCase());
@@ -56,7 +57,7 @@ const PaymentsPage: React.FC = () => {
     return matchSearch && matchStatus && matchMethod;
   });
 
-  const openDetail = (p: any) => {
+  const openDetail = (p: AdminPaymentRow) => {
     setSelectedPayment(p);
     setShowModal(true);
   };
@@ -67,16 +68,16 @@ const PaymentsPage: React.FC = () => {
     try {
       await adminPaymentApi.refund(
         selectedPayment.id,
-        selectedPayment.amount,
+        safeNumber(selectedPayment.amount),
         `Refund for ${selectedPayment.description}`,
-        selectedPayment.user_id
+        selectedPayment.user_id || ''
       );
       queryClient.invalidateQueries({ queryKey: ['admin_payments'] });
       setShowModal(false);
       setToastMessage(`Refund processed for ${selectedPayment.reference || selectedPayment.id}`);
       setShowToast(true);
-    } catch (err: any) {
-      setToastMessage(err.message || 'Refund failed');
+    } catch (err) {
+      setToastMessage(err instanceof Error ? err.message : 'Refund failed');
       setShowToast(true);
     } finally {
       setRefunding(false);
@@ -183,19 +184,19 @@ const PaymentsPage: React.FC = () => {
               </motion.div>
             ) : (
               <motion.div className="payments-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                {filtered.map((payment: any, index: number) => (
+                {filtered.map((payment, index) => (
                   <motion.div key={payment.id} className="payment-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.03 }}>
                     <div className="payment-card-row">
                       <span className="payment-ref">{payment.reference || payment.id?.slice(0, 8)}</span>
-                      <span className={`payment-status-badge ${(payment.status || 'pending').toLowerCase()}`}>{statusLabel(payment.status)}</span>
+                      <span className={`payment-status-badge ${(payment.status || 'pending').toLowerCase()}`}>{statusLabel(payment.status || '')}</span>
                     </div>
                     <div className="payment-card-row">
                       <span className="payment-customer">{payment.profiles?.full_name || 'Unknown'}</span>
-                      <span className="payment-amount">{formatAmount(payment.amount || 0)}</span>
+                      <span className="payment-amount">{formatAmount(safeNumber(payment.amount || 0))}</span>
                     </div>
                     <div className="payment-card-row">
                       <span className="payment-method">{payment.payment_method || 'N/A'}</span>
-                      <span className="payment-date">{formatGhanaDate(payment.created_at)}</span>
+                      <span className="payment-date">{formatGhanaDate(payment.created_at || '')}</span>
                     </div>
                     <div className="payment-card-row">
                       <button className="view-payment-btn" onClick={() => openDetail(payment)}>
@@ -207,11 +208,11 @@ const PaymentsPage: React.FC = () => {
                     <div className="payment-table-row" onClick={() => openDetail(payment)}>
                       <span className="ptd ptd-ref">{payment.reference || payment.id?.slice(0, 8)}</span>
                       <span className="ptd ptd-customer">{payment.profiles?.full_name || 'Unknown'}</span>
-                      <span className="ptd ptd-amount">{formatAmount(payment.amount || 0)}</span>
+                      <span className="ptd ptd-amount">{formatAmount(safeNumber(payment.amount || 0))}</span>
                       <span className="ptd ptd-method">{payment.payment_method || 'N/A'}</span>
-                      <span className="ptd ptd-date">{formatGhanaDate(payment.created_at)}</span>
+                      <span className="ptd ptd-date">{formatGhanaDate(payment.created_at || '')}</span>
                       <span className="ptd ptd-status">
-                        <span className={`payment-status-badge ${(payment.status || 'pending').toLowerCase()}`}>{statusLabel(payment.status)}</span>
+                        <span className={`payment-status-badge ${(payment.status || 'pending').toLowerCase()}`}>{statusLabel(payment.status || '')}</span>
                       </span>
                       <span className="ptd ptd-action">
                         <button className="view-btn-icon" onClick={(e) => { e.stopPropagation(); openDetail(payment); }}>
@@ -248,15 +249,15 @@ const PaymentsPage: React.FC = () => {
                   </div>
                   <div className="detail-item">
                     <span className="detail-label">Amount</span>
-                    <span className="detail-value amount-value">{formatAmount(selectedPayment.amount || 0)}</span>
+                    <span className="detail-value amount-value">{formatAmount(safeNumber(selectedPayment.amount || 0))}</span>
                   </div>
                   <div className="detail-item">
                     <span className="detail-label">Status</span>
-                    <span className={`payment-status-badge ${(selectedPayment.status || 'pending').toLowerCase()}`}>{statusLabel(selectedPayment.status)}</span>
+                    <span className={`payment-status-badge ${(selectedPayment.status || 'pending').toLowerCase()}`}>{statusLabel(selectedPayment.status || '')}</span>
                   </div>
                   <div className="detail-item">
                     <span className="detail-label">Date</span>
-                    <span className="detail-value">{formatGhanaDateTime(selectedPayment.created_at)}</span>
+                    <span className="detail-value">{formatGhanaDateTime(selectedPayment.created_at || '')}</span>
                   </div>
                   <div className="detail-item">
                     <span className="detail-label">Payment Method</span>

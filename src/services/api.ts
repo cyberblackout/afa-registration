@@ -23,6 +23,7 @@ import type {
   AdminWalletUser,
   AgentApplicationInit,
   AgentApplicationVerify,
+  AdminPaymentRow,
 } from '../types';
 
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_URL
@@ -408,8 +409,8 @@ export const notificationApi = {
 // ADMIN PAYMENTS
 // ============================================================
 export const adminPaymentApi = {
-  list: (): Promise<unknown[]> =>
-    invoke<unknown[]>('admin-payments', { action: 'list' }),
+  list: (): Promise<AdminPaymentRow[]> =>
+    invoke<AdminPaymentRow[]>('admin-payments', { action: 'list' }),
 
   refund: (id: string, amount: number, description: string, userId: string): Promise<ActionResult> =>
     invoke<ActionResult>('admin-payments', { action: 'refund', id, amount, description, user_id: userId }),
