@@ -235,6 +235,50 @@ export interface AdminPaymentRow {
   profiles?: AdminPaymentProfile | null;
 }
 
+/** Nested profile on an admin registration row */
+export interface AdminRegistrationProfile {
+  full_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  role?: string | null;
+}
+
+/** Document entry on an admin registration row */
+export interface AdminRegistrationDocument {
+  type?: string | null;
+  status?: string | null;
+}
+
+/** Timeline entry on an admin registration row */
+export interface AdminRegistrationTimelineEntry {
+  status?: string | null;
+  note?: string | null;
+  created_at?: string | null;
+  date?: string | null;
+}
+
+/** Registration row returned by registrationApi.adminList() */
+export interface AdminRegistrationRow {
+  id: string;
+  reg_number?: string | null;
+  full_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  date_of_birth?: string | null;
+  ghana_card_id?: string | null;
+  occupation?: string | null;
+  network?: string | null;
+  sim_number?: string | null;
+  status?: string | null;
+  admin_notes?: string | null;
+  user_message?: string | null;
+  created_at?: string | null;
+  profiles?: AdminRegistrationProfile | null;
+  registration_documents?: AdminRegistrationDocument[];
+  registration_timeline?: AdminRegistrationTimelineEntry[];
+}
+
 export interface AgentPricing {
   id: string;
   key: string;

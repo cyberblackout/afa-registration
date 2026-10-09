@@ -24,6 +24,7 @@ import type {
   AgentApplicationInit,
   AgentApplicationVerify,
   AdminPaymentRow,
+  AdminRegistrationRow,
 } from '../types';
 
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_URL
@@ -120,12 +121,12 @@ export const registrationApi = {
   create: (data: Record<string, unknown>): Promise<{ id: string; [k: string]: unknown }> =>
     invoke<{ id: string }>('create-registration', data),
 
-  adminList: (status?: string, userId?: string): Promise<unknown[]> => {
+  adminList: (status?: string, userId?: string): Promise<AdminRegistrationRow[]> => {
     const params = new URLSearchParams();
     if (status) params.set('status', status);
     if (userId) params.set('user_id', userId);
     const qs = params.toString();
-    return invoke<unknown[]>(`admin-registrations${qs ? '?' + qs : ''}`, undefined, 'GET');
+    return invoke<AdminRegistrationRow[]>(`admin-registrations${qs ? '?' + qs : ''}`, undefined, 'GET');
   },
 
   adminUpdateStatus: (id: string, status: string, adminNotes?: string, userMessage?: string): Promise<UpdateRegistrationStatusResult> =>

@@ -23,6 +23,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../services/supabase';
 import { registrationApi } from '../../services/api';
+import type { AdminRegistrationRow } from '../../types';
 import { useAuthStore } from '../../store/authStore';
 import AdminLayout from '../../layouts/AdminLayout';
 import {
@@ -71,7 +72,7 @@ const RegistrationsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [dateFilter, setDateFilter] = useState<string>('All');
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedReg, setSelectedReg] = useState<any>(null);
+  const [selectedReg, setSelectedReg] = useState<AdminRegistrationRow | null>(null);
   const [bulkSelected, setBulkSelected] = useState<Set<string>>(new Set());
   const [adminNotes, setAdminNotes] = useState('');
   const [userMessage, setUserMessage] = useState('');
@@ -82,7 +83,7 @@ const RegistrationsPage: React.FC = () => {
 
   const { data: registrations = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_registrations'],
-    queryFn: () => registrationApi.adminList() as any,
+    queryFn: () => registrationApi.adminList(),
   });
 
   useEffect(() => {
@@ -92,9 +93,9 @@ const RegistrationsPage: React.FC = () => {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [queryClient]);
 
-  const filteredRegs = registrations.filter((reg: any) => {
+  const filteredRegs = registrations.filter((reg) => {
     const name = reg.full_name || '';
     const phone = reg.phone || '';
     const id = reg.id || '';
@@ -106,16 +107,16 @@ const RegistrationsPage: React.FC = () => {
     let matchesDate = true;
     if (dateFilter === 'Today') {
       const todayStr = new Date().toISOString().split('T')[0];
-      matchesDate = reg.created_at?.startsWith(todayStr);
+      matchesDate = reg.created_at?.startsWith(todayStr) ?? false;
     } else if (dateFilter === 'This Week') {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
-      matchesDate = new Date(reg.created_at) >= weekAgo;
+      matchesDate = new Date(reg.created_at || 0) >= weekAgo;
     } else if (dateFilter === 'This Month') {
       const monthStart = new Date();
       monthStart.setDate(1);
       monthStart.setHours(0, 0, 0, 0);
-      matchesDate = new Date(reg.created_at) >= monthStart;
+      matchesDate = new Date(reg.created_at || 0) >= monthStart;
     }
     return matchesSearch && matchesStatus && matchesDate;
   });
@@ -137,17 +138,17 @@ const RegistrationsPage: React.FC = () => {
       setToastColor(warning ? 'danger' : 'success');
       setToastMessage(warning || `Registration ${status}`);
       setShowToast(true);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Status update error:', err);
       setToastColor('danger');
-      setToastMessage(err.message || 'Failed to update status');
+      setToastMessage(err instanceof Error ? err.message : 'Failed to update status');
       setShowToast(true);
     } finally {
       setStatusLoading(false);
     }
   };
 
-  const openDetail = (reg: any) => {
+  const openDetail = (reg: AdminRegistrationRow) => {
     setSelectedReg(reg);
     setAdminNotes(reg.admin_notes || '');
     setUserMessage(reg.user_message || '');
@@ -170,7 +171,7 @@ const RegistrationsPage: React.FC = () => {
     if (bulkSelected.size === paginatedRegs.length) {
       setBulkSelected(new Set());
     } else {
-      setBulkSelected(new Set(paginatedRegs.map((r: any) => r.id)));
+      setBulkSelected(new Set(paginatedRegs.map((r) => r.id)));
     }
   };
 
@@ -194,9 +195,9 @@ const RegistrationsPage: React.FC = () => {
       setToastMessage('Selected registrations updated');
       setShowToast(true);
     },
-    onError: (err: any) => {
+    onError: (err) => {
       setToastColor('danger');
-      setToastMessage(err.message || 'Bulk update failed');
+      setToastMessage(err instanceof Error ? err.message : 'Bulk update failed');
       setShowToast(true);
     },
   });
@@ -236,8 +237,8 @@ const RegistrationsPage: React.FC = () => {
             </div>
             <button className="export-btn" onClick={() => {
               const headers = 'Reg Number,Customer Name,Phone,Email,Network,SIM Number,Status,Date\n';
-              const rows = filteredRegs.map((r: any) =>
-                `${r.reg_number || r.id?.slice(0, 6)},"${r.full_name || ''}","${r.phone || ''}","${r.email || ''}",${r.network || ''},${r.sim_number || ''},${r.status || ''},${formatGhanaDate(r.created_at)}`
+              const rows = filteredRegs.map((r) =>
+                `${r.reg_number || r.id?.slice(0, 6)},"${r.full_name || ''}","${r.phone || ''}","${r.email || ''}",${r.network || ''},${r.sim_number || ''},${r.status || ''},${formatGhanaDate(r.created_at || '')}`
               ).join('\n');
               const blob = new Blob([headers + rows], { type: 'text/csv' });
               const url = URL.createObjectURL(blob);
@@ -338,7 +339,7 @@ const RegistrationsPage: React.FC = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              {paginatedRegs.map((reg: any, index: number) => (
+              {paginatedRegs.map((reg, index) => (
                 <motion.div
                   key={reg.id}
                   className="reg-card"
@@ -355,7 +356,7 @@ const RegistrationsPage: React.FC = () => {
                       <span className="field-value id-value">{reg.reg_number || reg.id?.slice(0, 6)}</span>
                     </div>
                     <div className="reg-card-field status-field">
-                      <span className="status-badge" style={{ background: statusBgColors[reg.status], color: statusColors[reg.status] }}>
+                      <span className="status-badge" style={{ background: statusBgColors[reg.status || ''], color: statusColors[reg.status || ''] }}>
                         {reg.status}
                       </span>
                     </div>
@@ -373,13 +374,13 @@ const RegistrationsPage: React.FC = () => {
                   <div className="reg-card-row">
                     <div className="reg-card-field">
                       <span className="field-label">Network</span>
-                      <span className="network-badge" style={{ background: networkBgColors[reg.network] || '#f5f5f5', color: networkColors[reg.network] || '#333' }}>
+                      <span className="network-badge" style={{ background: networkBgColors[reg.network || ''] || '#f5f5f5', color: networkColors[reg.network || ''] || '#333' }}>
                         {reg.network || 'N/A'}
                       </span>
                     </div>
                     <div className="reg-card-field">
                       <span className="field-label">Date</span>
-                      <span className="field-value">{formatDate(reg.created_at)}</span>
+                      <span className="field-value">{formatDate(reg.created_at || '')}</span>
                     </div>
                   </div>
                   <div className="reg-card-row">
@@ -399,13 +400,13 @@ const RegistrationsPage: React.FC = () => {
                     <span className="td td-customer">{reg.full_name || 'Unknown'}</span>
                     <span className="td td-phone">{reg.phone || ''}</span>
                     <span className="td td-network">
-                      <span className="network-badge" style={{ background: networkBgColors[reg.network] || '#f5f5f5', color: networkColors[reg.network] || '#333' }}>
+                      <span className="network-badge" style={{ background: networkBgColors[reg.network || ''] || '#f5f5f5', color: networkColors[reg.network || ''] || '#333' }}>
                         {reg.network || 'N/A'}
                       </span>
                     </span>
-                    <span className="td td-date">{formatDate(reg.created_at)}</span>
+                      <span className="td td-date">{formatDate(reg.created_at || '')}</span>
                     <span className="td td-status">
-                      <span className="status-badge" style={{ background: statusBgColors[reg.status], color: statusColors[reg.status] }}>
+                      <span className="status-badge" style={{ background: statusBgColors[reg.status || ''], color: statusColors[reg.status || ''] }}>
                         {reg.status}
                       </span>
                     </span>
@@ -513,13 +514,13 @@ const RegistrationsPage: React.FC = () => {
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Status</span>
-                      <span className="status-badge" style={{ background: statusBgColors[selectedReg.status], color: statusColors[selectedReg.status] }}>
+                      <span className="status-badge" style={{ background: statusBgColors[selectedReg.status || ''], color: statusColors[selectedReg.status || ''] }}>
                         {selectedReg.status}
                       </span>
                     </div>
                     <div className="detail-item">
                       <span className="detail-label">Time</span>
-                      <span className="detail-value">{formatDateTime(selectedReg.created_at)}</span>
+                      <span className="detail-value">{formatDateTime(selectedReg.created_at || '')}</span>
                     </div>
                   </div>
                 </div>
@@ -599,7 +600,7 @@ const RegistrationsPage: React.FC = () => {
                     <p className="no-docs">No documents uploaded</p>
                   ) : (
                     <div className="docs-list">
-                      {selectedReg.registration_documents.map((doc: any, i: number) => (
+                      {selectedReg.registration_documents.map((doc, i) => (
                         <div className="doc-item" key={i}>
                           <div className="doc-info">
                             <IonIcon icon={documentTextOutline} className="doc-icon" />
@@ -633,13 +634,13 @@ const RegistrationsPage: React.FC = () => {
                     <p className="no-docs">No timeline entries</p>
                   ) : (
                     <div className="timeline">
-                      {selectedReg.registration_timeline.map((entry: any, i: number) => (
+                      {selectedReg.registration_timeline.map((entry, i) => (
                         <div className="timeline-item" key={i}>
-                          <div className="timeline-dot" style={{ background: statusColors[entry.status] || '#FFCB05' }} />
+                          <div className="timeline-dot" style={{ background: statusColors[entry.status || ''] || '#FFCB05' }} />
                           <div className="timeline-content">
                             <div className="timeline-header">
                               <span className="timeline-status">{entry.status}</span>
-                              <span className="timeline-date">{formatGhanaDateTime(entry.created_at || entry.date)}</span>
+                              <span className="timeline-date">{formatGhanaDateTime(entry.created_at || entry.date || '')}</span>
                             </div>
                             <p className="timeline-note">{entry.note}</p>
                           </div>
@@ -708,7 +709,7 @@ const RegistrationsPage: React.FC = () => {
                                 `Email: ${selectedReg.email || ''}`,
                                 `Network: ${selectedReg.network || 'N/A'}`,
                                 `Status: ${selectedReg.status}`,
-                                `Date: ${formatDate(selectedReg.created_at)}`,
+                                `Date: ${formatDate(selectedReg.created_at || '')}`,
                               ].join('\n');
                               const blob = new Blob([content], { type: 'text/plain' });
                               const url = URL.createObjectURL(blob);
