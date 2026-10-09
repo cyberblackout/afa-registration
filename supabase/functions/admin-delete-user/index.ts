@@ -7,35 +7,27 @@ import {
   getCorsHeaders,
 } from "../_shared/auth.ts";
 import { z, validateBody } from "../_shared/validation.ts";
-
 const actionSchema = z.object({
   target_user_id: z.string().uuid("Invalid user ID"),
   reason: z.string().max(500, "Reason too long").optional(),
 });
-
 const DELETE_RATE_LIMIT = 5;
 const DELETE_RATE_WINDOW = 600;
-
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: getCorsHeaders(origin) });
   }
-
   if (req.method !== "POST") {
     return errorResp("Method not allowed", 405, origin);
   }
-
   const auth = await verifyAuth(req, ["admin"]);
   if (auth.error) return auth.error;
-
   const body = await req.json();
   const validation = validateBody(body, actionSchema);
   if (validation.error) return errorResp(validation.error, 400, origin);
-
   const { target_user_id, reason } = validation.data!;
   const admin = getSupabaseAdmin();
-
   // Rate limit: max N deletions per admin per window
   const { data: allowed } = await admin.rpc("check_rate_limit", {
     p_key: `delete_user:${auth.user.id}`,
@@ -43,18 +35,15 @@ Deno.serve(async (req) => {
     p_max_attempts: DELETE_RATE_LIMIT,
     p_window_seconds: DELETE_RATE_WINDOW,
   });
-
   if (allowed === false) {
     return errorResp("Rate limit exceeded. Try again later.", 429, origin);
   }
-
   // Step 1: Database soft-delete via RPC
   const { data, error } = await admin.rpc("admin_soft_delete_user", {
     p_caller_id: auth.user.id,
     p_target_user_id: target_user_id,
     p_reason: reason || null,
   });
-
   if (error) {
     const message = error.message || "Failed to delete user";
     if (
@@ -69,11 +58,9 @@ Deno.serve(async (req) => {
     }
     return errorResp("Failed to delete user: " + message, 500, origin);
   }
-
   if (data && !data.success) {
     return errorResp(data.message || "Delete failed", 400, origin);
   }
-
   // Step 2: Auth ban (after DB soft-delete succeeds)
   let authBanFailed = false;
   let authBanError = "";
@@ -89,7 +76,6 @@ Deno.serve(async (req) => {
     authBanFailed = true;
     authBanError = e.message || "Ban request failed";
   }
-
   if (authBanFailed) {
     return successResp(
       {
@@ -104,6 +90,5 @@ Deno.serve(async (req) => {
       origin,
     );
   }
-
   return successResp(data, origin);
 });

@@ -13,7 +13,6 @@ import {
   personOutline,
   giftOutline,
   notificationsOutline,
-  ribbonOutline,
   peopleOutline,
   cashOutline,
   chevronForward,

@@ -1,45 +1,34 @@
 import "https://deno.land/std@0.177.0/dotenv/load.ts";
 import {
   verifyAuth,
-  getSupabaseAdmin,
-  jsonResp,
-  errorResp,
+  getSupabaseAdmin, errorResp,
   successResp,
   getCorsHeaders,
 } from "../_shared/auth.ts";
 import { z, validateBody } from "../_shared/validation.ts";
-
 const actionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("get_stats") }),
   z.object({ action: z.literal("get_daily_chart") }),
 ]);
-
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: getCorsHeaders(origin) });
   }
-
   const auth = await verifyAuth(req, ["admin"]);
   if (auth.error) return auth.error;
-
   const admin = getSupabaseAdmin();
-
   // GET defaults to get_stats
   if (req.method === "GET") {
     return getStats(admin, origin);
   }
-
   if (req.method !== "POST") {
     return errorResp("Method not allowed", 405, origin);
   }
-
   const body = await req.json();
   const validation = validateBody(body, actionSchema);
   if (validation.error) return errorResp(validation.error, 400, origin);
-
   const data = validation.data!;
-
   switch (data.action) {
     case "get_stats":
       return getStats(admin, origin);
@@ -49,7 +38,6 @@ Deno.serve(async (req) => {
       return errorResp("Invalid action", 400, origin);
   }
 });
-
 async function getStats(admin: any, origin: string | null) {
   const [
     totalUsersRes,
@@ -102,7 +90,6 @@ async function getStats(admin: any, origin: string | null) {
       .select("id", { count: "exact", head: true })
       .eq("status", "processing"),
   ]);
-
   const revenue = (revenueRes.data || []).reduce(
     (sum: number, t: any) => sum + (Number(t.amount) || 0),
     0
@@ -111,7 +98,6 @@ async function getStats(admin: any, origin: string | null) {
     (sum: number, p: any) => sum + (Number(p.wallet_balance) || 0),
     0
   );
-
   return successResp(
     {
       total_users: totalUsersRes.count || 0,
@@ -129,7 +115,6 @@ async function getStats(admin: any, origin: string | null) {
     origin
   );
 }
-
 async function getDailyChart(admin: any, origin: string | null) {
   const now = new Date();
   const days = [];
@@ -141,7 +126,6 @@ async function getDailyChart(admin: any, origin: string | null) {
     const dayEnd = new Date(d);
     dayEnd.setHours(23, 59, 59, 999);
     const dayLabel = d.toLocaleDateString("en-US", { weekday: "short" });
-
     const [revRes, regsRes] = await Promise.all([
       admin
         .from("wallet_transactions")
@@ -155,7 +139,6 @@ async function getDailyChart(admin: any, origin: string | null) {
         .gte("created_at", dayStart.toISOString())
         .lte("created_at", dayEnd.toISOString()),
     ]);
-
     days.push({
       day: dayLabel,
       revenue: (revRes.data || []).reduce((s: number, t: any) => s + (t.amount || 0), 0),

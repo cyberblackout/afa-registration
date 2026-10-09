@@ -1,17 +1,13 @@
 import { verifyAuth, getSupabaseAdmin, errorResp, successResp, getCorsHeaders } from "../_shared/auth.ts";
-
 const PAYSTACK_SECRET = Deno.env.get("PAYSTACK_SECRET_KEY") ?? "";
 const PAYSTACK_BASE = "https://api.paystack.co";
-
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: getCorsHeaders(origin) });
   }
-
   const auth = await verifyAuth(req, ["user"]);
   if (auth.error) return auth.error;
-
   // Support both GET (query params) and POST (body)
   let reference: string | null = null;
   if (req.method === "GET") {
@@ -27,13 +23,10 @@ Deno.serve(async (req) => {
   } else {
     return errorResp("Method not allowed", 405, origin);
   }
-
   if (!reference) {
     return errorResp("Reference is required", 400, origin);
   }
-
   const admin = getSupabaseAdmin();
-
   // Look up the application by payment_reference
   const { data: app, error: appError } = await admin
     .from("agent_applications")
@@ -41,11 +34,9 @@ Deno.serve(async (req) => {
     .eq("payment_reference", reference)
     .eq("user_id", auth.user!.id)
     .single();
-
   if (appError || !app) {
     return errorResp("Application not found", 404, origin);
   }
-
   // If already paid, return current status
   if (app.payment_status === "paid") {
     // If already approved, include agent_id
@@ -76,7 +67,6 @@ Deno.serve(async (req) => {
       origin
     );
   }
-
   // If already approved, return current status
   if (app.status === "approved") {
     return successResp(
@@ -89,7 +79,6 @@ Deno.serve(async (req) => {
       origin
     );
   }
-
   // Still pending — verify with Paystack if secret key is available
   if (PAYSTACK_SECRET) {
     try {
@@ -100,9 +89,7 @@ Deno.serve(async (req) => {
           "Content-Type": "application/json",
         },
       });
-
       const verifyData = await verifyRes.json();
-
       if (verifyData.status && verifyData.data?.status === "success") {
         // Payment confirmed — mark as paid, pending admin review
         const { error: updateError } = await admin
@@ -113,11 +100,9 @@ Deno.serve(async (req) => {
             updated_at: new Date().toISOString(),
           })
           .eq("id", app.id);
-
         if (updateError) {
           console.error("verify-agent-application update error:", updateError);
         }
-
         return successResp(
           {
             payment_status: "paid",
@@ -129,7 +114,6 @@ Deno.serve(async (req) => {
           origin
         );
       }
-
       if (verifyData.status && verifyData.data?.status === "failed") {
         await admin
           .from("agent_applications")
@@ -139,7 +123,6 @@ Deno.serve(async (req) => {
             updated_at: new Date().toISOString(),
           })
           .eq("id", app.id);
-
         return successResp(
           {
             payment_status: "failed",
@@ -154,7 +137,6 @@ Deno.serve(async (req) => {
       // Fall through to return pending status
     }
   }
-
   // Still pending
   return successResp(
     {

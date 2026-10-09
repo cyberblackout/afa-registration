@@ -1,14 +1,11 @@
 import "https://deno.land/std@0.177.0/dotenv/load.ts";
 import {
   verifyAuth,
-  getSupabaseAdmin,
-  jsonResp,
-  errorResp,
+  getSupabaseAdmin, errorResp,
   successResp,
   getCorsHeaders,
 } from "../_shared/auth.ts";
 import { z, validateBody } from "../_shared/validation.ts";
-
 const actionSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("get_profile"),
@@ -38,16 +35,13 @@ const actionSchema = z.discriminatedUnion("action", [
     action: z.literal("get_my_referral_transactions"),
   }),
 ]);
-
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: getCorsHeaders(origin) });
   }
-
   const auth = await verifyAuth(req, ["user", "agent", "admin"]);
   if (auth.error) return auth.error;
-
   if (req.method === "GET") {
     // Default: get profile with referral code
     const admin = getSupabaseAdmin();
@@ -57,7 +51,6 @@ Deno.serve(async (req) => {
       .eq("id", auth.user!.id)
       .single();
     if (error) return errorResp("Profile not found", 404, origin);
-
     // Auto-generate referral code if missing. Same budget as the explicit
     // generate_code action (B12) so this path cannot be used to mint codes
     // without limit either; when the budget is spent we just return the
@@ -81,18 +74,14 @@ Deno.serve(async (req) => {
     }
     return successResp(data, origin);
   }
-
   if (req.method !== "POST") {
     return errorResp("Method not allowed", 405, origin);
   }
-
   const body = await req.json();
   const validation = validateBody(body, actionSchema);
   if (validation.error) return errorResp(validation.error, 400, origin);
-
   const admin = getSupabaseAdmin();
   const data = validation.data!;
-
   // Rate limit referral mutations per user id (never per IP: shared/mobile
   // networks would otherwise punish unrelated users).
   const limit = async (
@@ -111,7 +100,6 @@ Deno.serve(async (req) => {
     }
     return null;
   };
-
   switch (data.action) {
     case "get_stats": {
       const { data: stats, error } = await admin.rpc("get_referral_stats", {
@@ -120,7 +108,6 @@ Deno.serve(async (req) => {
       if (error) return errorResp("Failed to get stats", 500, origin);
       return successResp(stats, origin);
     }
-
     case "get_my_referrals": {
       const { data: referrals, error } = await admin.rpc("get_my_referrals_masked", {
         p_caller_id: auth.user!.id,
@@ -128,7 +115,6 @@ Deno.serve(async (req) => {
       if (error) return errorResp("Failed to fetch referrals", 500, origin);
       return successResp(referrals || [], origin);
     }
-
     case "get_my_rewards": {
       const { data: rewards, error } = await admin
         .from("referral_rewards")
@@ -138,7 +124,6 @@ Deno.serve(async (req) => {
       if (error) return errorResp("Failed to fetch rewards", 500, origin);
       return successResp(rewards, origin);
     }
-
     case "generate_code": {
       const limited = await limit("generate_code", 3, 3600);
       if (limited) return limited;
@@ -148,7 +133,6 @@ Deno.serve(async (req) => {
       if (error) return errorResp("Failed to generate code", 500, origin);
       return successResp(code, origin);
     }
-
     case "validate_code": {
       const limited = await limit("validate_code", 20, 60);
       if (limited) return limited;
@@ -159,7 +143,6 @@ Deno.serve(async (req) => {
       if (error) return errorResp("Failed to validate code", 500, origin);
       return successResp(result, origin);
     }
-
     case "create_referral": {
       const limited = await limit("create_referral", 5, 300);
       if (limited) return limited;
@@ -171,7 +154,6 @@ Deno.serve(async (req) => {
       if (error) return errorResp("Failed to create referral", 500, origin);
       return successResp(result, origin);
     }
-
     case "get_my_referral_transactions": {
       const { data: txns, error } = await admin
         .from("wallet_transactions")
@@ -182,7 +164,6 @@ Deno.serve(async (req) => {
       if (error) return errorResp("Failed to fetch transactions", 500, origin);
       return successResp(txns || [], origin);
     }
-
     default:
       return errorResp("Invalid action", 400, origin);
   }

@@ -1,8 +1,18 @@
-# RETIRED — Netlify is no longer the production target.
-# Canonical deployment is GitHub Pages (.github/workflows/deploy.yml), which cannot
-# read this file: its SPA fallback lives in public/404.html and its CSP in index.html.
-# This file is kept only so https://afa-register.netlify.app (fallback mirror) can
-# still be rebuilt with the same security headers. Delete it together with the mirror.
+# Netlify = production pipeline for the CUSTOM DOMAIN.
+#   NS1 DNS: afaregister.com / www.afaregister.com → 35.157.26.135 /
+#   63.176.8.218 (Netlify), apex 301 → www → 200. Verified live.
+# GitHub Pages = mirror at cyberblackout.github.io, deployed by
+#   .github/workflows/deploy.yml. Two independent pipelines are live;
+#   both run `npm run build` so the mirrors stay identical.
+# Division of labour:
+#   - This file supplies the SPA fallback (/* → /index.html) AND the
+#     security headers GitHub Pages cannot set (X-Frame-Options,
+#     X-Content-Type-Options, Referrer-Policy, Permissions-Policy,
+#     HSTS, full CSP). The GH Pages mirror carries only the meta CSP
+#     in index.html plus GitHub's HSTS — that header gap is expected
+#     and tracked, not a regression here.
+#   - GH Pages SPA fallback lives in public/404.html; its CSP is the
+#     <meta> tag in index.html (both are base-path aware).
 
 [build]
   command = "npm run build"

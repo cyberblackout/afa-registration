@@ -65,7 +65,8 @@ const ITEMS_PER_PAGE = 8;
 
 const RegistrationsPage: React.FC = () => {
   const queryClient = useQueryClient();
-  const { user } = useAuthStore();
+  const { user: _user } = useAuthStore();
+  void _user;
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [dateFilter, setDateFilter] = useState<string>('All');

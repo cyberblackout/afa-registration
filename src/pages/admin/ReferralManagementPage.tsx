@@ -3,7 +3,6 @@ import { IonIcon, IonPage, IonToast, IonButton } from '@ionic/react';
 import {
   peopleOutline, checkmarkCircle, timeOutline, closeCircle,
   cashOutline, trendingUpOutline, refreshOutline,
-  searchOutline, funnelOutline,
 } from 'ionicons/icons';
 import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -18,7 +17,12 @@ const ReferralManagementPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [toast, setToast] = useState({ show: false, msg: '' });
 
-  const { data: analytics } = useQuery({
+  const {
+    data: analytics,
+    isLoading: analyticsLoading,
+    isError: analyticsError,
+    refetch: refetchAnalytics,
+  } = useQuery({
     queryKey: ['admin_referral_analytics'],
     queryFn: () => referralApi.adminAnalytics() as any,
   });
@@ -59,6 +63,10 @@ const ReferralManagementPage: React.FC = () => {
     total_rewards_paid: 0, unique_referrers: 0, fraud_attempts: 0,
   };
 
+  // Loading and error must not masquerade as real zeros.
+  const statVal = (v: string | number) =>
+    analyticsLoading ? '…' : analyticsError ? '—' : v;
+
   const statusBadge = (s: string) => {
     const map: Record<string, string> = {
       pending: 'badge-pending', registered: 'badge-info',
@@ -89,14 +97,21 @@ const ReferralManagementPage: React.FC = () => {
           </div>
         </motion.div>
 
+        {analyticsError && (
+          <div className="fraud-alert" style={{ cursor: 'pointer' }} onClick={() => refetchAnalytics()}>
+            <IonIcon icon={closeCircle} />
+            <span>Failed to load referral analytics — tap to retry</span>
+          </div>
+        )}
+
         <div className="analytics-grid">
           {[
-            { icon: peopleOutline, label: 'Total Referrals', value: analyticsData.total_referrals, color: '#6366f1' },
-            { icon: checkmarkCircle, label: 'Successful', value: analyticsData.successful, color: '#059669' },
-            { icon: timeOutline, label: 'Pending', value: analyticsData.pending, color: '#f59e0b' },
-            { icon: closeCircle, label: 'Rejected', value: analyticsData.rejected, color: '#dc2626' },
-            { icon: cashOutline, label: 'Rewards Paid', value: `GH₵ ${safeNumber(analyticsData.total_rewards_paid).toFixed(2)}`, color: '#059669' },
-            { icon: trendingUpOutline, label: 'Unique Referrers', value: analyticsData.unique_referrers, color: '#6366f1' },
+            { icon: peopleOutline, label: 'Total Referrals', value: statVal(analyticsData.total_referrals), color: '#6366f1' },
+            { icon: checkmarkCircle, label: 'Successful', value: statVal(analyticsData.successful), color: '#059669' },
+            { icon: timeOutline, label: 'Pending', value: statVal(analyticsData.pending), color: '#f59e0b' },
+            { icon: closeCircle, label: 'Rejected', value: statVal(analyticsData.rejected), color: '#dc2626' },
+            { icon: cashOutline, label: 'Rewards Paid', value: analyticsLoading ? '…' : analyticsError ? '—' : `GH₵ ${safeNumber(analyticsData.total_rewards_paid).toFixed(2)}`, color: '#059669' },
+            { icon: trendingUpOutline, label: 'Unique Referrers', value: statVal(analyticsData.unique_referrers), color: '#6366f1' },
           ].map((s, i) => (
             <Card key={s.label} className="analytics-card" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
               <div className="analytics-icon" style={{ background: `${s.color}15`, color: s.color }}><IonIcon icon={s.icon} /></div>

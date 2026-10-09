@@ -9,7 +9,6 @@ import {
   walletOutline,
   cardOutline,
   cartOutline,
-  chatbubblesOutline,
   notificationsOutline,
   barChartOutline,
   settingsOutline,
@@ -84,7 +83,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
         setWhatsappEnabled(enabled);
         setWhatsappNumber(number);
         setWhatsappMessage(message);
-      } catch (e) {
+      } catch (_e) {
         // Non-critical
       }
     };

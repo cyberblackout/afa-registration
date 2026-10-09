@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { IonPage, IonCard, IonCardContent, IonButton, IonIcon,
-  IonText, IonToast, IonLoading, IonChip, IonSearchbar, IonSegment, IonSegmentButton,
+import { IonPage, IonButton, IonIcon,
+  IonToast, IonLoading, IonSearchbar, IonSegment, IonSegmentButton,
   IonLabel, IonModal, IonItem, IonTextarea,
 } from '@ionic/react';
 import {
   peopleOutline, checkmarkCircleOutline, closeCircleOutline, timeOutline,
-  shieldCheckmarkOutline, ribbonOutline, cashOutline, searchOutline,
-  reloadOutline, eyeOutline, banOutline, checkmarkOutline, alertCircleOutline,
+  ribbonOutline, banOutline, checkmarkOutline,
 } from 'ionicons/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';

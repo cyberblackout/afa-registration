@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   IonButton,
   IonIcon,
@@ -16,10 +16,6 @@ import {
   chatbubbleOutline,
   phonePortraitOutline,
   personOutline,
-  checkmarkCircle,
-  closeCircle,
-  timeOutline,
-  refreshOutline,
   eyeOutline,
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';

@@ -3,12 +3,9 @@ import {
   verifyAuth,
   getSupabaseAdmin,
   errorResp,
-  successResp,
-  jsonResp,
-  getCorsHeaders,
+  successResp, getCorsHeaders,
 } from "../_shared/auth.ts";
 import { z, validateBody } from "../_shared/validation.ts";
-
 // NOTE: no price, role or user id is accepted from the client. The amount is
 // resolved server-side inside create_afa_registration from profiles.role.
 // `expected_amount` is optional and used ONLY to detect that the price the
@@ -24,33 +21,26 @@ const createRegistrationSchema = z.object({
   occupation: z.string().min(1, "Occupation is required"),
   expected_amount: z.number().optional(),
 });
-
 const KNOWN_RPC_ERRORS = new Set([
   "Authentication required",
   "Caller profile not found",
   "Registration fee is not configured",
 ]);
-
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: getCorsHeaders(origin) });
   }
-
   if (req.method !== "POST") {
     return errorResp("Method not allowed", 405, origin);
   }
-
   const auth = await verifyAuth(req, ["user", "agent", "admin"]);
   if (auth.error) return auth.error;
-
   const body = await req.json();
   const validation = validateBody(body, createRegistrationSchema);
   if (validation.error) return errorResp(validation.error, 400, origin);
-
   const data = validation.data!;
   const admin = getSupabaseAdmin();
-
   // ─── ATOMIC: role -> price -> lock wallet -> verify -> debit -> insert ───
   const { data: result, error: rpcError } = await admin.rpc(
     "create_afa_registration",
@@ -66,7 +56,6 @@ Deno.serve(async (req) => {
       p_expected_amount: data.expected_amount ?? null,
     }
   );
-
   if (rpcError) {
     const message = rpcError.message || "";
     if (KNOWN_RPC_ERRORS.has(message)) {
@@ -83,9 +72,7 @@ Deno.serve(async (req) => {
       origin
     );
   }
-
   const res = result as any;
-
   if (!res?.success) {
     if (res?.code === "PRICE_CHANGED") {
       return jsonResp(
@@ -116,7 +103,6 @@ Deno.serve(async (req) => {
     }
     return errorResp(res?.error || "Registration failed", 400, origin);
   }
-
   return successResp(
     {
       id: res.id,

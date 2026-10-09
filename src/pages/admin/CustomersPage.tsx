@@ -7,8 +7,6 @@ import {
   IonItem,
   IonLabel,
   IonModal,
-  IonCard,
-  IonCardContent,
   IonToast,
   IonAlert,
   IonActionSheet,
@@ -35,8 +33,7 @@ import {
   eyeOutline,
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../services/supabase';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminCustomerApi, walletApi, orderApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate } from '../../utils/date';
@@ -51,7 +48,7 @@ const CustomersPage: React.FC = () => {
   const [editCustomer, setEditCustomer] = useState<any>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
-  const [alertConfig, setAlertConfig] = useState<{ header: string; message: string; action: () => void }>({ header: '', message: '', action: () => {} });
+  const [alertConfig] = useState<{ header: string; message: string; action: () => void }>({ header: '', message: '', action: () => {} });
   const [toastMessage, setToastMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [editName, setEditName] = useState('');
@@ -72,13 +69,23 @@ const CustomersPage: React.FC = () => {
     queryFn: () => adminCustomerApi.list() as any,
   });
 
-  const { data: transactions } = useQuery({
+  const {
+    data: transactions,
+    isLoading: txLoading,
+    isError: txError,
+    refetch: refetchTx,
+  } = useQuery({
     queryKey: ['admin_customer_transactions', expandedId],
     queryFn: () => walletApi.adminListTransactions(expandedId!) as any,
     enabled: !!expandedId,
   });
 
-  const { data: customerOrders } = useQuery({
+  const {
+    data: customerOrders,
+    isLoading: ordersLoading,
+    isError: ordersError,
+    refetch: refetchOrders,
+  } = useQuery({
     queryKey: ['admin_customer_orders', expandedId],
     queryFn: () => orderApi.list(expandedId!) as any,
     enabled: !!expandedId,
@@ -153,7 +160,7 @@ const CustomersPage: React.FC = () => {
     }
   };
 
-  const showToastMsg = (msg: string) => {
+  const _showToastMsg = (msg: string) => {
     setToastMessage(msg);
     setShowToast(true);
   };
@@ -337,7 +344,13 @@ const CustomersPage: React.FC = () => {
                             </div>
                             <div className="detail-section">
                               <h4>Recent Transactions</h4>
-                              {!transactions || transactions.length === 0 ? (
+                              {txLoading ? (
+                                <p className="no-data">Loading…</p>
+                              ) : txError ? (
+                                <p className="no-data" style={{ cursor: 'pointer' }} onClick={() => refetchTx()}>
+                                  Could not load transactions — tap to retry
+                                </p>
+                              ) : !transactions || transactions.length === 0 ? (
                                 <p className="no-data">No transactions recorded</p>
                               ) : (
                                 <div className="detail-table">
@@ -355,7 +368,13 @@ const CustomersPage: React.FC = () => {
                             </div>
                             <div className="detail-section">
                               <h4>Recent Orders</h4>
-                              {!customerOrders || customerOrders.length === 0 ? (
+                              {ordersLoading ? (
+                                <p className="no-data">Loading…</p>
+                              ) : ordersError ? (
+                                <p className="no-data" style={{ cursor: 'pointer' }} onClick={() => refetchOrders()}>
+                                  Could not load orders — tap to retry
+                                </p>
+                              ) : !customerOrders || customerOrders.length === 0 ? (
                                 <p className="no-data">No orders yet</p>
                               ) : (
                                 <div className="detail-table">

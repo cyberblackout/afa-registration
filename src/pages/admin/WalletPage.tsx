@@ -59,7 +59,12 @@ const WalletPage: React.FC = () => {
     queryFn: () => walletApi.adminListUsers() as any,
   });
 
-  const { data: txHistory } = useQuery({
+  const {
+    data: txHistory,
+    isLoading: txHistoryLoading,
+    isError: txHistoryError,
+    refetch: refetchTxHistory,
+  } = useQuery({
     queryKey: ['admin_wallet_tx', expandedId],
     queryFn: () => walletApi.adminListTransactions(expandedId!) as any,
     enabled: !!expandedId,
@@ -260,7 +265,13 @@ const WalletPage: React.FC = () => {
                             className="wallet-tx-history"
                           >
                             <h4>Transaction History</h4>
-                            {!txHistory || txHistory.length === 0 ? (
+                            {txHistoryLoading ? (
+                              <p className="no-tx">Loading…</p>
+                            ) : txHistoryError ? (
+                              <p className="no-tx" style={{ cursor: 'pointer' }} onClick={() => refetchTxHistory()}>
+                                Could not load transaction history — tap to retry
+                              </p>
+                            ) : !txHistory || txHistory.length === 0 ? (
                               <p className="no-tx">No transactions yet</p>
                             ) : (
                               <div className="tx-list">

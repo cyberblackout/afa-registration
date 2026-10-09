@@ -85,7 +85,8 @@ const DashboardPage: React.FC = () => {
   });
 
   const isLoadingInitial = profileLoading && !profile;
-  const isLoadingAll = profileLoading || ordersLoading || regLoading || referralLoading;
+  const _isLoadingAll = profileLoading || ordersLoading || regLoading || referralLoading;
+  void _isLoadingAll;
 
   const displayName = useMemo(() => profile?.full_name || user?.full_name || '', [profile, user]);
   const firstName = displayName ? displayName.split(' ')[0] : '';

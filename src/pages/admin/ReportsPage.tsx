@@ -3,8 +3,6 @@ import {
   IonPage,
   IonButton,
   IonIcon,
-  IonCard,
-  IonCardContent,
   IonToast,
 } from '@ionic/react';
 import {
@@ -17,9 +15,8 @@ import {
   documentTextOutline,
   walletOutline,
   calendarOutline,
-  checkmarkCircle,
 } from 'ionicons/icons';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminReportsApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';

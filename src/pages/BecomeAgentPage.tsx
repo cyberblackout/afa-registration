@@ -95,7 +95,8 @@ const steps = [
 
 const BecomeAgentPage: React.FC = () => {
   const history = useHistory();
-  const { user, setUser } = useAuthStore();
+  const { user, setUser: _setUser } = useAuthStore();
+  void _setUser;
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', color: 'success' });
@@ -150,6 +151,7 @@ const BecomeAgentPage: React.FC = () => {
 
       const reference = initData.reference;
       const applicationId = initData.application_id;
+      void applicationId;
 
       // Poll for payment verification (max 30 seconds)
       const pollPaymentStatus = async () => {
@@ -182,6 +184,9 @@ const BecomeAgentPage: React.FC = () => {
         callback: () => {
           setLoading(true);
           setToast({ show: true, message: 'Payment received! Verifying...', color: 'success' });
+          // Watchdog: never leave the blocking loader (and the scroll
+          // lock behind it) up if verification hangs on a dead network.
+          const watchdog = setTimeout(() => setLoading(false), 45000);
           pollPaymentStatus()
             .then((result: any) => {
               if (result?.status === 'approved') {
@@ -200,7 +205,10 @@ const BecomeAgentPage: React.FC = () => {
             .catch((err: any) => {
               setToast({ show: true, message: err.message || 'Payment verification failed', color: 'danger' });
             })
-            .finally(() => setLoading(false));
+            .finally(() => {
+              clearTimeout(watchdog);
+              setLoading(false);
+            });
         },
         onClose: () => {
           setLoading(false);
@@ -212,6 +220,9 @@ const BecomeAgentPage: React.FC = () => {
         throw new Error('Payment system failed to initialize the checkout. Please try again.');
       }
       handler.openIframe();
+      // The Paystack overlay owns the UI from here; release our
+      // blocking loader so a missed onClose can never lock scrolling.
+      setLoading(false);
     } catch (err: any) {
       setToast({ show: true, message: err.message || 'Something went wrong', color: 'danger' });
       setLoading(false);

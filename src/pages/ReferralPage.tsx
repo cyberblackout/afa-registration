@@ -5,8 +5,8 @@ import {
 } from '@ionic/react';
 import {
   Gift, Users, CheckCircle, Clock, XCircle,
-  Wallet, Copy, Share2, Link as LinkIcon, TrendingUp,
-  UserPlus, DollarSign, ArrowRight, ShieldAlert,
+  Wallet, Copy, Link as LinkIcon, TrendingUp,
+  ArrowRight, ShieldAlert,
   AlertTriangle, ShieldCheck, Ban, Smartphone,
 } from 'lucide-react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -95,21 +95,21 @@ const ReferralPage: React.FC = () => {
     staleTime: 60000,
   });
 
-  const { data: referrals = [] as Referral[], isLoading: referralsLoading, isError: referralsError } = useQuery({
+  const { data: referrals = [] as Referral[], isLoading: referralsLoading } = useQuery({
     queryKey: ['my_referrals', user?.id],
     queryFn: () => referralApi.getMyReferrals() as Promise<Referral[]>,
     enabled: !!user?.id,
     staleTime: 60000,
   });
 
-  const { data: rewards = [] as ReferralReward[], isLoading: rewardsLoading, isError: rewardsError } = useQuery({
+  const { data: rewards = [] as ReferralReward[], isLoading: rewardsLoading } = useQuery({
     queryKey: ['referral_rewards', user?.id],
     queryFn: () => referralApi.getMyRewards() as Promise<ReferralReward[]>,
     enabled: !!user?.id,
     staleTime: 60000,
   });
 
-  const { data: transactions = [], isLoading: txnsLoading, isError: txnsError } = useQuery({
+  const { data: transactions = [], isLoading: txnsLoading } = useQuery({
     queryKey: ['referral-reward-transactions', user?.id],
     queryFn: () => referralApi.getMyReferralTransactions() as Promise<any[]>,
     enabled: !!user?.id,
@@ -134,7 +134,8 @@ const ReferralPage: React.FC = () => {
 
   const isLoadingInitial = profileLoading && !profile;
   const hasError = profileError || statsError;
-  const isLoadingAll = profileLoading || statsLoading || referralsLoading || rewardsLoading || txnsLoading;
+  const _isLoadingAll = profileLoading || statsLoading || referralsLoading || rewardsLoading || txnsLoading;
+  void _isLoadingAll;
 
   const copyCode = useCallback(async () => {
     try {

@@ -17,12 +17,11 @@ import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '../../services/supabase';
-import { adminDashboardApi, type AdminDashboardStats } from '../../services/api';
+import { adminDashboardApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate } from '../../utils/date';
 import Card from '../../components/Card';
-import { safeNumber, formatCurrency as fmtCurrency } from '../../utils/number';
+import { safeNumber } from '../../utils/number';
 import './DashboardPage.css';
 
 const statusConfig = {
@@ -72,13 +71,26 @@ const DashboardPage: React.FC = () => {
     queryFn: () => adminDashboardApi.getStats(),
   });
 
-  const { data: weeklyData } = useQuery({
+  const {
+    data: weeklyData,
+    isError: weeklyError,
+    refetch: refetchWeekly,
+  } = useQuery({
     queryKey: ['admin_weekly_data'],
     queryFn: async () => {
       const chartData = await adminDashboardApi.getDailyChart();
       return chartData;
     },
   });
+
+  const chartFallback = weeklyError ? (
+    <div
+      style={{ height: 280, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+    >
+      <p style={{ color: '#6b7280', margin: 0 }}>Failed to load chart</p>
+      <IonButton fill="clear" onClick={() => refetchWeekly()}>Retry</IonButton>
+    </div>
+  ) : null;
 
   const statCards = [
     { label: 'Total Users', value: stats ? stats.total_users.toLocaleString() : '...', icon: peopleOutline, color: '#3b82f6' },
@@ -159,7 +171,9 @@ const DashboardPage: React.FC = () => {
               <h3>Revenue Trend</h3>
               <span className="chart-period">Last 7 days</span>
             </div>
-            {!weeklyData ? (
+            {weeklyError ? (
+              chartFallback
+            ) : !weeklyData ? (
               <Skeleton height="280px" />
             ) : (
               <ResponsiveContainer width="100%" height={280}>
@@ -184,7 +198,9 @@ const DashboardPage: React.FC = () => {
               <h3>Registrations Trend</h3>
               <span className="chart-period">Last 7 days</span>
             </div>
-            {!weeklyData ? (
+            {weeklyError ? (
+              chartFallback
+            ) : !weeklyData ? (
               <Skeleton height="280px" />
             ) : (
               <ResponsiveContainer width="100%" height={280}>

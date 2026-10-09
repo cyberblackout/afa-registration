@@ -1,31 +1,24 @@
 import "https://deno.land/std@0.177.0/dotenv/load.ts";
 import {
   verifyAuth,
-  getSupabaseAdmin,
-  jsonResp,
-  errorResp,
+  getSupabaseAdmin, errorResp,
   successResp,
   getCorsHeaders,
 } from "../_shared/auth.ts";
 import { z, validateBody } from "../_shared/validation.ts";
-
 const reportSchema = z.object({
   start_date: z.string().optional(),
   end_date: z.string().optional(),
 });
-
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: getCorsHeaders(origin) });
   }
-
   const auth = await verifyAuth(req, ["admin"]);
   if (auth.error) return auth.error;
-
   let startDate = "";
   let endDate = "";
-
   if (req.method === "POST") {
     const body = await req.json();
     const validation = validateBody(body, reportSchema);
@@ -39,23 +32,17 @@ Deno.serve(async (req) => {
   } else {
     return errorResp("Method not allowed", 405, origin);
   }
-
   const admin = getSupabaseAdmin();
-
   // Build queries with optional date filters
   let revenueQuery = admin
     .from("wallet_transactions")
     .select("amount, type, created_at")
     .eq("type", "credit");
-
   let registrationQuery = admin.from("registrations").select("status, created_at");
-
   let paymentQuery = admin
     .from("wallet_transactions")
     .select("amount, payment_method, status, created_at");
-
   let newUsersQuery = admin.from("profiles").select("id", { count: "exact", head: true });
-
   if (startDate) {
     revenueQuery = revenueQuery.gte("created_at", startDate);
     registrationQuery = registrationQuery.gte("created_at", startDate);
@@ -68,7 +55,6 @@ Deno.serve(async (req) => {
     paymentQuery = paymentQuery.lte("created_at", endDate);
     newUsersQuery = newUsersQuery.lte("created_at", endDate);
   }
-
   const [revenueRes, registrationRes, paymentRes, newUsersRes, totalUsersRes] =
     await Promise.all([
       revenueQuery,
@@ -77,12 +63,10 @@ Deno.serve(async (req) => {
       newUsersQuery,
       admin.from("profiles").select("id", { count: "exact", head: true }),
     ]);
-
   const revenue = (revenueRes.data || []).reduce(
     (sum: number, t: any) => sum + (Number(t.amount) || 0),
     0
   );
-
   const registrationStats = {
     total: (registrationRes.data || []).length,
     pending: (registrationRes.data || []).filter((r: any) => r.status === "pending").length,
@@ -90,7 +74,6 @@ Deno.serve(async (req) => {
     rejected: (registrationRes.data || []).filter((r: any) => r.status === "rejected").length,
     completed: (registrationRes.data || []).filter((r: any) => r.status === "completed").length,
   };
-
   const paymentStats = {
     total: (paymentRes.data || []).length,
     total_amount: (paymentRes.data || []).reduce(
@@ -103,7 +86,6 @@ Deno.serve(async (req) => {
       return acc;
     }, {}),
   };
-
   return successResp(
     {
       revenue,

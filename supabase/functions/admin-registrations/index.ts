@@ -7,7 +7,6 @@ import {
   getCorsHeaders,
 } from "../_shared/auth.ts";
 import { z, validateBody } from "../_shared/validation.ts";
-
 const actionSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("list"),
@@ -55,9 +54,7 @@ const actionSchema = z.discriminatedUnion("action", [
     registration_id: z.string().uuid(),
   }),
 ]);
-
 // ── Notification helpers ──────────────────────────────────────
-
 const STATUS_LABELS: Record<string, string> = {
   pending: "Pending Review",
   processing: "Under Processing",
@@ -67,7 +64,6 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: "Not Approved",
   cancelled: "Cancelled",
 };
-
 function buildEmailSubject(status: string): string {
   switch (status) {
     case "approved":
@@ -81,7 +77,6 @@ function buildEmailSubject(status: string): string {
       return "Registration Status Update";
   }
 }
-
 function buildEmailHtml(
   name: string,
   regNumber: string,
@@ -99,10 +94,8 @@ function buildEmailHtml(
   };
   const label = STATUS_LABELS[status] || status;
   const color = statusColors[status] || "#6b7280";
-
   let bodyText = "";
   let defaultMsg = "";
-
   if (status === "approved" || status === "completed") {
     defaultMsg =
       "Your registration is now complete. You can log in to your dashboard to view your registration details and access all available features.";
@@ -123,7 +116,6 @@ function buildEmailHtml(
       ? `<p style="color:#6b7280;margin:0 0 20px;font-size:14px;line-height:1.6"><strong>Note:</strong> ${userMessage}</p>`
       : `<p style="color:#6b7280;margin:0 0 20px;font-size:14px;line-height:1.6">${defaultMsg}</p>`;
   }
-
   return `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
@@ -155,7 +147,6 @@ function buildEmailHtml(
   </table>
 </body></html>`;
 }
-
 function buildSmsMessage(
   regNumber: string,
   status: string,
@@ -174,7 +165,6 @@ function buildSmsMessage(
       return `MTN AFA: Your registration #${regNumber} status has been updated to "${STATUS_LABELS[status] || status}".${suffix}`;
   }
 }
-
 function buildPushPayload(
   regNumber: string,
   status: string,
@@ -203,7 +193,6 @@ function buildPushPayload(
       };
   }
 }
-
 function getNotificationType(
   status: string,
 ): "success" | "error" | "info" {
@@ -211,9 +200,7 @@ function getNotificationType(
   if (status === "rejected") return "error";
   return "info";
 }
-
 // ── Send notification to all enabled channels ─────────────────
-
 async function sendRegistrationStatusNotifications(
   admin: ReturnType<typeof getSupabaseAdmin>,
   userId: string,
@@ -227,31 +214,25 @@ async function sendRegistrationStatusNotifications(
     .select("full_name, email, phone, notification_preferences")
     .eq("id", userId)
     .single();
-
   if (!profile) return;
-
   const prefs = profile.notification_preferences || {};
   const userName = profile.full_name || "User";
   const notifType = getNotificationType(status);
-
   // 2. In-app notification (always)
   const inAppTitle = buildEmailSubject(status);
   const inAppMessage = userMessage
     ? `${buildSmsMessage(regNumber, status, userMessage).replace("MTN AFA: ", "")}`
     : `${buildSmsMessage(regNumber, status).replace("MTN AFA: ", "")}`;
-
   await admin.from("notifications").insert({
     user_id: userId,
     title: inAppTitle,
     message: inAppMessage,
     type: notifType,
   });
-
   // 3. Email
   if (profile.email && prefs.email !== false) {
     const subject = buildEmailSubject(status);
     const html = buildEmailHtml(userName, regNumber, status, userMessage);
-
     const { data: keyRow } = await admin
       .from("system_settings")
       .select("setting_value")
@@ -262,10 +243,8 @@ async function sendRegistrationStatusNotifications(
       .select("setting_value")
       .eq("setting_name", "email_from")
       .single();
-
     const apiKey = keyRow?.setting_value;
     const fromEmail = fromRow?.setting_value || "MTN AFA Portal <noreply@afa-portal.com>";
-
     if (apiKey) {
       const { data: logEntry } = await admin
         .from("notifications_log")
@@ -280,7 +259,6 @@ async function sendRegistrationStatusNotifications(
         })
         .select("id")
         .single();
-
       try {
         const res = await fetch("https://api.resend.com/emails", {
           method: "POST",
@@ -330,11 +308,9 @@ async function sendRegistrationStatusNotifications(
       }
     }
   }
-
   // 4. SMS
   if (profile.phone && prefs.sms !== false) {
     const message = buildSmsMessage(regNumber, status, userMessage);
-
     const { data: urlRow } = await admin
       .from("system_settings")
       .select("setting_value")
@@ -350,11 +326,9 @@ async function sendRegistrationStatusNotifications(
       .select("setting_value")
       .eq("setting_name", "sms_sender_id")
       .single();
-
     const apiUrl = urlRow?.setting_value;
     const apiKey = keyRow?.setting_value;
     const senderId = senderRow?.setting_value || "MTN AFA";
-
     if (apiUrl && apiKey) {
       const { data: logEntry } = await admin
         .from("notifications_log")
@@ -368,7 +342,6 @@ async function sendRegistrationStatusNotifications(
         })
         .select("id")
         .single();
-
       try {
         const res = await fetch(apiUrl, {
           method: "POST",
@@ -417,11 +390,9 @@ async function sendRegistrationStatusNotifications(
       }
     }
   }
-
   // 5. Push
   if (prefs.push !== false) {
     const pushPayload = buildPushPayload(regNumber, status);
-
     const { data: pubKeyRow } = await admin
       .from("app_settings")
       .select("value")
@@ -432,16 +403,13 @@ async function sendRegistrationStatusNotifications(
       .select("value")
       .eq("key", "vapid_private_key")
       .single();
-
     const vapidPublicKey = pubKeyRow?.value;
     const vapidPrivateKey = privKeyRow?.value;
-
     if (vapidPublicKey && vapidPrivateKey) {
       const { data: subscriptions } = await admin
         .from("push_subscriptions")
         .select("endpoint, p256dh_key, auth_key")
         .eq("user_id", userId);
-
       if (subscriptions && subscriptions.length > 0) {
         for (const sub of subscriptions) {
           const { data: logEntry } = await admin
@@ -457,7 +425,6 @@ async function sendRegistrationStatusNotifications(
             })
             .select("id")
             .single();
-
           try {
             const result = await sendWebPush(
               sub.endpoint,
@@ -467,7 +434,6 @@ async function sendRegistrationStatusNotifications(
               vapidPublicKey,
               vapidPrivateKey,
             );
-
             if (result.status >= 200 && result.status < 300) {
               if (logEntry) {
                 await admin
@@ -510,9 +476,7 @@ async function sendRegistrationStatusNotifications(
     }
   }
 }
-
 // ── Web Push helper (VAPID) ───────────────────────────────────
-
 async function sendWebPush(
   endpoint: string,
   p256dh: string,
@@ -528,7 +492,6 @@ async function sendWebPush(
     exp: now + 43200,
     sub: "mailto:admin@afa-portal.com",
   };
-
   const encoder = new TextEncoder();
   const headerB64 = btoa(JSON.stringify(header))
     .replace(/=/g, "")
@@ -539,12 +502,10 @@ async function sendWebPush(
     .replace(/\+/g, "-")
     .replace(/\//g, "_");
   const signingInput = encoder.encode(`${headerB64}.${claimB64}`);
-
   const privKeyBytes = Uint8Array.from(
     atob(vapidPrivateKey.replace(/-/g, "+").replace(/_/g, "/")),
     (c) => c.charCodeAt(0),
   );
-
   const privateKey = await crypto.subtle.importKey(
     "pkcs8",
     privKeyBytes.buffer,
@@ -552,13 +513,11 @@ async function sendWebPush(
     false,
     ["sign"],
   );
-
   const signature = await crypto.subtle.sign(
     { name: "ECDSA", hash: "SHA-256" },
     privateKey,
     signingInput,
   );
-
   const sigBytes = new Uint8Array(signature);
   const rLen = sigBytes[3];
   const r = sigBytes.slice(4, 4 + rLen);
@@ -570,21 +529,17 @@ async function sendWebPush(
   const rawSignature = new Uint8Array(64);
   rawSignature.set(rPadded);
   rawSignature.set(sPadded, 32);
-
   const signatureB64 = btoa(String.fromCharCode(...rawSignature))
     .replace(/=/g, "")
     .replace(/\+/g, "-")
     .replace(/\//g, "_");
-
   const jwt = `${headerB64}.${claimB64}.${signatureB64}`;
-
   const parsedPayload = JSON.parse(payload);
   const body = JSON.stringify({
     title: parsedPayload.title || "MTN AFA",
     body: parsedPayload.body || "",
     data: { url: parsedPayload.url || "/dashboard" },
   });
-
   const res = await fetch(endpoint, {
     method: "POST",
     headers: {
@@ -594,51 +549,39 @@ async function sendWebPush(
     },
     body,
   });
-
   return { status: res.status, body: await res.text() };
 }
-
 // ── Main handler ──────────────────────────────────────────────
-
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: getCorsHeaders(origin) });
   }
-
   const auth = await verifyAuth(req, ["admin"]);
   if (auth.error) return auth.error;
-
   if (req.method === "GET") {
     const admin = getSupabaseAdmin();
     const url = new URL(req.url);
     const status = url.searchParams.get("status");
     const userId = url.searchParams.get("user_id");
-
     let query = admin
       .from("registrations")
       .select("*, registration_documents(*), registration_timeline(*), profiles!registrations_user_id_fkey(full_name, email, phone, role, username)")
       .order("created_at", { ascending: false });
-
     if (status) query = query.eq("status", status);
     if (userId) query = query.eq("user_id", userId);
-
     const { data, error } = await query;
     if (error) return errorResp("Failed to fetch registrations", 500, origin);
     return successResp(data, origin);
   }
-
   if (req.method !== "POST") {
     return errorResp("Method not allowed", 405, origin);
   }
-
   const body = await req.json();
   const validation = validateBody(body, actionSchema);
   if (validation.error) return errorResp(validation.error, 400, origin);
-
   const admin = getSupabaseAdmin();
   const data = validation.data!;
-
   switch (data.action) {
     case "update_status": {
       let referralWarning: string | undefined;
@@ -649,13 +592,11 @@ Deno.serve(async (req) => {
       if (data.user_message !== undefined) {
         updatePayload.user_message = data.user_message;
       }
-
       const { error } = await admin
         .from("registrations")
         .update(updatePayload)
         .eq("id", data.id);
       if (error) return errorResp("Failed to update status", 500, origin);
-
       // Timeline entry
       await admin.from("registration_timeline").insert({
         registration_id: data.id,
@@ -663,14 +604,12 @@ Deno.serve(async (req) => {
         status: data.status,
         note: data.admin_notes || `Status updated to ${data.status}`,
       });
-
       // Fetch registration to get user_id and reg_number
       const { data: registration } = await admin
         .from("registrations")
         .select("user_id, reg_number")
         .eq("id", data.id)
         .single();
-
       // Send notifications (non-blocking — fire and forget)
       if (registration?.user_id) {
         const regNumber = registration.reg_number || data.id.slice(0, 8);
@@ -683,7 +622,6 @@ Deno.serve(async (req) => {
         ).catch((err) => {
           console.error("Notification send error:", err);
         });
-
         // Process referral reward when registration is completed.
         // B17: failures used to vanish into an empty catch, so an admin could
         // see "Status updated" while the reward silently never happened. Every
@@ -724,19 +662,16 @@ Deno.serve(async (req) => {
           }
         }
       }
-
       const payload: Record<string, unknown> = { message: "Status updated" };
       if (referralWarning) payload.referral_warning = referralWarning;
       return successResp(payload, origin);
     }
-
     case "bulk_update": {
       const { error } = await admin
         .from("registrations")
         .update({ status: data.status })
         .in("id", data.ids);
       if (error) return errorResp("Bulk update failed", 500, origin);
-
       const timelineEntries = data.ids.map((id) => ({
         registration_id: id,
         changed_by: auth.user!.id,
@@ -744,7 +679,6 @@ Deno.serve(async (req) => {
         note: `Bulk status update to ${data.status}`,
       }));
       await admin.from("registration_timeline").insert(timelineEntries);
-
       // Send notifications for each registration (fire and forget)
       for (const id of data.ids) {
         const { data: reg } = await admin
@@ -764,10 +698,8 @@ Deno.serve(async (req) => {
           });
         }
       }
-
       return successResp({ message: `${data.ids.length} registrations updated` }, origin);
     }
-
     case "add_timeline": {
       const { error } = await admin.from("registration_timeline").insert({
         registration_id: data.registration_id,
@@ -778,7 +710,6 @@ Deno.serve(async (req) => {
       if (error) return errorResp("Failed to add timeline entry", 500, origin);
       return successResp({ message: "Timeline entry added" }, origin);
     }
-
     case "assign_admin": {
       const { error } = await admin
         .from("registrations")
@@ -787,7 +718,6 @@ Deno.serve(async (req) => {
       if (error) return errorResp("Failed to assign admin", 500, origin);
       return successResp({ message: "Admin assigned" }, origin);
     }
-
     case "add_document": {
       const { error } = await admin.from("registration_documents").insert({
         registration_id: data.registration_id,
@@ -799,7 +729,6 @@ Deno.serve(async (req) => {
       if (error) return errorResp("Failed to add document", 500, origin);
       return successResp({ message: "Document added" }, origin);
     }
-
     case "update_document_status": {
       const { error } = await admin
         .from("registration_documents")
@@ -808,7 +737,6 @@ Deno.serve(async (req) => {
       if (error) return errorResp("Failed to update document status", 500, origin);
       return successResp({ message: "Document status updated" }, origin);
     }
-
     case "process_referral_reward": {
       const { data: reward, error } = await admin.rpc("process_referral_reward", {
         registration_id: data.registration_id,
@@ -819,7 +747,6 @@ Deno.serve(async (req) => {
       }
       return successResp(reward, origin);
     }
-
     default:
       return errorResp("Invalid action", 400, origin);
   }

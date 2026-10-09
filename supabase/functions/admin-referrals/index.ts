@@ -1,14 +1,11 @@
 import "https://deno.land/std@0.177.0/dotenv/load.ts";
 import {
   verifyAuth,
-  getSupabaseAdmin,
-  jsonResp,
-  errorResp,
+  getSupabaseAdmin, errorResp,
   successResp,
   getCorsHeaders,
 } from "../_shared/auth.ts";
 import { z, validateBody } from "../_shared/validation.ts";
-
 const actionSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("analytics"),
@@ -26,7 +23,6 @@ const actionSchema = z.discriminatedUnion("action", [
     referral_id: z.string().uuid(),
   }),
 ]);
-
 // admin_get_referral_analytics reports authorization problems inside its
 // JSON payload ({"error": "Unauthorized"}) rather than as a SQL error, so a
 // plain `{ error }` destructure would otherwise ship them as a 200.
@@ -38,16 +34,13 @@ async function fetchAnalytics(admin: ReturnType<typeof getSupabaseAdmin>, caller
   if (data && data.error) return { authError: String(data.error) };
   return { analytics: data };
 }
-
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: getCorsHeaders(origin) });
   }
-
   const auth = await verifyAuth(req, ["admin"]);
   if (auth.error) return auth.error;
-
   if (req.method === "GET") {
     const admin = getSupabaseAdmin();
     const result = await fetchAnalytics(admin, auth.user!.id);
@@ -55,18 +48,14 @@ Deno.serve(async (req) => {
     if (result.authError) return errorResp(result.authError, 403, origin);
     return successResp(result.analytics, origin);
   }
-
   if (req.method !== "POST") {
     return errorResp("Method not allowed", 405, origin);
   }
-
   const body = await req.json();
   const validation = validateBody(body, actionSchema);
   if (validation.error) return errorResp(validation.error, 400, origin);
-
   const admin = getSupabaseAdmin();
   const data = validation.data!;
-
   // Money-moving admin action: rate limit per admin user id (never per IP).
   const limit = async (
     action: string,
@@ -84,7 +73,6 @@ Deno.serve(async (req) => {
     }
     return null;
   };
-
   switch (data.action) {
     case "analytics": {
       const result = await fetchAnalytics(admin, auth.user!.id);
@@ -92,7 +80,6 @@ Deno.serve(async (req) => {
       if (result.authError) return errorResp(result.authError, 403, origin);
       return successResp(result.analytics, origin);
     }
-
     case "list": {
       const { data: referrals, error } = await admin
         .from("referrals")
@@ -101,7 +88,6 @@ Deno.serve(async (req) => {
       if (error) return errorResp("Failed to fetch referrals", 500, origin);
       return successResp(referrals, origin);
     }
-
     case "update_status": {
       const { error } = await admin
         .from("referrals")
@@ -110,7 +96,6 @@ Deno.serve(async (req) => {
       if (error) return errorResp("Failed to update status", 500, origin);
       return successResp({ message: "Status updated" }, origin);
     }
-
     case "retry_reward": {
       const limited = await limit("retry_reward", 10, 300);
       if (limited) return limited;
@@ -121,7 +106,6 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (refErr) return errorResp("Failed to load referral", 500, origin);
       if (!referral) return errorResp("Referral not found", 404, origin);
-
       const { data: registration, error: regErr } = await admin
         .from("registrations")
         .select("id")
@@ -134,7 +118,6 @@ Deno.serve(async (req) => {
       if (!registration) {
         return errorResp("No completed registration found for this referred user", 409, origin);
       }
-
       const { data: reward, error } = await admin.rpc("process_referral_reward", {
         registration_id: registration.id,
       });
@@ -147,7 +130,6 @@ Deno.serve(async (req) => {
       }
       return successResp(reward, origin);
     }
-
     default:
       return errorResp("Invalid action", 400, origin);
   }

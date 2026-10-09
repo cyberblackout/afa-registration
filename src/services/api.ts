@@ -384,9 +384,6 @@ export const adminPaymentApi = {
 
   refund: (id: string, amount: number, description: string, userId: string): Promise<any> =>
     invoke<any>('admin-payments', { action: 'refund', id, amount, description, user_id: userId }),
-
-  updateStatus: (id: string, status: string): Promise<any> =>
-    invoke<any>('admin-payments', { action: 'update_status', id, status }),
 };
 
 // ============================================================

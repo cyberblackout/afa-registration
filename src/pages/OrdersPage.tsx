@@ -14,8 +14,6 @@ import {
   chevronBack,
   closeOutline,
   checkmarkCircle,
-  timeOutline,
-  alertCircle,
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import Card from '../components/Card';
@@ -31,8 +29,8 @@ import {
   isGhanaSameDay,
   isGhanaLastWeek,
   isGhanaSameMonth,
-  getGhanaTodayISO,
 } from '../utils/date';
+import { safeNumber } from '../utils/number';
 import AmountDisplay from '../components/AmountDisplay';
 import './OrdersPage.css';
 
@@ -548,7 +546,7 @@ const OrdersPage: React.FC = () => {
                             '-----------',
                             `Order ID: ${selectedOrder.id}`,
                             `Customer: ${selectedOrder.profiles?.full_name || 'N/A'}`,
-                            `Amount: GH₵ ${Number(selectedOrder.amount ?? 0).toFixed(2)}`,
+                            `Amount: GH₵ ${safeNumber(selectedOrder.amount).toFixed(2)}`,
                             `Status: ${selectedOrder.status}`,
                             `Date: ${formatGhanaDateTime(selectedOrder.created_at)}`,
                           ].join('\n');

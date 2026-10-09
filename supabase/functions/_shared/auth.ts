@@ -23,10 +23,14 @@ function isDevOrigin(origin: string): boolean {
   }
 }
 
+// Exact mirror host only. The previous suffix match
+// (hostname.endsWith(".netlify.app")) accepted ANY Netlify site —
+// deploy subdomains are claimable by anyone, so it was an open
+// CORS pattern. Phase A origin matrix flagged this.
 function isNetlifyDomain(origin: string): boolean {
   try {
     const url = new URL(origin);
-    return url.hostname.endsWith(".netlify.app");
+    return url.hostname === "afa-register.netlify.app";
   } catch {
     return false;
   }

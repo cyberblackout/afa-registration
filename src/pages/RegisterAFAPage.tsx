@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   IonPage,
   IonToast,
@@ -6,11 +6,7 @@ import {
 import {
   CheckCircle,
   User,
-  Phone,
   CreditCard,
-  MapPin,
-  Calendar,
-  Briefcase,
   Wallet,
   ArrowRight,
   ShieldCheck,
@@ -18,7 +14,6 @@ import {
   FileText,
   AlertTriangle,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { useHistory } from 'react-router-dom';
 import { registrationApi } from '../services/api';

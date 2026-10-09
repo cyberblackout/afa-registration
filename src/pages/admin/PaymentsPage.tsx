@@ -3,16 +3,8 @@ import {
   IonPage,
   IonButton,
   IonIcon,
-  IonInput,
-  IonItem,
-  IonLabel,
   IonModal,
-  IonCard,
-  IonCardContent,
   IonToast,
-  IonBadge,
-  IonSelect,
-  IonSelectOption,
 } from '@ionic/react';
 import {
   cardOutline,
@@ -22,9 +14,6 @@ import {
   timeOutline,
   arrowForward,
   cashOutline,
-  walletOutline,
-  trendingUpOutline,
-  trendingDownOutline,
   closeOutline,
   refreshOutline,
 } from 'ionicons/icons';

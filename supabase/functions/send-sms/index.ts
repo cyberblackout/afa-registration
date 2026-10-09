@@ -1,34 +1,27 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { verifyAuth, getSupabaseAdmin, errorResp, successResp, getCorsHeaders } from "../_shared/auth.ts";
-
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: getCorsHeaders(origin) });
   }
   if (req.method !== "POST") return errorResp("Method not allowed", 405, origin);
-
   const auth = await verifyAuth(req, ["admin"]);
   if (auth.error) return auth.error;
-
   let body: any;
   try {
     body = await req.json();
   } catch {
     return errorResp("Invalid request body", 400, origin);
   }
-
   const { user_id, phone, message, type = "transactional" } = body;
   if (!phone || !message) {
     return errorResp("phone and message are required", 400, origin);
   }
-
   // Validate phone number format (Ghana: +233XXXXXXXXX or 0XXXXXXXXX)
   const phoneRegex = /^(\+233|0)[0-9]{9}$/;
   if (!phoneRegex.test(phone.replace(/\s/g, ''))) {
     return errorResp("Invalid phone number format", 400, origin);
   }
-
   // Rate limit: max 20 SMS per minute per admin
   const adminClient = getSupabaseAdmin();
   const { data: rateLimit } = await adminClient.rpc("check_rate_limit", {
@@ -40,9 +33,7 @@ Deno.serve(async (req) => {
   if (rateLimit === false) {
     return errorResp("Rate limit exceeded. Please wait before sending more SMS.", 429, origin);
   }
-
   const admin = getSupabaseAdmin();
-
   // Check notification preferences if user_id provided
   if (user_id) {
     const { data: profile } = await admin
@@ -50,7 +41,6 @@ Deno.serve(async (req) => {
       .select("notification_preferences")
       .eq("id", user_id)
       .single();
-
     const prefs = profile?.notification_preferences || {};
     if (prefs.sms === false) {
       return successResp({ skipped: true, reason: "user_opted_out" }, origin);
@@ -59,34 +49,28 @@ Deno.serve(async (req) => {
       return successResp({ skipped: true, reason: "marketing_opted_out" }, origin);
     }
   }
-
   // Get Hubtel config from system_settings
   const { data: urlRow } = await admin
     .from("system_settings")
     .select("setting_value")
     .eq("setting_name", "sms_api_url")
     .single();
-
   const { data: keyRow } = await admin
     .from("system_settings")
     .select("setting_value")
     .eq("setting_name", "sms_api_key")
     .single();
-
   const { data: senderRow } = await admin
     .from("system_settings")
     .select("setting_value")
     .eq("setting_name", "sms_sender_id")
     .single();
-
   const apiUrl = urlRow?.setting_value;
   const apiKey = keyRow?.setting_value;
   const senderId = senderRow?.setting_value || "MTN AFA";
-
   if (!apiUrl || !apiKey) {
     return errorResp("SMS provider not configured", 500, origin);
   }
-
   // Create pending log entry
   const { data: logEntry, error: logError } = await admin
     .from("notifications_log")
@@ -101,11 +85,9 @@ Deno.serve(async (req) => {
     })
     .select("id")
     .single();
-
   if (logError) {
     console.error("Failed to create notification log:", logError);
   }
-
   // Call Hubtel SMS API
   try {
     const res = await fetch(apiUrl, {
@@ -120,9 +102,7 @@ Deno.serve(async (req) => {
         content: message,
       }),
     });
-
     const data = await res.json();
-
     if (!res.ok) {
       console.error("Hubtel SMS API error:", data);
       if (logEntry) {
@@ -137,7 +117,6 @@ Deno.serve(async (req) => {
       }
       return errorResp(data.message || "SMS send failed", 502, origin);
     }
-
     // Update log as sent
     if (logEntry) {
       await admin
@@ -150,7 +129,6 @@ Deno.serve(async (req) => {
         })
         .eq("id", logEntry.id);
     }
-
     return successResp({ status: "sent", provider_response: data }, origin);
   } catch (err) {
     console.error("SMS send error:", err);

@@ -8,13 +8,9 @@ import {
   agentApi,
   adminSettingsApi,
   adminCustomerApi,
-  adminDashboardApi,
-  adminReportsApi,
-  adminPaymentApi,
   ticketApi,
   adminConfigApi,
   adminAuditApi,
-  pushApi,
   settingsApi,
   auditApi,
   whatsappConfigApi,
@@ -102,7 +98,7 @@ export const db = {
     return { data };
   },
 
-  getTransactions: async (userId: string) => {
+  getTransactions: async (_userId: string) => {
     const data = await walletApi.getTransactions();
     return { data };
   },
@@ -112,7 +108,7 @@ export const db = {
     return { data };
   },
 
-  creditWallet: async (userId: string, amount: number, description: string, reference?: string) => {
+  creditWallet: async (userId: string, amount: number, description: string, _reference?: string) => {
     await walletApi.adminCredit(userId, amount, description);
     return { data: null };
   },
@@ -134,12 +130,12 @@ export const db = {
   },
 
   // NOTIFICATIONS
-  getNotifications: async (userId: string) => {
+  getNotifications: async (_userId: string) => {
     const data = await notificationApi.list();
     return { data };
   },
 
-  getUnreadCount: async (userId: string) => {
+  getUnreadCount: async (_userId: string) => {
     const result = await notificationApi.unreadCount() as any;
     return { count: result.count };
   },
@@ -149,7 +145,7 @@ export const db = {
     return { data: null };
   },
 
-  markAllNotificationsRead: async (userId: string) => {
+  markAllNotificationsRead: async (_userId: string) => {
     await notificationApi.markAllRead();
     return { data: null };
   },
@@ -221,7 +217,7 @@ export const db = {
   },
 
   // SUPPORT TICKETS
-  getTickets: async (userId?: string) => {
+  getTickets: async (_userId?: string) => {
     const data = await ticketApi.list();
     return { data };
   },
@@ -252,17 +248,17 @@ export const db = {
     return { data };
   },
 
-  getMyReferrals: async (userId: string) => {
+  getMyReferrals: async (_userId: string) => {
     const data = await referralApi.getMyReferrals();
     return { data };
   },
 
-  getMyReferralRewards: async (userId: string) => {
+  getMyReferralRewards: async (_userId: string) => {
     const data = await referralApi.getMyRewards();
     return { data };
   },
 
-  getMyReferralCode: async (userId: string) => {
+  getMyReferralCode: async (_userId: string) => {
     const data = await referralApi.getProfile() as any;
     return { data: { referral_code: data?.referral_code } };
   },

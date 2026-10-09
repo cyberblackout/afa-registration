@@ -36,7 +36,6 @@ import {
   isGhanaSameDay,
   isGhanaLastWeek,
   isGhanaSameMonth,
-  getGhanaTodayISO,
 } from '../utils/date';
 import './WalletPage.css';
 
@@ -163,7 +162,12 @@ const WalletPage: React.FC = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  const { data: balanceData, isLoading: balanceLoading } = useQuery({
+  const {
+    data: balanceData,
+    isLoading: balanceLoading,
+    isError: balanceError,
+    refetch: refetchBalance,
+  } = useQuery({
     queryKey: ['wallet', user?.id],
     queryFn: () => profileApi.getWalletBalance(user!.id),
     enabled: !!user?.id,
@@ -478,6 +482,15 @@ const WalletPage: React.FC = () => {
                   <div className="wallet-hero-amount-display">
                     <span className="wallet-hero-skeleton">...</span>
                   </div>
+                ) : balanceError ? (
+                  <button
+                    type="button"
+                    className="wallet-hero-amount-display wallet-hero-amount-retry"
+                    onClick={() => refetchBalance()}
+                    title="Tap to retry"
+                  >
+                    —
+                  </button>
                 ) : (
                   <AmountDisplay
                     value={balanceData?.wallet_balance ?? 0}

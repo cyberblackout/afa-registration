@@ -78,7 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setUser(null);
               setError('Profile not found. Please log in again.');
             }
-          } catch (profileErr: any) {
+          } catch (_profileErr: any) {
             if (cancelled) return;
             profileFetched.current = true;
             setUser(null);
@@ -88,7 +88,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           profileFetched.current = true;
           setUser(null);
         }
-      } catch (initErr: any) {
+      } catch (_initErr: any) {
         if (cancelled) return;
         profileFetched.current = true;
         setLoading(false);
@@ -122,7 +122,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               setUser(profile as any, (profile.role ?? 'user') as 'user' | 'agent' | 'admin');
               setError(null);
             }
-          } catch (err: any) {
+          } catch (_err: any) {
             if (cancelled) return;
             profileFetched.current = true;
           }
@@ -141,7 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (profile) {
               setUser(profile as any, (profile.role ?? 'user') as 'user' | 'agent' | 'admin');
             }
-          } catch (err: any) {
+          } catch (_err: any) {
             // Token refresh profile fetch failed — non-critical
           }
         }

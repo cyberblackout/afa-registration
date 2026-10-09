@@ -46,7 +46,8 @@ const OrdersPage: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [showModal, setShowModal] = useState(false);
   const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
+  const [toastMessage, _setToastMessage] = useState('');
+  void _setToastMessage;
 
   const { data: orders = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_orders'],
