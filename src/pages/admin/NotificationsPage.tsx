@@ -38,6 +38,17 @@ const statusColors: Record<string, string> = {
   bounced: '#c62828',
 };
 
+interface NotificationLogRow {
+  id: string;
+  channel: string | null;
+  recipient: string | null;
+  subject: string | null;
+  status: string | null;
+  error_message: string | null;
+  is_marketing: boolean | null;
+  created_at: string | null;
+}
+
 const NotificationsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<Tab>('email');
@@ -49,13 +60,13 @@ const NotificationsPage: React.FC = () => {
   const [sending, setSending] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [toastColor, setToastColor] = useState('success');
+  const [toastColor, setToastColor] = useState<'success' | 'danger' | 'warning'>('success');
   const [logChannelFilter, setLogChannelFilter] = useState<string>('all');
 
   // Delivery log query
   const { data: deliveryLog = [], isLoading: logLoading, isError: logError, refetch: refetchLog } = useQuery({
     queryKey: ['notifications_log', logChannelFilter],
-    queryFn: async () => {
+    queryFn: async (): Promise<NotificationLogRow[]> => {
       let query = supabase
         .from('notifications_log')
         .select('*, profiles!notifications_log_user_id_fkey(full_name, email)')
@@ -81,8 +92,8 @@ const NotificationsPage: React.FC = () => {
         .in('id', allIds);
       return {
         userIds: allIds,
-        emails: (profiles || []).map((p: any) => p.email).filter(Boolean),
-        phones: (profiles || []).map((p: any) => p.phone).filter(Boolean),
+        emails: (profiles || []).map((p: { email: string | null }) => p.email).filter((e): e is string => Boolean(e)),
+        phones: (profiles || []).map((p: { phone: string | null }) => p.phone).filter((ph): ph is string => Boolean(ph)),
       };
     } else {
       const resolvedId = await notificationApi.adminResolveEmail(specificEmail);
@@ -99,7 +110,7 @@ const NotificationsPage: React.FC = () => {
     }
   };
 
-  const showToastMsg = (msg: string, color = 'success') => {
+  const showToastMsg = (msg: string, color: 'success' | 'danger' | 'warning' = 'success') => {
     setToastMessage(msg);
     setToastColor(color);
     setShowToast(true);
@@ -142,8 +153,8 @@ const NotificationsPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['notifications_log'] });
       setSubject('');
       setMessage('');
-    } catch (err: any) {
-      showToastMsg(err.message || 'Failed to send email', 'danger');
+    } catch (err) {
+      showToastMsg(err instanceof Error ? err.message : 'Failed to send email', 'danger');
     } finally {
       setSending(false);
     }
@@ -181,8 +192,8 @@ const NotificationsPage: React.FC = () => {
       showToastMsg(`SMS: ${sent} sent, ${skipped} skipped (opted out)`);
       queryClient.invalidateQueries({ queryKey: ['notifications_log'] });
       setMessage('');
-    } catch (err: any) {
-      showToastMsg(err.message || 'Failed to send SMS', 'danger');
+    } catch (err) {
+      showToastMsg(err instanceof Error ? err.message : 'Failed to send SMS', 'danger');
     } finally {
       setSending(false);
     }
@@ -225,8 +236,8 @@ const NotificationsPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['notifications_log'] });
       setSubject('');
       setMessage('');
-    } catch (err: any) {
-      showToastMsg(err.message || 'Failed to send push', 'danger');
+    } catch (err) {
+      showToastMsg(err instanceof Error ? err.message : 'Failed to send push', 'danger');
     } finally {
       setSending(false);
     }
@@ -371,11 +382,11 @@ const NotificationsPage: React.FC = () => {
                 ) : deliveryLog.length === 0 ? (
                   <div className="empty-history">No notifications sent yet</div>
                 ) : (
-                  deliveryLog.map((entry: any) => (
+                  deliveryLog.map((entry) => (
                     <div key={entry.id} className="log-item">
                       <div className="log-item-top">
                         <span className={`log-channel-badge log-channel-${entry.channel}`}>{entry.channel}</span>
-                        <span className="log-status" style={{ color: statusColors[entry.status] || '#666' }}>
+                        <span className="log-status" style={{ color: statusColors[entry.status || ''] || '#666' }}>
                           {entry.status}
                         </span>
                         {entry.is_marketing && <span className="log-marketing-badge">Marketing</span>}
@@ -385,7 +396,7 @@ const NotificationsPage: React.FC = () => {
                         {entry.subject && <span className="log-subject">{entry.subject}</span>}
                       </div>
                       <div className="log-item-bottom">
-                        <span className="log-date">{formatGhanaDateTime(entry.created_at)}</span>
+                        <span className="log-date">{formatGhanaDateTime(entry.created_at || '')}</span>
                         {entry.error_message && <span className="log-error">{entry.error_message}</span>}
                       </div>
                     </div>
@@ -398,7 +409,7 @@ const NotificationsPage: React.FC = () => {
       </div>
     </AdminLayout>
 
-      <IonToast isOpen={showToast} onDidDismiss={() => setShowToast(false)} message={toastMessage} duration={4000} position="top" color={toastColor as any} />
+      <IonToast isOpen={showToast} onDidDismiss={() => setShowToast(false)} message={toastMessage} duration={4000} position="top"   color={toastColor} />
     </IonPage>
   );
 };
