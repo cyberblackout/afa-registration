@@ -17,12 +17,19 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import AmountDisplay from '../components/AmountDisplay';
 import './BecomeAgentPage.css';
 
+// Paystack Inline injects a global PaystackPop on window.
+interface PaystackPopInstance {
+  setup: (opts: Record<string, unknown>) => { openIframe: () => void } | null | undefined;
+}
+type PaystackWindow = Window & { PaystackPop?: PaystackPopInstance };
+const getPaystackPop = (): PaystackPopInstance | undefined => (window as PaystackWindow).PaystackPop;
+
 // Load Paystack Inline script (same pattern as WalletPage)
 let paystackScriptLoaded = false;
 const loadPaystackScript = (): Promise<void> => {
-  if (paystackScriptLoaded && (window as any).PaystackPop) return Promise.resolve();
+  if (paystackScriptLoaded && getPaystackPop()) return Promise.resolve();
   return new Promise((resolve, reject) => {
-    if ((window as any).PaystackPop) {
+    if (getPaystackPop()) {
       paystackScriptLoaded = true;
       resolve();
       return;
@@ -30,7 +37,7 @@ const loadPaystackScript = (): Promise<void> => {
     const existingScript = document.querySelector('script[src*="paystack"]');
     if (existingScript) {
       const interval = setInterval(() => {
-        if ((window as any).PaystackPop) {
+        if (getPaystackPop()) {
           clearInterval(interval);
           paystackScriptLoaded = true;
           resolve();
@@ -44,7 +51,7 @@ const loadPaystackScript = (): Promise<void> => {
     script.async = true;
     script.onload = () => {
       const waitForPop = setInterval(() => {
-        if ((window as any).PaystackPop) {
+        if (getPaystackPop()) {
           clearInterval(waitForPop);
           paystackScriptLoaded = true;
           resolve();
@@ -99,7 +106,7 @@ const BecomeAgentPage: React.FC = () => {
   void _setUser;
   const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState({ show: false, message: '', color: 'success' });
+  const [toast, setToast] = useState<{ show: boolean; message: string; color: 'success' | 'danger' | 'warning' }>({ show: false, message: '', color: 'success' });
 
   const { data: agentFeeData, isLoading: feeLoading, isError: feeError } = useQuery({
     queryKey: ['agent_fee'],
@@ -136,7 +143,7 @@ const BecomeAgentPage: React.FC = () => {
     setLoading(true);
     try {
       // Step 1: Initiate agent application server-side (creates pending record + Paystack transaction)
-      const initData = await agentApi.initiateApplication() as any;
+      const initData = await agentApi.initiateApplication();
       if (!initData?.access_code || !initData?.reference) {
         throw new Error(initData?.error || 'Failed to initiate payment');
       }
@@ -144,7 +151,7 @@ const BecomeAgentPage: React.FC = () => {
       // Step 2: Load Paystack script and open popup
       await loadPaystackScript();
 
-      const PaystackPop = (window as any).PaystackPop;
+      const PaystackPop = getPaystackPop();
       if (!PaystackPop || typeof PaystackPop.setup !== 'function') {
         throw new Error('Payment system failed to initialize. Please refresh and try again.');
       }
@@ -157,15 +164,15 @@ const BecomeAgentPage: React.FC = () => {
       const pollPaymentStatus = async () => {
         for (let i = 0; i < 15; i++) {
           try {
-            const result = await agentApi.verifyApplication(reference) as any;
+            const result = await agentApi.verifyApplication(reference);
             if (result?.payment_status === 'paid') {
               return result;
             }
             if (result?.payment_status === 'failed') {
               throw new Error('Payment was not successful. Please try again.');
             }
-          } catch (err: any) {
-            if (err.message?.includes('not successful')) throw err;
+          } catch (err) {
+            if (err instanceof Error && err.message?.includes('not successful')) throw err;
           }
           await new Promise(r => setTimeout(r, 2000));
         }
@@ -176,7 +183,7 @@ const BecomeAgentPage: React.FC = () => {
       const handler = PaystackPop.setup({
         key: import.meta.env.VITE_PAYSTACK_PUBLIC_KEY as string,
         email: user?.email || '',
-        amount: Math.round(initData.amount * 100),
+        amount: Math.round(initData.amount! * 100),
         currency: 'GHS',
         ref: reference,
         access_code: initData.access_code,
@@ -188,7 +195,7 @@ const BecomeAgentPage: React.FC = () => {
           // lock behind it) up if verification hangs on a dead network.
           const watchdog = setTimeout(() => setLoading(false), 45000);
           pollPaymentStatus()
-            .then((result: any) => {
+            .then((result) => {
               if (result?.status === 'approved') {
                 // Auto-approved — update local role
                 if (user) {
@@ -202,8 +209,8 @@ const BecomeAgentPage: React.FC = () => {
                 setTimeout(() => history.push('/dashboard'), 2000);
               }
             })
-            .catch((err: any) => {
-              setToast({ show: true, message: err.message || 'Payment verification failed', color: 'danger' });
+            .catch((err) => {
+              setToast({ show: true, message: err instanceof Error ? err.message : 'Payment verification failed', color: 'danger' });
             })
             .finally(() => {
               clearTimeout(watchdog);
@@ -223,8 +230,8 @@ const BecomeAgentPage: React.FC = () => {
       // The Paystack overlay owns the UI from here; release our
       // blocking loader so a missed onClose can never lock scrolling.
       setLoading(false);
-    } catch (err: any) {
-      setToast({ show: true, message: err.message || 'Something went wrong', color: 'danger' });
+    } catch (err) {
+      setToast({ show: true, message: err instanceof Error ? err.message : 'Something went wrong', color: 'danger' });
       setLoading(false);
     }
   };
@@ -470,7 +477,7 @@ const BecomeAgentPage: React.FC = () => {
           isOpen={toast.show}
           message={toast.message}
           duration={4000}
-          color={toast.color as any}
+          color={toast.color}
           onDidDismiss={() => setToast({ ...toast, show: false })}
         />
       </div>

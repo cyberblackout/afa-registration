@@ -21,6 +21,8 @@ import type {
   AdminSettingsBundle,
   AdminCustomer,
   AdminWalletUser,
+  AgentApplicationInit,
+  AgentApplicationVerify,
 } from '../types';
 
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_URL
@@ -232,11 +234,11 @@ export const referralApi = {
 // AGENTS
 // ============================================================
 export const agentApi = {
-  initiateApplication: (): Promise<{ authorization_url?: string; reference?: string; [k: string]: unknown }> =>
-    invoke('initiate-agent-application'),
+  initiateApplication: (): Promise<AgentApplicationInit> =>
+    invoke<AgentApplicationInit>('initiate-agent-application'),
 
-  verifyApplication: (reference: string): Promise<ActionResult> =>
-    invoke<ActionResult>('verify-agent-application', { reference }),
+  verifyApplication: (reference: string): Promise<AgentApplicationVerify> =>
+    invoke<AgentApplicationVerify>('verify-agent-application', { reference }),
 
   getDashboard: (): Promise<AgentDashboardData> =>
     invoke<AgentDashboardData>('admin-agents', undefined, 'GET'),

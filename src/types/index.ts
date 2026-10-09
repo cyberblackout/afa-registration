@@ -199,6 +199,23 @@ export interface AdminWalletUser {
   wallet_status?: string | null;
 }
 
+/** Response from agentApi.initiateApplication() — Paystack setup payload */
+export interface AgentApplicationInit {
+  access_code?: string;
+  reference?: string;
+  application_id?: string;
+  amount?: number;
+  authorization_url?: string;
+  error?: string;
+}
+
+/** Response from agentApi.verifyApplication() */
+export interface AgentApplicationVerify {
+  payment_status?: string;
+  status?: string;
+  error?: string;
+}
+
 export interface AgentPricing {
   id: string;
   key: string;
