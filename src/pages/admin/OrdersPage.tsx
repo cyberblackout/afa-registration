@@ -20,6 +20,7 @@ import Card from '../../components/Card';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../services/supabase';
 import { orderApi } from '../../services/api';
+import type { Order } from '../../types';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate, formatGhanaDateTime } from '../../utils/date';
 import { safeNumber } from '../../utils/number';
@@ -43,7 +44,7 @@ const OrdersPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, _setToastMessage] = useState('');
@@ -51,7 +52,7 @@ const OrdersPage: React.FC = () => {
 
   const { data: orders = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_orders'],
-    queryFn: () => orderApi.list() as any,
+    queryFn: () => orderApi.list(),
   });
 
   useEffect(() => {
@@ -61,15 +62,15 @@ const OrdersPage: React.FC = () => {
       })
       .subscribe();
     return () => { supabase.removeChannel(channel); };
-  }, []);
+  }, [queryClient]);
 
-  const filtered = orders.filter((o: any) => {
+  const filtered = orders.filter((o) => {
     const matchSearch = (o.id || '').toLowerCase().includes(search.toLowerCase()) || (o.profiles?.full_name || '').toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === 'All' || (o.status || '').toLowerCase() === statusFilter.toLowerCase();
     return matchSearch && matchStatus;
   });
 
-  const openDetail = (o: any) => {
+  const openDetail = (o: Order) => {
     setSelectedOrder(o);
     setShowModal(true);
   };
@@ -140,7 +141,7 @@ const OrdersPage: React.FC = () => {
               </motion.div>
             ) : (
               <motion.div className="orders-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                {filtered.map((order: any, index: number) => (
+                {filtered.map((order, index) => (
                   <Card key={order.id} className="order-card" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.03 }}>
                     <div className="order-card-row">
                       <span className="order-id">{order.id?.slice(0, 8)}</span>
