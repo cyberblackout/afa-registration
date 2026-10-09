@@ -10,6 +10,7 @@ import type {
   ReferralStats,
   ReferralTransaction,
   AgentApplication,
+  AgentApplicationsBundle,
   AgentDashboardData,
   SystemSetting,
   AuditLog,
@@ -254,8 +255,8 @@ export const agentApi = {
   checkPermission: (permission: string): Promise<boolean> =>
     invoke<boolean>('agent-apply', { action: 'check_permission', permission }),
 
-  adminGetApplications: (): Promise<AgentApplication[]> =>
-    invoke<AgentApplication[]>('admin-agents', { action: 'get_applications' }),
+  adminGetApplications: (): Promise<AgentApplicationsBundle> =>
+    invoke<AgentApplicationsBundle>('admin-agents', { action: 'get_applications' }),
 
   adminApprove: (applicationId: string, status: string, adminNotes?: string): Promise<ActionResult> =>
     invoke<ActionResult>('admin-agents', { action: 'approve', application_id: applicationId, status, admin_notes: adminNotes }),

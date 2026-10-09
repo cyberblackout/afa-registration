@@ -154,6 +154,42 @@ export interface AgentApplication {
   updated_at: string;
 }
 
+/** Application row from admin_get_agent_applications — includes joined profile fields */
+export interface AgentApplicationRow {
+  id: string;
+  user_id: string;
+  user_name: string | null;
+  user_email: string | null;
+  user_phone: string | null;
+  payment_status: 'pending' | 'paid' | 'failed' | 'refunded';
+  amount_paid: number;
+  payment_reference?: string | null;
+  status: 'pending' | 'approved' | 'rejected';
+  admin_notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Agent profile row from admin_get_agent_applications */
+export interface AgentProfileRow {
+  id: string;
+  agent_id?: string | null;
+  full_name: string | null;
+  email: string | null;
+  phone: string | null;
+  agent_status?: string | null;
+  agent_verified?: boolean | null;
+  agent_since?: string | null;
+  registrations_count: number;
+  earnings: number;
+}
+
+/** Bundle returned by admin_get_agent_applications RPC */
+export interface AgentApplicationsBundle {
+  applications: AgentApplicationRow[];
+  agents: AgentProfileRow[];
+}
+
 export interface AgentPricing {
   id: string;
   key: string;

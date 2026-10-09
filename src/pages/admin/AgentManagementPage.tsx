@@ -10,6 +10,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { agentApi } from '../../services/api';
+import type { AgentApplicationRow } from '../../types';
 import AdminLayout from '../../layouts/AdminLayout';
 import Card from '../../components/Card';
 import { formatGhanaDate, formatGhanaDateTime } from '../../utils/date';
@@ -20,16 +21,16 @@ const AgentManagementPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [segment, setSegment] = useState('agents');
-  const [toast, setToast] = useState({ show: false, message: '', color: 'success' });
+  const [toast, setToast] = useState<{ show: boolean; message: string; color: 'success' | 'danger' }>({ show: false, message: '', color: 'success' });
   const [loading, setLoading] = useState(false);
-  const [selectedApp, setSelectedApp] = useState<any>(null);
+  const [selectedApp, setSelectedApp] = useState<AgentApplicationRow | null>(null);
   const [adminNotes, setAdminNotes] = useState('');
 
   const { data: agentResult, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_agents'],
     queryFn: async () => {
       const data = await agentApi.adminGetApplications();
-      return data as any || { agents: [], applications: [] };
+      return data || { agents: [], applications: [] };
     },
   });
 
@@ -47,8 +48,8 @@ const AgentManagementPage: React.FC = () => {
       setSelectedApp(null);
       setAdminNotes('');
     },
-    onError: (err: any) => {
-      setToast({ show: true, message: err.message, color: 'danger' });
+    onError: (err: unknown) => {
+      setToast({ show: true, message: err instanceof Error ? err.message : 'Failed to approve/reject application', color: 'danger' });
       setLoading(false);
     },
   });
@@ -62,12 +63,12 @@ const AgentManagementPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['admin_agents'] });
       setToast({ show: true, message: 'Agent status updated', color: 'success' });
     },
-    onError: (err: any) => {
-      setToast({ show: true, message: err.message, color: 'danger' });
+    onError: (err: unknown) => {
+      setToast({ show: true, message: err instanceof Error ? err.message : 'Failed to update agent status', color: 'danger' });
     },
   });
 
-  const handleApprove = (app: any) => {
+  const handleApprove = (app: AgentApplicationRow) => {
     setSelectedApp(app);
   };
 
@@ -77,7 +78,7 @@ const AgentManagementPage: React.FC = () => {
     approveMutation.mutate({ id: selectedApp.id, status: 'approved', notes: adminNotes });
   };
 
-  const handleReject = (app: any) => {
+  const handleReject = (app: AgentApplicationRow) => {
     setSelectedApp(app);
   };
 
@@ -87,15 +88,15 @@ const AgentManagementPage: React.FC = () => {
     approveMutation.mutate({ id: selectedApp.id, status: 'rejected', notes: adminNotes });
   };
 
-  const filteredAgents = agents.filter((a: any) =>
+  const filteredAgents = agents.filter((a) =>
     a.full_name?.toLowerCase().includes(search.toLowerCase()) ||
     a.agent_id?.toLowerCase().includes(search.toLowerCase()) ||
     a.email?.toLowerCase().includes(search.toLowerCase()) ||
     a.phone?.includes(search)
   );
 
-  const pendingApps = applications.filter((a: any) => a.status === 'pending');
-  const allFilteredApps = applications.filter((a: any) =>
+  const pendingApps = applications.filter((a) => a.status === 'pending');
+  const allFilteredApps = applications.filter((a) =>
     a.user_name?.toLowerCase().includes(search.toLowerCase()) ||
     a.user_email?.toLowerCase().includes(search.toLowerCase()) ||
     a.user_phone?.includes(search)
@@ -137,14 +138,14 @@ const AgentManagementPage: React.FC = () => {
           <Card variant="bordered" className="am-stat-card">
             <IonIcon icon={checkmarkCircleOutline} style={{ color: '#2e7d32' }} />
             <div>
-              <span className="am-stat-value">{agents.filter((a: any) => a.agent_verified).length}</span>
+              <span className="am-stat-value">{agents.filter((a) => a.agent_verified).length}</span>
               <span className="am-stat-label">Verified Agents</span>
             </div>
           </Card>
           <Card variant="bordered" className="am-stat-card">
             <IonIcon icon={banOutline} style={{ color: '#c62828' }} />
             <div>
-              <span className="am-stat-value">{agents.filter((a: any) => a.agent_status === 'suspended').length}</span>
+              <span className="am-stat-value">{agents.filter((a) => a.agent_status === 'suspended').length}</span>
               <span className="am-stat-label">Suspended</span>
             </div>
           </Card>
@@ -197,7 +198,7 @@ const AgentManagementPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredAgents.map((agent: any) => (
+                  {filteredAgents.map((agent) => (
                     <tr key={agent.id}>
                       <td><code>{agent.agent_id || '—'}</code></td>
                       <td>{agent.full_name}</td>
@@ -273,7 +274,7 @@ const AgentManagementPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {allFilteredApps.map((app: any) => (
+                  {allFilteredApps.map((app) => (
                     <tr key={app.id}>
                       <td>{app.user_name}</td>
                       <td>{app.user_email}</td>
@@ -353,7 +354,7 @@ const AgentManagementPage: React.FC = () => {
           isOpen={toast.show}
           message={toast.message}
           duration={3000}
-          color={toast.color as any}
+          color={toast.color}
           onDidDismiss={() => setToast({ ...toast, show: false })}
         />
     </IonPage>
