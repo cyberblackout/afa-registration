@@ -129,6 +129,27 @@ export interface Referral {
   created_at: string;
   completed_at: string | null;
   referred_profile?: { full_name: string; email: string; phone: string };
+  referrer?: { full_name: string | null; email: string | null; phone: string | null } | null;
+  referred?: { full_name: string | null; email: string | null; phone: string | null } | null;
+}
+
+/** Analytics returned by referralApi.adminAnalytics() */
+export interface ReferralAdminAnalytics {
+  total_referrals: number;
+  successful: number;
+  pending: number;
+  rejected: number;
+  total_rewards_paid: number;
+  unique_referrers: number;
+  fraud_attempts: number;
+}
+
+/** Result of referralApi.adminRetryReward() */
+export interface ReferralRetryRewardResult {
+  amount?: number;
+  success?: boolean;
+  error?: string;
+  message?: string;
 }
 
 export interface ReferralReward {

@@ -25,6 +25,8 @@ import type {
   AgentApplicationVerify,
   AdminPaymentRow,
   AdminRegistrationRow,
+  ReferralAdminAnalytics,
+  ReferralRetryRewardResult,
 } from '../types';
 
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_URL
@@ -219,8 +221,8 @@ export const referralApi = {
   getMyReferralTransactions: (): Promise<ReferralTransaction[]> =>
     invoke<ReferralTransaction[]>('referrals', { action: 'get_my_referral_transactions' }),
 
-  adminAnalytics: (): Promise<unknown> =>
-    invoke<unknown>('admin-referrals', { action: 'analytics' }),
+  adminAnalytics: (): Promise<ReferralAdminAnalytics> =>
+    invoke<ReferralAdminAnalytics>('admin-referrals', { action: 'analytics' }),
 
   adminList: (): Promise<Referral[]> =>
     invoke<Referral[]>('admin-referrals', { action: 'list' }),
@@ -228,8 +230,8 @@ export const referralApi = {
   adminUpdateStatus: (id: string, status: string): Promise<ActionResult> =>
     invoke<ActionResult>('admin-referrals', { action: 'update_status', id, status }),
 
-  adminRetryReward: (referralId: string): Promise<ActionResult> =>
-    invoke<ActionResult>('admin-referrals', { action: 'retry_reward', referral_id: referralId }),
+  adminRetryReward: (referralId: string): Promise<ReferralRetryRewardResult> =>
+    invoke<ReferralRetryRewardResult>('admin-referrals', { action: 'retry_reward', referral_id: referralId }),
 };
 
 // ============================================================

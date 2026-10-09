@@ -24,12 +24,12 @@ const ReferralManagementPage: React.FC = () => {
     refetch: refetchAnalytics,
   } = useQuery({
     queryKey: ['admin_referral_analytics'],
-    queryFn: () => referralApi.adminAnalytics() as any,
+    queryFn: () => referralApi.adminAnalytics(),
   });
 
   const { data: referrals = [], isLoading: referralsLoading, isError: referralsError, refetch: refetchReferrals } = useQuery({
-    queryKey: ['admin_all_referrals'],
-    queryFn: () => referralApi.adminList() as any,
+    queryKey: ['admin_referrals'],
+    queryFn: () => referralApi.adminList(),
   });
 
   const updateStatus = async (id: string, status: string) => {
@@ -38,14 +38,14 @@ const ReferralManagementPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['admin_all_referrals'] });
       queryClient.invalidateQueries({ queryKey: ['admin_referral_analytics'] });
       setToast({ show: true, msg: `Referral ${status}` });
-    } catch (err: any) {
-      setToast({ show: true, msg: err.message || `Failed to ${status} referral` });
+    } catch (err) {
+      setToast({ show: true, msg: (err instanceof Error ? err.message : null) || `Failed to ${status} referral` });
     }
   };
 
   const retryReward = async (referralId: string) => {
     try {
-      const result = await referralApi.adminRetryReward(referralId) as any;
+      const result = await referralApi.adminRetryReward(referralId);
       if (result?.success) {
         setToast({ show: true, msg: `Reward granted: GH₵ ${safeNumber(result.amount).toFixed(2)}` });
       } else {
@@ -53,8 +53,8 @@ const ReferralManagementPage: React.FC = () => {
       }
       queryClient.invalidateQueries({ queryKey: ['admin_all_referrals'] });
       queryClient.invalidateQueries({ queryKey: ['admin_referral_analytics'] });
-    } catch (err: any) {
-      setToast({ show: true, msg: err.message || 'Retry failed' });
+    } catch (err) {
+      setToast({ show: true, msg: (err instanceof Error ? err.message : null) || 'Retry failed' });
     }
   };
 
@@ -165,7 +165,7 @@ const ReferralManagementPage: React.FC = () => {
                 <span>Date</span>
                 <span>Actions</span>
               </div>
-              {referrals.map((r: any, i: number) => (
+              {referrals.map((r, i) => (
                 <motion.div key={r.id} className="ref-tr" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.02 }}>
                   <span className="ref-name">{r.referrer?.full_name || 'Unknown'}</span>
                   <span className="ref-name">{r.referred?.full_name || '---'}</span>
