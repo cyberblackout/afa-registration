@@ -146,8 +146,8 @@ Deno.serve(async (req) => {
         return errorResp("Profile not found", 404, origin);
       }
       const rows = priceRows || [];
-      const afa = rows.find((r: any) => r.key === "afa_registration");
-      const maxTopup = rows.find((r: any) => r.key === "wallet_max_topup");
+      const afa = rows.find((r: { key: string }) => r.key === "afa_registration");
+      const maxTopup = rows.find((r: { key: string }) => r.key === "wallet_max_topup");
       const tier: "normal" | "agent" = profile.role === "agent" ? "agent" : "normal";
       const price = tier === "agent" ? afa?.agent_price : afa?.normal_price;
       const priceNumeric = toNumeric(price);

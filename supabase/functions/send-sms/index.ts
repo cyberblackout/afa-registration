@@ -7,13 +7,16 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return errorResp("Method not allowed", 405, origin);
   const auth = await verifyAuth(req, ["admin"]);
   if (auth.error) return auth.error;
-  let body: any;
+  let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {
     return errorResp("Invalid request body", 400, origin);
   }
-  const { user_id, phone, message, type = "transactional" } = body;
+  const user_id = typeof body.user_id === "string" ? body.user_id : undefined;
+  const phone = typeof body.phone === "string" ? body.phone : undefined;
+  const message = typeof body.message === "string" ? body.message : undefined;
+  const type = typeof body.type === "string" ? body.type : "transactional";
   if (!phone || !message) {
     return errorResp("phone and message are required", 400, origin);
   }

@@ -186,7 +186,7 @@ export function jsonResp(
   status = 200,
   origin?: string | null
 ): Response {
-  const cors = getCorsHeaders(origin);
+  const cors = getCorsHeaders(origin ?? null);
   return new Response(JSON.stringify(data), {
     status,
     headers: { ...cors, "Content-Type": "application/json" },

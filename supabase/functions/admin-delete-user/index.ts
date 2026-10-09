@@ -72,9 +72,9 @@ Deno.serve(async (req) => {
       authBanFailed = true;
       authBanError = banError.message || "Ban failed";
     }
-  } catch (e: any) {
+  } catch (e) {
     authBanFailed = true;
-    authBanError = e.message || "Ban request failed";
+    authBanError = (e instanceof Error ? e.message : null) || "Ban request failed";
   }
   if (authBanFailed) {
     return successResp(

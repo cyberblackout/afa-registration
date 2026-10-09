@@ -3,7 +3,7 @@ import {
   verifyAuth,
   getSupabaseAdmin,
   errorResp,
-  successResp, getCorsHeaders,
+  successResp, getCorsHeaders, jsonResp,
 } from "../_shared/auth.ts";
 import { z, validateBody } from "../_shared/validation.ts";
 // NOTE: no price, role or user id is accepted from the client. The amount is
@@ -72,7 +72,20 @@ Deno.serve(async (req) => {
       origin
     );
   }
-  const res = result as any;
+  const res = result as {
+    success?: boolean;
+    code?: string;
+    error?: string;
+    current_price?: number;
+    tier?: string;
+    pricing_tier?: string;
+    required?: number;
+    balance?: number;
+    new_balance?: number;
+    id?: string;
+    message?: string;
+    fee_charged?: number;
+  };
   if (!res?.success) {
     if (res?.code === "PRICE_CHANGED") {
       return jsonResp(

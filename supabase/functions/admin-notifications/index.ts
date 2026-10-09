@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
       let targetUserIds = data.user_ids || [];
       if (data.send_to_all) {
         const { data: allUsers } = await admin.from("profiles").select("id");
-        targetUserIds = (allUsers || []).map((u: any) => u.id);
+        targetUserIds = (allUsers || []).map((u: { id: string }) => u.id);
       }
       if (targetUserIds.length === 0) {
         return errorResp("No recipients specified", 400, origin);
@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
     case "get_all_user_ids": {
       const { data: users, error } = await admin.from("profiles").select("id");
       if (error) return errorResp("Failed to fetch users", 500, origin);
-      return successResp((users || []).map((u: any) => u.id), origin);
+      return successResp((users || []).map((u: { id: string }) => u.id), origin);
     }
     case "resolve_email": {
       const { data: profile, error } = await admin

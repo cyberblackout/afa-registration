@@ -1,4 +1,5 @@
 import { getSupabaseAdmin, getCorsHeaders } from "../_shared/auth.ts";
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 const PAYSTACK_SECRET = Deno.env.get("PAYSTACK_SECRET_KEY") ?? "";
 const PAYSTACK_BASE = "https://api.paystack.co";
 // Verify Paystack webhook signature (HMAC SHA512) with constant-time comparison
@@ -38,9 +39,9 @@ function getPaymentPurpose(reference: string): "wallet_topup" | "agent_applicati
 }
 // Handle wallet top-up payment
 async function handleWalletTopup(
-  admin: any,
+  admin: SupabaseClient,
   reference: string,
-  transactionData: any,
+  transactionData: { reference: string },
   eventType: string
 ) {
   // Look up the pending wallet transaction
@@ -128,9 +129,9 @@ async function handleWalletTopup(
 }
 // Handle agent application payment
 async function handleAgentApplication(
-  admin: any,
+  admin: SupabaseClient,
   reference: string,
-  transactionData: any,
+  transactionData: { reference: string },
   eventType: string
 ) {
   // Look up the pending agent application
@@ -225,7 +226,7 @@ Deno.serve(async (req) => {
     console.error("Invalid webhook signature - rejecting request");
     return new Response("Invalid signature", { status: 400 });
   }
-  let event: any;
+  let event: { event?: string; data?: { reference: string } };
   try {
     event = JSON.parse(rawBody);
   } catch {

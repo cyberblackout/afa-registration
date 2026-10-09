@@ -1,4 +1,5 @@
 import "https://deno.land/std@0.177.0/dotenv/load.ts";
+import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   verifyAuth,
   getSupabaseAdmin, errorResp,
@@ -38,7 +39,7 @@ Deno.serve(async (req) => {
       return errorResp("Invalid action", 400, origin);
   }
 });
-async function getStats(admin: any, origin: string | null) {
+async function getStats(admin: SupabaseClient, origin: string | null) {
   const [
     totalUsersRes,
     totalRegistrationsRes,
@@ -91,11 +92,11 @@ async function getStats(admin: any, origin: string | null) {
       .eq("status", "processing"),
   ]);
   const revenue = (revenueRes.data || []).reduce(
-    (sum: number, t: any) => sum + (Number(t.amount) || 0),
+    (sum: number, t: { amount: number | null }) => sum + (Number(t.amount) || 0),
     0
   );
   const totalWalletBalance = (walletBalanceRes.data || []).reduce(
-    (sum: number, p: any) => sum + (Number(p.wallet_balance) || 0),
+    (sum: number, p: { wallet_balance: number | null }) => sum + (Number(p.wallet_balance) || 0),
     0
   );
   return successResp(
@@ -115,7 +116,7 @@ async function getStats(admin: any, origin: string | null) {
     origin
   );
 }
-async function getDailyChart(admin: any, origin: string | null) {
+async function getDailyChart(admin: SupabaseClient, origin: string | null) {
   const now = new Date();
   const days = [];
   for (let i = 6; i >= 0; i--) {
@@ -141,7 +142,7 @@ async function getDailyChart(admin: any, origin: string | null) {
     ]);
     days.push({
       day: dayLabel,
-      revenue: (revRes.data || []).reduce((s: number, t: any) => s + (t.amount || 0), 0),
+      revenue: (revRes.data || []).reduce((s: number, t: { amount: number | null }) => s + (t.amount || 0), 0),
       registrations: regsRes.count ?? 0,
     });
   }

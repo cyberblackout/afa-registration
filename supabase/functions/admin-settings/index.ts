@@ -48,11 +48,11 @@ const actionSchema = z.discriminatedUnion("action", [
   }),
   z.object({
     action: z.literal("save_app_settings"),
-    settings: z.record(z.string()),
+    settings: z.record(z.string(), z.string()),
   }),
   z.object({
     action: z.literal("save_system_settings"),
-    settings: z.record(z.string()),
+    settings: z.record(z.string(), z.string()),
   }),
   z.object({
     action: z.literal("save_afa_prices"),
@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
       "vapid_private_key",
     ];
     const safeAppSettings = (appRes.data || []).filter(
-      (s: any) => !SENSITIVE_KEYS.includes(s.key)
+      (s: { key: string }) => !SENSITIVE_KEYS.includes(s.key)
     );
     return successResp(
       {

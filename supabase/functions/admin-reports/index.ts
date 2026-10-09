@@ -64,23 +64,23 @@ Deno.serve(async (req) => {
       admin.from("profiles").select("id", { count: "exact", head: true }),
     ]);
   const revenue = (revenueRes.data || []).reduce(
-    (sum: number, t: any) => sum + (Number(t.amount) || 0),
+    (sum: number, t: { amount: number | null }) => sum + (Number(t.amount) || 0),
     0
   );
   const registrationStats = {
     total: (registrationRes.data || []).length,
-    pending: (registrationRes.data || []).filter((r: any) => r.status === "pending").length,
-    approved: (registrationRes.data || []).filter((r: any) => r.status === "approved").length,
-    rejected: (registrationRes.data || []).filter((r: any) => r.status === "rejected").length,
-    completed: (registrationRes.data || []).filter((r: any) => r.status === "completed").length,
+    pending: (registrationRes.data || []).filter((r: { status: string }) => r.status === "pending").length,
+    approved: (registrationRes.data || []).filter((r: { status: string }) => r.status === "approved").length,
+    rejected: (registrationRes.data || []).filter((r: { status: string }) => r.status === "rejected").length,
+    completed: (registrationRes.data || []).filter((r: { status: string }) => r.status === "completed").length,
   };
   const paymentStats = {
     total: (paymentRes.data || []).length,
     total_amount: (paymentRes.data || []).reduce(
-      (sum: number, p: any) => sum + (Number(p.amount) || 0),
+      (sum: number, p: { amount: number | null }) => sum + (Number(p.amount) || 0),
       0
     ),
-    by_method: (paymentRes.data || []).reduce((acc: Record<string, number>, p: any) => {
+    by_method: (paymentRes.data || []).reduce((acc: Record<string, number>, p: { amount: number | null; payment_method: string | null }) => {
       const method = p.payment_method || "Unknown";
       acc[method] = (acc[method] || 0) + (Number(p.amount) || 0);
       return acc;

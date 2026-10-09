@@ -121,17 +121,17 @@ Deno.serve(async (req) => {
   if (rateLimit === false) {
     return errorResp("Rate limit exceeded. Please wait before sending more notifications.", 429, origin);
   }
-  let body: any;
+  let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {
     return errorResp("Invalid request body", 400, origin);
   }
-  const targetUserId: string | undefined = body.user_id;
-  const title: string | undefined = body.title;
-  const notifBody: string = body.body || "";
-  const targetUrl: string = body.url || "";
-  const notifType: string = body.type || "transactional";
+  const targetUserId = typeof body.user_id === "string" ? body.user_id : undefined;
+  const title = typeof body.title === "string" ? body.title : undefined;
+  const notifBody: string = typeof body.body === "string" ? body.body : "";
+  const targetUrl: string = typeof body.url === "string" ? body.url : "";
+  const notifType: string = typeof body.type === "string" ? body.type : "transactional";
   if (!title) {
     return errorResp("title is required", 400, origin);
   }
@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
     const { data: profiles } = await admin
       .from("profiles")
       .select("id")
-      .eq("notification_preferences->>'push', " + "'true'" + ")");
+      .eq("notification_preferences->>push", "true");
     if (profiles) {
       for (const p of profiles) {
         targetUserIds.push(p.id);

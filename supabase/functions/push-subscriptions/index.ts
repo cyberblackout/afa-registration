@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
         .from("push_subscriptions")
         .select("endpoint")
         .eq("user_id", auth.user!.id);
-      const endpoints = (subs || []).map((s: any) => s.endpoint);
+      const endpoints = (subs || []).map((s: { endpoint: string }) => s.endpoint);
       if (endpoints.length > 0) {
         await admin
           .from("push_subscriptions")

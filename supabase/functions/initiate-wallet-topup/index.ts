@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
   }
   const auth = await verifyAuth(req, ["user", "agent", "admin"]);
   if (auth.error) return auth.error;
-  let body: any;
+  let body: Record<string, unknown>;
   try {
     body = await req.json();
   } catch {
