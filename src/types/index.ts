@@ -276,3 +276,8 @@ export interface AdminSettingsBundle {
   system_settings?: SystemSettingRow[];
   pricing?: PricingRow[];
 }
+
+/** Customer row returned by adminCustomerApi.list() — a User plus soft-delete flag */
+export interface AdminCustomer extends User {
+  deleted_at?: string | null;
+}

@@ -35,6 +35,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminCustomerApi, walletApi, orderApi } from '../../services/api';
+import type { AdminCustomer, Transaction, Order } from '../../types';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate } from '../../utils/date';
 import Card from '../../components/Card';
@@ -45,7 +46,7 @@ const CustomersPage: React.FC = () => {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [editCustomer, setEditCustomer] = useState<any>(null);
+  const [editCustomer, setEditCustomer] = useState<AdminCustomer | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [alertConfig] = useState<{ header: string; message: string; action: () => void }>({ header: '', message: '', action: () => {} });
@@ -54,10 +55,10 @@ const CustomersPage: React.FC = () => {
   const [editName, setEditName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editPhone, setEditPhone] = useState('');
-  const [roleActionTarget, setRoleActionTarget] = useState<any>(null);
+  const [roleActionTarget, setRoleActionTarget] = useState<AdminCustomer | null>(null);
   const [showRoleSheet, setShowRoleSheet] = useState(false);
   const [isChangingRole, setIsChangingRole] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminCustomer | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmEmail, setDeleteConfirmEmail] = useState('');
   const [deleteReason, setDeleteReason] = useState('');
@@ -66,7 +67,7 @@ const CustomersPage: React.FC = () => {
 
   const { data: customers = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_customers'],
-    queryFn: () => adminCustomerApi.list() as any,
+    queryFn: () => adminCustomerApi.list(),
   });
 
   const {
@@ -76,7 +77,7 @@ const CustomersPage: React.FC = () => {
     refetch: refetchTx,
   } = useQuery({
     queryKey: ['admin_customer_transactions', expandedId],
-    queryFn: () => walletApi.adminListTransactions(expandedId!) as any,
+    queryFn: () => walletApi.adminListTransactions(expandedId!),
     enabled: !!expandedId,
   });
 
@@ -87,26 +88,26 @@ const CustomersPage: React.FC = () => {
     refetch: refetchOrders,
   } = useQuery({
     queryKey: ['admin_customer_orders', expandedId],
-    queryFn: () => orderApi.list(expandedId!) as any,
+    queryFn: () => orderApi.list(expandedId!),
     enabled: !!expandedId,
   });
 
   const filtered = customers
-    .filter((c: any) => showDeletedUsers ? true : !c.deleted_at)
-    .filter((c: any) =>
+    .filter((c) => showDeletedUsers ? true : !c.deleted_at)
+    .filter((c) =>
       c.full_name?.toLowerCase().includes(search.toLowerCase()) ||
       c.email?.toLowerCase().includes(search.toLowerCase()) ||
       c.phone?.includes(search)
     );
 
-  const activeCount = customers.filter((c: any) => !c.deleted_at).length;
-  const deletedCount = customers.filter((c: any) => c.deleted_at).length;
+  const activeCount = customers.filter((c) => !c.deleted_at).length;
+  const deletedCount = customers.filter((c) => c.deleted_at).length;
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
   };
 
-  const openEdit = (c: any) => {
+  const openEdit = (c: AdminCustomer) => {
     setEditCustomer(c);
     setEditName(c.full_name || '');
     setEditEmail(c.email || '');
@@ -123,13 +124,13 @@ const CustomersPage: React.FC = () => {
       setEditCustomer(null);
       setToastMessage('Customer details updated successfully');
       setShowToast(true);
-    } catch (err: any) {
-      setToastMessage(err.message || 'Failed to update customer');
+    } catch (err) {
+      setToastMessage(err instanceof Error ? err.message : 'Failed to update customer');
       setShowToast(true);
     }
   };
 
-  const setRole = async (targetUser: any) => {
+  const setRole = async (targetUser: AdminCustomer) => {
     setRoleActionTarget(targetUser);
     setShowRoleSheet(true);
   };
@@ -151,8 +152,8 @@ const CustomersPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['afa-pricing'] });
       setToastMessage(`${roleActionTarget.full_name} is now ${newRole}`);
       setShowToast(true);
-    } catch (err: any) {
-      setToastMessage(err.message || 'Failed to update role');
+    } catch (err) {
+      setToastMessage(err instanceof Error ? err.message : 'Failed to update role');
       setShowToast(true);
     } finally {
       setIsChangingRole(false);
@@ -165,7 +166,7 @@ const CustomersPage: React.FC = () => {
     setShowToast(true);
   };
 
-  const openDeleteConfirm = (c: any) => {
+  const openDeleteConfirm = (c: AdminCustomer) => {
     setDeleteTarget(c);
     setDeleteConfirmEmail('');
     setDeleteReason('');
@@ -189,8 +190,8 @@ const CustomersPage: React.FC = () => {
         : '';
       setToastMessage(`${deleteTarget.full_name || 'User'} has been deleted${authWarning}`);
       setShowToast(true);
-    } catch (err: any) {
-      setToastMessage(err.message || 'Failed to delete user');
+    } catch (err) {
+      setToastMessage(err instanceof Error ? err.message : 'Failed to delete user');
       setShowToast(true);
     } finally {
       setIsDeleting(false);
@@ -200,7 +201,7 @@ const CustomersPage: React.FC = () => {
     }
   };
 
-  const getRoleLabel = (c: any): string => {
+  const getRoleLabel = (c: AdminCustomer): string => {
     if (c.role === 'admin') return 'Admin';
     if (c.role === 'agent') return 'Agent';
     return 'User';
@@ -259,7 +260,7 @@ const CustomersPage: React.FC = () => {
                   <IonIcon icon={peopleOutline} />
                   <p>No customers found</p>
                 </div>
-              ) : filtered.map((customer: any, index: number) => {
+              ) : filtered.map((customer, index) => {
                 const roleLabel = getRoleLabel(customer);
                 return (
                   <motion.div
@@ -354,7 +355,7 @@ const CustomersPage: React.FC = () => {
                                 <p className="no-data">No transactions recorded</p>
                               ) : (
                                 <div className="detail-table">
-                                  {transactions.map((t: any, i: number) => (
+                                  {transactions.map((t, i) => (
                                     <div key={t.id || i} className="detail-row">
                                       <span>{formatGhanaDate(t.created_at)}</span>
                                       <span className={t.type === 'credit' ? 'tx-credit' : 'tx-debit'}>
@@ -378,7 +379,7 @@ const CustomersPage: React.FC = () => {
                                 <p className="no-data">No orders yet</p>
                               ) : (
                                 <div className="detail-table">
-                                  {customerOrders.map((o: any, i: number) => (
+                                  {customerOrders.map((o, i) => (
                                     <div key={o.id || i} className="detail-row">
                                       <span>{o.id?.slice(0, 8)}</span>
                                       <span>GH₵ {safeNumber(o.amount).toFixed(2)}</span>

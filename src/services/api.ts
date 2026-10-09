@@ -18,6 +18,7 @@ import type {
   SendPushResult,
   UpdateRegistrationStatusResult,
   AdminSettingsBundle,
+  AdminCustomer,
 } from '../types';
 
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_URL
@@ -292,8 +293,8 @@ export const adminSettingsApi = {
 // ADMIN CUSTOMERS
 // ============================================================
 export const adminCustomerApi = {
-  list: (): Promise<User[]> =>
-    invoke<User[]>('admin-customers', { action: 'list' }),
+  list: (): Promise<AdminCustomer[]> =>
+    invoke<AdminCustomer[]>('admin-customers', { action: 'list' }),
 
   getUser: (userId: string): Promise<User> =>
     invoke<User>('admin-customers', { action: 'get_user', user_id: userId }),
