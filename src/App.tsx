@@ -169,7 +169,7 @@ const AuthErrorScreen: React.FC = () => {
 };
 
 const ProtectedRoute: React.FC<{
-  component: React.FC<any>;
+  component: React.ComponentType<Record<string, unknown>>;
   path: string;
   exact?: boolean;
   requireAdmin?: boolean;
@@ -217,7 +217,7 @@ const ProtectedRoute: React.FC<{
   );
 };
 
-const AdminQueryGate: React.FC<{ component: React.FC<any> } & any> = ({ component: Component, ...props }) => {
+const AdminQueryGate: React.FC<{ component: React.ComponentType<Record<string, unknown>> } & Record<string, unknown>> = ({ component: Component, ...props }) => {
   const { role } = useAuthStore();
   const { data: isAdmin, isLoading: adminLoading } = useIsAdmin();
 
