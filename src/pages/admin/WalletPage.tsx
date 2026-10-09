@@ -27,6 +27,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { walletApi } from '../../services/api';
+import type { AdminWalletUser, Transaction } from '../../types';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate } from '../../utils/date';
 import Card from '../../components/Card';
@@ -38,7 +39,7 @@ const WalletPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showTxModal, setShowTxModal] = useState(false);
-  const [selectedWallet, setSelectedWallet] = useState<any>(null);
+  const [selectedWallet, setSelectedWallet] = useState<AdminWalletUser | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   // A ref, NOT useState: passing an async function to a state setter makes
   // React invoke it as an updater, firing the API call when the dialog merely
@@ -56,7 +57,7 @@ const WalletPage: React.FC = () => {
 
   const { data: profiles = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_wallets'],
-    queryFn: () => walletApi.adminListUsers() as any,
+    queryFn: () => walletApi.adminListUsers(),
   });
 
   const {
@@ -66,13 +67,13 @@ const WalletPage: React.FC = () => {
     refetch: refetchTxHistory,
   } = useQuery({
     queryKey: ['admin_wallet_tx', expandedId],
-    queryFn: () => walletApi.adminListTransactions(expandedId!) as any,
+    queryFn: () => walletApi.adminListTransactions(expandedId!),
     enabled: !!expandedId,
   });
 
-  const totalBalance = profiles.reduce((sum: number, p: any) => sum + safeNumber(p.wallet_balance), 0);
+  const totalBalance = profiles.reduce((sum, p) => sum + safeNumber(p.wallet_balance), 0);
 
-  const filtered = profiles.filter((p: any) =>
+  const filtered = profiles.filter((p) =>
     p.full_name?.toLowerCase().includes(search.toLowerCase()) ||
     p.email?.toLowerCase().includes(search.toLowerCase())
   );
@@ -81,7 +82,7 @@ const WalletPage: React.FC = () => {
     setExpandedId(expandedId === id ? null : id);
   };
 
-  const openTxModal = (profile: any, type: 'credit' | 'debit') => {
+  const openTxModal = (profile: AdminWalletUser, type: 'credit' | 'debit') => {
     setSelectedWallet(profile);
     setTxType(type);
     setTxAmount('');
@@ -104,15 +105,15 @@ const WalletPage: React.FC = () => {
       setShowTxModal(false);
       setToastMessage(`${txType === 'credit' ? 'Credited' : 'Debited'} GH₵ ${safeNumber(amount).toFixed(2)} ${txType === 'credit' ? 'to' : 'from'} ${selectedWallet.full_name}`);
       setShowToast(true);
-    } catch (err: any) {
-      setToastMessage(err.message || 'Transaction failed');
+    } catch (err) {
+      setToastMessage(err instanceof Error ? err.message : 'Transaction failed');
       setShowToast(true);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const toggleFreeze = (profile: any) => {
+  const toggleFreeze = (profile: AdminWalletUser) => {
     setConfirmMsg(`Are you sure you want to ${profile.wallet_status === 'frozen' ? 'unfreeze' : 'freeze'} ${profile.full_name}'s wallet?`);
     confirmActionRef.current = async () => {
       try {
@@ -121,8 +122,8 @@ const WalletPage: React.FC = () => {
         queryClient.invalidateQueries({ queryKey: ['admin_wallets'] });
         setToastMessage(`${profile.full_name}'s wallet has been ${frozen ? 'unfrozen' : 'frozen'}`);
         setShowToast(true);
-      } catch (err: any) {
-        setToastMessage(err.message || 'Failed to update wallet status');
+      } catch (err) {
+        setToastMessage(err instanceof Error ? err.message : 'Failed to update wallet status');
         setShowToast(true);
       }
     };
@@ -134,8 +135,8 @@ const WalletPage: React.FC = () => {
     await queryClient.invalidateQueries({ queryKey: ['admin_wallet_tx'] });
   };
 
-  const activeWallets = profiles.filter((p: any) => p.wallet_status !== 'frozen').length;
-  const frozenWallets = profiles.filter((p: any) => p.wallet_status === 'frozen').length;
+  const activeWallets = profiles.filter((p) => p.wallet_status !== 'frozen').length;
+  const frozenWallets = profiles.filter((p) => p.wallet_status === 'frozen').length;
 
   return (
     <IonPage>
@@ -213,7 +214,7 @@ const WalletPage: React.FC = () => {
                 </div>
               )}
               <AnimatePresence>
-                {filtered.map((profile: any, index: number) => (
+                {filtered.map((profile, index) => (
                   <motion.div
                     key={profile.id}
                     layout
@@ -275,7 +276,7 @@ const WalletPage: React.FC = () => {
                               <p className="no-tx">No transactions yet</p>
                             ) : (
                               <div className="tx-list">
-                                {txHistory.map((tx: any, i: number) => (
+                                {txHistory.map((tx, i) => (
                                   <div key={tx.id || i} className="tx-row">
                                     <div className="tx-side">
                                       <div className={`tx-type-icon ${tx.type === 'credit' ? 'tx-credit' : 'tx-debit'}`}>

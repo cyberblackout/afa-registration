@@ -190,6 +190,15 @@ export interface AgentApplicationsBundle {
   agents: AgentProfileRow[];
 }
 
+/** User row returned by walletApi.adminListUsers() — includes wallet fields */
+export interface AdminWalletUser {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  wallet_balance: number | string | null;
+  wallet_status?: string | null;
+}
+
 export interface AgentPricing {
   id: string;
   key: string;

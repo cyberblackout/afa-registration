@@ -20,6 +20,7 @@ import type {
   UpdateRegistrationStatusResult,
   AdminSettingsBundle,
   AdminCustomer,
+  AdminWalletUser,
 } from '../types';
 
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_URL
@@ -159,8 +160,8 @@ export const walletApi = {
   verifyTopUp: (reference: string): Promise<ActionResult> =>
     invoke<ActionResult>('verify-wallet-topup', { reference }),
 
-  adminListUsers: (): Promise<unknown[]> =>
-    invoke<unknown[]>('admin-wallet', { action: 'list_users' }),
+  adminListUsers: (): Promise<AdminWalletUser[]> =>
+    invoke<AdminWalletUser[]>('admin-wallet', { action: 'list_users' }),
 
   adminListTransactions: (userId: string): Promise<Transaction[]> =>
     invoke<Transaction[]>('admin-wallet', { action: 'list_transactions', user_id: userId }),
