@@ -85,7 +85,7 @@ const ReferralPage: React.FC = () => {
     staleTime: 60000,
   });
 
-  const referralCode = (profile as any)?.referral_code || '';
+  const referralCode = profile?.referral_code || '';
   const referralLink = `${window.location.origin}${import.meta.env.BASE_URL}register?ref=${referralCode}`;
 
   const { data: stats, isLoading: statsLoading, isError: statsError } = useQuery({
@@ -111,7 +111,7 @@ const ReferralPage: React.FC = () => {
 
   const { data: transactions = [], isLoading: txnsLoading } = useQuery({
     queryKey: ['referral-reward-transactions', user?.id],
-    queryFn: () => referralApi.getMyReferralTransactions() as Promise<any[]>,
+      queryFn: () => referralApi.getMyReferralTransactions(),
     enabled: !!user?.id,
     staleTime: 60000,
   });
@@ -130,7 +130,7 @@ const ReferralPage: React.FC = () => {
     .filter((r) => r.status === 'pending')
     .reduce((sum, r) => sum + Number(r.amount || 0), 0), [rewards]);
 
-  const referralTransactions = useMemo(() => transactions.filter((t: any) => t.reference?.startsWith('REF-')), [transactions]);
+  const referralTransactions = useMemo(() => transactions.filter((t) => t.reference?.startsWith('REF-')), [transactions]);
 
   const isLoadingInitial = profileLoading && !profile;
   const hasError = profileError || statsError;
@@ -387,7 +387,7 @@ const ReferralPage: React.FC = () => {
             <div className="rr-earnings-secondary-item">
               <Wallet size={14} />
               <span className="rr-earnings-secondary-label">Available</span>
-              <span className="rr-earnings-secondary-value"><AmountDisplay value={(user as any)?.wallet_balance || 0} showToggle={false} /></span>
+              <span className="rr-earnings-secondary-value"><AmountDisplay value={user?.wallet_balance || 0} showToggle={false} /></span>
             </div>
           </div>
         </Card>
@@ -442,7 +442,7 @@ const ReferralPage: React.FC = () => {
             </div>
             <Card noPadding variant="bordered" className="rr-feed">
               {referrals.map((r) => {
-                const name = (r as any).referred_profile?.full_name || r.referred_id?.slice(0, 8) || 'Pending';
+                const name = r.referred_profile?.full_name || r.referred_id?.slice(0, 8) || 'Pending';
                 const color = getInitialColor(name);
                 return (
                   <div key={r.id} className="rr-feed-item">
@@ -489,7 +489,7 @@ const ReferralPage: React.FC = () => {
                     <span>Date</span>
                     <span>Reference</span>
                   </div>
-                  {referralTransactions.map((t: any) => (
+                  {referralTransactions.map((t) => (
                     <div key={t.id} className="rr-table-row">
                       <span className="rr-table-desc">{t.description}</span>
                       <span className="rr-table-amount rr-table-credit"><AmountDisplay value={t.amount} showToggle={false} /></span>
@@ -500,7 +500,7 @@ const ReferralPage: React.FC = () => {
                 </div>
               </div>
               <div className="rr-mobile-list">
-                {referralTransactions.map((t: any) => (
+                {referralTransactions.map((t) => (
                   <div key={t.id} className="rr-mobile-card">
                     <div className="rr-mobile-card-top">
                       <span className="rr-mobile-card-desc">{t.description}</span>
