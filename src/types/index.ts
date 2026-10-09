@@ -244,3 +244,35 @@ export interface SendPushResult extends ActionResult {
 export interface UpdateRegistrationStatusResult extends ActionResult {
   referral_warning?: string;
 }
+
+/** Row returned in the app_settings array of the admin-settings bundle */
+export interface AppSettingRow {
+  key: string;
+  value: string | null;
+}
+
+/** Row returned in the system_settings array of the admin-settings bundle */
+export interface SystemSettingRow {
+  setting_name: string;
+  setting_value: string | null;
+}
+
+/** Row returned in the pricing array of the admin-settings bundle */
+export interface PricingRow {
+  key: string;
+  label?: string | null;
+  amount?: number | string | null;
+  normal_price?: number | string | null;
+  agent_price?: number | string | null;
+  type?: string | null;
+  category?: string | null;
+  active?: boolean;
+  updated_at?: string;
+}
+
+/** Bundle returned by adminSettingsApi.getAll() */
+export interface AdminSettingsBundle {
+  app_settings?: AppSettingRow[];
+  system_settings?: SystemSettingRow[];
+  pricing?: PricingRow[];
+}

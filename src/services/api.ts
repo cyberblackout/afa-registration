@@ -17,6 +17,7 @@ import type {
   DeleteUserResult,
   SendPushResult,
   UpdateRegistrationStatusResult,
+  AdminSettingsBundle,
 } from '../types';
 
 const FUNCTIONS_URL = import.meta.env.VITE_SUPABASE_URL
@@ -266,8 +267,8 @@ export const agentApi = {
 // ADMIN SETTINGS
 // ============================================================
 export const adminSettingsApi = {
-  getAll: (): Promise<unknown> =>
-    invoke<unknown>('admin-settings', undefined, 'GET'),
+  getAll: (): Promise<AdminSettingsBundle> =>
+    invoke<AdminSettingsBundle>('admin-settings', undefined, 'GET'),
 
   saveAppSettings: (settings: Record<string, string>): Promise<ActionResult> =>
     invoke<ActionResult>('admin-settings', { action: 'save_app_settings', settings }),

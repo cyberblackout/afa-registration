@@ -83,17 +83,17 @@ const SettingsPage: React.FC = () => {
   const { data: settingsData, isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_settings'],
     queryFn: async () => {
-      const result = await adminSettingsApi.getAll() as any;
-      const appVals = (result.app_settings || []).map((s: any) => ({ key: s.key, value: s.value }));
-      const sysVals = (result.system_settings || []).map((s: any) => ({ key: s.setting_name, value: s.setting_value }));
-      return [...appVals, ...sysVals] as any;
+      const result = await adminSettingsApi.getAll();
+      const appVals = (result.app_settings || []).map((s) => ({ key: s.key, value: s.value ?? '' }));
+      const sysVals = (result.system_settings || []).map((s) => ({ key: s.setting_name, value: s.setting_value ?? '' }));
+      return [...appVals, ...sysVals];
     },
   });
 
   useEffect(() => {
     if (settingsData && settingsData.length > 0) {
       const vals: Record<string, string> = {};
-      settingsData.forEach((s: any) => { vals[s.key] = s.value; });
+      settingsData.forEach((s) => { vals[s.key] = s.value; });
       setSettings(prev => {
         const merged = { ...vals, ...prev };
         return merged;
@@ -110,8 +110,8 @@ const SettingsPage: React.FC = () => {
   const { data: feePricing } = useQuery({
     queryKey: ['admin_settings_fees'],
     queryFn: async () => {
-      const result = await adminSettingsApi.getAll() as any;
-      return (result.pricing || []).filter((p: any) => FEE_PRICING_KEYS.includes(p.key)) as any;
+      const result = await adminSettingsApi.getAll();
+      return (result.pricing || []).filter((p) => p.key != null && FEE_PRICING_KEYS.includes(p.key));
     },
   });
 
@@ -119,7 +119,7 @@ const SettingsPage: React.FC = () => {
     if (feePricing && feePricing.length > 0) {
       setFeeValues(prev => {
         const next = { ...prev };
-        feePricing.forEach((p: any) => { next[p.key] = p.amount?.toString() ?? ''; });
+        feePricing.forEach((p) => { next[p.key] = p.amount?.toString() ?? ''; });
         return next;
       });
     }
@@ -128,8 +128,8 @@ const SettingsPage: React.FC = () => {
   const { data: afaPricingRow, isLoading: afaPricingLoading, isError: afaPricingError } = useQuery({
     queryKey: ['admin_settings_afa'],
     queryFn: async () => {
-      const result = await adminSettingsApi.getAll() as any;
-      return ((result.pricing || []).find((p: any) => p.key === 'afa_registration') ?? null) as any;
+      const result = await adminSettingsApi.getAll();
+      return ((result.pricing || []).find((p) => p.key === 'afa_registration') ?? null);
     },
   });
 
@@ -178,9 +178,9 @@ const SettingsPage: React.FC = () => {
       setToastMessage(`${section} settings saved successfully`);
       setShowToast(true);
       setInitialSnapshot(JSON.stringify({ settings, feeValues }));
-    } catch (err: any) {
+    } catch (err) {
       setToastColor('danger');
-      setToastMessage(err.message || 'Save failed');
+      setToastMessage(err instanceof Error ? err.message : 'Save failed');
       setShowToast(true);
     } finally {
       setSaving(null);
@@ -208,9 +208,9 @@ const SettingsPage: React.FC = () => {
       setToastMessage('AFA pricing saved successfully');
       setShowToast(true);
       setAfaInitialSnapshot(JSON.stringify(afaValues));
-    } catch (err: any) {
+    } catch (err) {
       setToastColor('danger');
-      setToastMessage(err.message || 'Save failed');
+      setToastMessage(err instanceof Error ? err.message : 'Save failed');
       setShowToast(true);
     } finally {
       setSaving(null);
@@ -257,9 +257,9 @@ const SettingsPage: React.FC = () => {
       setToastMessage('Fees saved successfully');
       setShowToast(true);
       setInitialSnapshot(JSON.stringify({ settings, feeValues }));
-    } catch (err: any) {
+    } catch (err) {
       setToastColor('danger');
-      setToastMessage(err.message || 'Save failed');
+      setToastMessage(err instanceof Error ? err.message : 'Save failed');
       setShowToast(true);
     } finally {
       setSaving(null);
@@ -312,9 +312,9 @@ const SettingsPage: React.FC = () => {
       setToastMessage('Wallet & Referral settings saved successfully');
       setShowToast(true);
       setInitialSnapshot(JSON.stringify({ settings, feeValues }));
-    } catch (err: any) {
+    } catch (err) {
       setToastColor('danger');
-      setToastMessage(err.message || 'Save failed');
+      setToastMessage(err instanceof Error ? err.message : 'Save failed');
       setShowToast(true);
     } finally {
       setSaving(null);
@@ -509,7 +509,7 @@ const SettingsPage: React.FC = () => {
                       </div>
                       <IonToggle
                         checked={get('referral_enabled', 'true') === 'true'}
-                        onIonChange={(e: any) => set('referral_enabled', e.detail.checked ? 'true' : 'false')}
+                        onIonChange={(e: CustomEvent<{ checked: boolean }>) => set('referral_enabled', e.detail.checked ? 'true' : 'false')}
                       />
                     </div>
 
@@ -523,7 +523,7 @@ const SettingsPage: React.FC = () => {
                       </div>
                       <IonToggle
                         checked={get('referral_fraud_protection', 'true') === 'true'}
-                        onIonChange={(e: any) => set('referral_fraud_protection', e.detail.checked ? 'true' : 'false')}
+                        onIonChange={(e: CustomEvent<{ checked: boolean }>) => set('referral_fraud_protection', e.detail.checked ? 'true' : 'false')}
                       />
                     </div>
                   </div>
@@ -562,7 +562,7 @@ const SettingsPage: React.FC = () => {
                       </div>
                       <IonToggle
                         checked={get('whatsapp_enabled', 'true') === 'true'}
-                        onIonChange={(e: any) => set('whatsapp_enabled', e.detail.checked ? 'true' : 'false')}
+                        onIonChange={(e: CustomEvent<{ checked: boolean }>) => set('whatsapp_enabled', e.detail.checked ? 'true' : 'false')}
                       />
                     </div>
 
@@ -628,7 +628,7 @@ const SettingsPage: React.FC = () => {
                     </div>
                     <IonToggle
                       checked={get('agent_system_enabled', 'true') === 'true'}
-                      onIonChange={(e: any) => set('agent_system_enabled', e.detail.checked ? 'true' : 'false')}
+                      onIonChange={(e: CustomEvent<{ checked: boolean }>) => set('agent_system_enabled', e.detail.checked ? 'true' : 'false')}
                     />
                   </div>
 
@@ -639,7 +639,7 @@ const SettingsPage: React.FC = () => {
                     </div>
                     <IonToggle
                       checked={get('agent_auto_approve', 'false') === 'true'}
-                      onIonChange={(e: any) => set('agent_auto_approve', e.detail.checked ? 'true' : 'false')}
+                      onIonChange={(e: CustomEvent<{ checked: boolean }>) => set('agent_auto_approve', e.detail.checked ? 'true' : 'false')}
                     />
                   </div>
 
