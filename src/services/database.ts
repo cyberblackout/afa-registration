@@ -62,8 +62,8 @@ export const db = {
     return { data };
   },
 
-  createRegistration: async (data: any) => {
-    const result = await registrationApi.create(data) as any;
+  createRegistration: async (data: Record<string, unknown>) => {
+    const result = await registrationApi.create(data);
     return { data: result };
   },
 
@@ -72,12 +72,12 @@ export const db = {
     return { data: null };
   },
 
-  addRegistrationTimeline: async (data: any) => {
+  addRegistrationTimeline: async (data: { registration_id: string; status: string; note?: string }) => {
     await registrationApi.adminAddTimeline(data.registration_id, data.status, data.note);
     return { data: null };
   },
 
-  addRegistrationDocument: async (data: any) => {
+  addRegistrationDocument: async (data: { registration_id: string; document_type: string; document_url: string; file_name?: string }) => {
     await registrationApi.adminAddDocument(data.registration_id, data.document_type, data.document_url, data.file_name);
     return { data: null };
   },
@@ -136,7 +136,7 @@ export const db = {
   },
 
   getUnreadCount: async (_userId: string) => {
-    const result = await notificationApi.unreadCount() as any;
+    const result = await notificationApi.unreadCount();
     return { count: result.count };
   },
 
@@ -155,7 +155,7 @@ export const db = {
     return { data: null };
   },
 
-  createNotification: async (data: any) => {
+  createNotification: async (data: { user_id: string; title: string; message: string; type?: string }) => {
     await notificationApi.adminSend(data.title, data.message, data.type || 'info', [data.user_id]);
     return { data: null };
   },
@@ -173,7 +173,7 @@ export const db = {
     return { data: { value } };
   },
 
-  updateSetting: async (key: string, value: any) => {
+  updateSetting: async (key: string, value: string | number | boolean | object | null) => {
     await adminSettingsApi.saveAppSettings({ [key]: typeof value === 'string' ? value : JSON.stringify(value) });
     return { data: null };
   },
@@ -184,7 +184,7 @@ export const db = {
     return { data };
   },
 
-  createAuditLog: async (data: any) => {
+  createAuditLog: async (data: { entity: string; entity_id?: string; details?: Record<string, unknown> }) => {
     await auditApi.create(data);
     return { data: null };
   },
@@ -200,7 +200,7 @@ export const db = {
     return { data };
   },
 
-  createAnnouncement: async (data: any) => {
+  createAnnouncement: async (data: { title: string; message: string; active?: boolean }) => {
     await adminConfigApi.createAnnouncement(data.title, data.message, data.active);
     return { data: null };
   },
@@ -222,7 +222,7 @@ export const db = {
     return { data };
   },
 
-  createTicket: async (data: any) => {
+  createTicket: async (data: { subject: string; message: string; priority?: string }) => {
     await ticketApi.create(data.subject, data.message, data.priority);
     return { data: null };
   },
@@ -259,7 +259,7 @@ export const db = {
   },
 
   getMyReferralCode: async (_userId: string) => {
-    const data = await referralApi.getProfile() as any;
+    const data = await referralApi.getProfile();
     return { data: { referral_code: data?.referral_code } };
   },
 
@@ -357,7 +357,7 @@ export const db = {
 
   getSystemSetting: async (name: string) => {
     const settings = await adminConfigApi.getSystemSettings();
-    const found = settings.find((s: any) => s.setting_name === name);
+    const found = settings.find((s) => s.setting_name === name);
     return { data: found ? { setting_value: found.setting_value } : null };
   },
 
