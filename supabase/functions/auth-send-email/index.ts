@@ -140,14 +140,21 @@ Deno.serve(async (req) => {
   const config = loaded.config;
 
   // Fetch app branding (name / support) from app_settings — non-secret.
+  // Nothing here is hardcoded: name and contact come from settings, and
+  // when they are unset the templates degrade to generic wording
+  // rather than inventing a sender identity.
   const { data: brandingRows } = await admin
     .from("app_settings")
     .select("key, value")
     .in("key", ["site_name", "support_email"]);
   const branding = new Map<string, string>();
   for (const r of brandingRows ?? []) branding.set(r.key, r.value ?? "");
-  const appName = branding.get("site_name") || config.fromName || "MTN AFA Portal";
-  const supportEmail = branding.get("support_email") || config.replyTo || "";
+  const appName = (branding.get("site_name") || config.fromName || "").trim();
+  // Prose fallback when no name is configured at all.
+  const appLabel = appName || "your account";
+  // Subject suffix: empty when no name is configured.
+  const subjectSuffix = appName ? ` — ${appName}` : "";
+  const supportEmail = (branding.get("support_email") || config.replyTo || "").trim();
   const footer = supportEmail
     ? `If you didn't request this, you can safely ignore this email. Contact ${escapeHtml(supportEmail)} for help.`
     : "If you didn't request this, you can safely ignore this email.";
@@ -165,9 +172,9 @@ Deno.serve(async (req) => {
       const link = buildVerifyUrl(email_data.token_hash, "signup", email_data.redirect_to);
       out.push({
         to: [user.email],
-        subject: `Confirm your email address — ${appName}`,
+        subject: `Confirm your email address ${subjectSuffix}`,
         html: wrapHtml(
-          `Welcome to ${escapeHtml(appName)}`,
+          `Welcome to ${escapeHtml(appLabel)}`,
           `<p>Hi${displayName ? " " + escapeHtml(displayName) : ""},</p>
            <p>Confirm your email address to finish signing up.</p>
            <p><a href="${escapeHtml(link)}" style="display:inline-block;background:#ffcc00;color:#111;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Confirm email address</a></p>
@@ -181,9 +188,9 @@ Deno.serve(async (req) => {
       const link = buildVerifyUrl(email_data.token_hash, "recovery", email_data.redirect_to);
       out.push({
         to: [user.email],
-        subject: `Reset your password — ${appName}`,
+        subject: `Reset your password ${subjectSuffix}`,
         html: wrapHtml(
-          `Reset your ${escapeHtml(appName)} password`,
+          `Reset your ${escapeHtml(appLabel)} password`,
           `<p>Hi${displayName ? " " + escapeHtml(displayName) : ""},</p>
            <p>We received a request to reset your password. Choose a new one using the link below.</p>
            <p><a href="${escapeHtml(link)}" style="display:inline-block;background:#ffcc00;color:#111;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Reset password</a></p>
@@ -197,9 +204,9 @@ Deno.serve(async (req) => {
       const link = buildVerifyUrl(email_data.token_hash, "magiclink", email_data.redirect_to);
       out.push({
         to: [user.email],
-        subject: `Your sign-in link — ${appName}`,
+        subject: `Your sign-in link ${subjectSuffix}`,
         html: wrapHtml(
-          `Sign in to ${escapeHtml(appName)}`,
+          `Sign in to ${escapeHtml(appLabel)}`,
           `<p>Use the link below to sign in. It expires shortly and can only be used once.</p>
            <p><a href="${escapeHtml(link)}" style="display:inline-block;background:#ffcc00;color:#111;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Sign in</a></p>
            <p style="font-size:14px;color:#555;">Or copy this link:<br><span style="word-break:break-all;">${escapeHtml(link)}</span></p>`,
@@ -212,10 +219,10 @@ Deno.serve(async (req) => {
       const link = buildVerifyUrl(email_data.token_hash, "invite", email_data.redirect_to);
       out.push({
         to: [user.email],
-        subject: `You've been invited to ${appName}`,
+        subject: `You're invited${subjectSuffix}`,
         html: wrapHtml(
           `You're invited`,
-          `<p>You've been invited to create an account on ${escapeHtml(appName)}.</p>
+          `<p>You've been invited to create an account on ${escapeHtml(appLabel)}.</p>
            <p><a href="${escapeHtml(link)}" style="display:inline-block;background:#ffcc00;color:#111;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Accept invitation</a></p>
            <p style="font-size:14px;color:#555;">Or copy this link:<br><span style="word-break:break-all;">${escapeHtml(link)}</span></p>`,
           footer
@@ -232,7 +239,7 @@ Deno.serve(async (req) => {
         const linkCurrent = buildVerifyUrl(email_data.token_hash_new, "email_change", email_data.redirect_to);
         out.push({
           to: [user.email],
-          subject: `Confirm your new email address — ${appName}`,
+          subject: `Confirm your new email address ${subjectSuffix}`,
           html: wrapHtml(
             `Confirm your new email address`,
             `<p>A change to your email address was requested.</p>
@@ -244,7 +251,7 @@ Deno.serve(async (req) => {
         const linkNew = buildVerifyUrl(email_data.token_hash, "email_change", email_data.redirect_to);
         out.push({
           to: [user.new_email!],
-          subject: `Confirm your new email address — ${appName}`,
+          subject: `Confirm your new email address ${subjectSuffix}`,
           html: wrapHtml(
             `Confirm your new email address`,
             `<p>A change to your email address was requested.</p>
@@ -271,7 +278,7 @@ Deno.serve(async (req) => {
              <p style="font-size:24px;font-weight:bold;letter-spacing:4px;">${escapeHtml(tok)}</p>`;
         out.push({
           to: [target],
-          subject: `Confirm your new email address — ${appName}`,
+          subject: `Confirm your new email address ${subjectSuffix}`,
           html: wrapHtml(`Confirm your new email address`, body, footer),
         });
       }
@@ -281,7 +288,7 @@ Deno.serve(async (req) => {
       // OTP only — no link. Show the code.
       out.push({
         to: [user.email],
-        subject: `Your verification code — ${appName}`,
+        subject: `Your verification code ${subjectSuffix}`,
         html: wrapHtml(
           `Your verification code`,
           `<p>Use the code below to verify your identity. It expires shortly.</p>
@@ -291,14 +298,76 @@ Deno.serve(async (req) => {
       });
       break;
     }
+    case "email": {
+      // EmailOTPVerification — a bare OTP, no link.
+      out.push({
+        to: [user.email],
+        subject: `Your verification code ${subjectSuffix}`,
+        html: wrapHtml(
+          `Your verification code`,
+          `<p>Use the code below to continue.</p>
+           <p style="font-size:28px;font-weight:bold;letter-spacing:6px;">${escapeHtml(email_data.token || "")}</p>`,
+          footer
+        ),
+      });
+      break;
+    }
+    case "email_change_current": {
+      // GoTrue may split secure email change into two sends. This one
+      // addresses the CURRENT email. Per the documented mapping the
+      // current email uses token_hash_new + token (the names are
+      // deliberately reversed for backward compatibility). The verify
+      // type stays "email_change" — that is what /verify accepts.
+      const hash = email_data.token_hash_new;
+      const tok = email_data.token;
+      if (!hash && !tok) break;
+      out.push({
+        to: [user.email],
+        subject: `Confirm your email address change ${subjectSuffix}`,
+        html: wrapHtml(
+          `Confirm your email address change`,
+          hash
+            ? `<p>A change of email address was requested for your account.</p>
+               <p><a href="${escapeHtml(buildVerifyUrl(hash, "email_change", email_data.redirect_to))}" style="display:inline-block;background:#ffcc00;color:#111;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Confirm change</a></p>
+               <p style="font-size:14px;color:#555;">Or copy this link:<br><span style="word-break:break-all;">${escapeHtml(buildVerifyUrl(hash, "email_change", email_data.redirect_to))}</span></p>`
+            : `<p>Use this code to confirm the change:</p>
+               <p style="font-size:24px;font-weight:bold;letter-spacing:4px;">${escapeHtml(tok)}</p>`,
+          footer
+        ),
+      });
+      break;
+    }
+    case "email_change_new": {
+      // Companion to email_change_current — addresses the NEW email,
+      // which per the documented mapping uses token_hash + token_new.
+      const hash = email_data.token_hash;
+      const tok = email_data.token_new;
+      const target = user.new_email || user.email;
+      if (!hash && !tok) break;
+      out.push({
+        to: [target],
+        subject: `Confirm your new email address ${subjectSuffix}`,
+        html: wrapHtml(
+          `Confirm your new email address`,
+          hash
+            ? `<p>A change to your email address was requested.</p>
+               <p><a href="${escapeHtml(buildVerifyUrl(hash, "email_change", email_data.redirect_to))}" style="display:inline-block;background:#ffcc00;color:#111;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;">Confirm new email address</a></p>
+               <p style="font-size:14px;color:#555;">Or copy this link:<br><span style="word-break:break-all;">${escapeHtml(buildVerifyUrl(hash, "email_change", email_data.redirect_to))}</span></p>`
+            : `<p>Use this code to confirm your new email address:</p>
+               <p style="font-size:24px;font-weight:bold;letter-spacing:4px;">${escapeHtml(tok)}</p>`,
+          footer
+        ),
+      });
+      break;
+    }
     // Security notifications — no token, simple notice.
     case "password_changed_notification": {
       out.push({
         to: [user.email],
-        subject: `Your password was changed — ${appName}`,
+        subject: `Your password was changed ${subjectSuffix}`,
         html: wrapHtml(
           `Password changed`,
-          `<p>The password for your ${escapeHtml(appName)} account was changed.</p>
+          `<p>The password for your ${escapeHtml(appLabel)} account was changed.</p>
            <p>If you didn't make this change, contact support immediately.</p>`,
           footer
         ),
@@ -308,10 +377,10 @@ Deno.serve(async (req) => {
     case "email_changed_notification": {
       out.push({
         to: [user.email],
-        subject: `Your email address was changed — ${appName}`,
+        subject: `Your email address was changed ${subjectSuffix}`,
         html: wrapHtml(
           `Email changed`,
-          `<p>The email address for your ${escapeHtml(appName)} account was changed${email_data.old_email ? ` from ${escapeHtml(email_data.old_email)}` : ""}.</p>
+          `<p>The email address for your ${escapeHtml(appLabel)} account was changed${email_data.old_email ? ` from ${escapeHtml(email_data.old_email)}` : ""}.</p>
            <p>If you didn't make this change, contact support immediately.</p>`,
           footer
         ),
@@ -321,11 +390,37 @@ Deno.serve(async (req) => {
     case "phone_changed_notification": {
       out.push({
         to: [user.email],
-        subject: `Your phone number was changed — ${appName}`,
+        subject: `Your phone number was changed ${subjectSuffix}`,
         html: wrapHtml(
           `Phone number changed`,
-          `<p>The phone number for your ${escapeHtml(appName)} account was changed.</p>
+          `<p>The phone number for your ${escapeHtml(appLabel)} account was changed.</p>
            <p>If you didn't make this change, contact support immediately.</p>`,
+          footer
+        ),
+      });
+      break;
+    }
+    case "identity_linked_notification": {
+      out.push({
+        to: [user.email],
+        subject: `A sign-in method was linked to your account ${subjectSuffix}`,
+        html: wrapHtml(
+          `New sign-in method linked`,
+          `<p>A new sign-in method was linked to your ${escapeHtml(appLabel)} account.</p>
+           <p>If you didn't do this, contact support immediately.</p>`,
+          footer
+        ),
+      });
+      break;
+    }
+    case "identity_unlinked_notification": {
+      out.push({
+        to: [user.email],
+        subject: `A sign-in method was unlinked from your account ${subjectSuffix}`,
+        html: wrapHtml(
+          `Sign-in method unlinked`,
+          `<p>A sign-in method was unlinked from your ${escapeHtml(appLabel)} account.</p>
+           <p>If you didn't do this, contact support immediately.</p>`,
           footer
         ),
       });
@@ -356,11 +451,13 @@ Deno.serve(async (req) => {
   }
 
   if (anyFailure) {
-    // Generic error to Supabase (it will surface/log). No internals.
-    return new Response(
-      JSON.stringify({ error: { http_code: 502, message: "Failed to send email" } }),
-      { status: 502, headers: { "Content-Type": "application/json" } }
-    );
+    // 503 + retry-after is the ONLY combination Supabase Auth retries
+    // (400/403/502 are surfaced as a permanent 500 and the email is
+    // dropped). Generic message — no internals, no key, no provider body.
+    return new Response(JSON.stringify({ error: { http_code: 503, message: "Failed to send email" } }), {
+      status: 503,
+      headers: { "Content-Type": "application/json", "retry-after": "true" },
+    });
   }
 
   return new Response(JSON.stringify({}), {

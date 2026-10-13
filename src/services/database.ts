@@ -6,7 +6,6 @@ import {
   notificationApi,
   referralApi,
   agentApi,
-  adminSettingsApi,
   adminCustomerApi,
   ticketApi,
   adminConfigApi,
@@ -171,11 +170,6 @@ export const db = {
   getSetting: async (key: string) => {
     const value = await settingsApi.getSetting(key);
     return { data: { value } };
-  },
-
-  updateSetting: async (key: string, value: string | number | boolean | object | null) => {
-    await adminSettingsApi.saveAppSettings({ [key]: typeof value === 'string' ? value : JSON.stringify(value) });
-    return { data: null };
   },
 
   // AUDIT LOGS
@@ -359,10 +353,5 @@ export const db = {
     const settings = await adminConfigApi.getSystemSettings();
     const found = settings.find((s) => s.setting_name === name);
     return { data: found ? { setting_value: found.setting_value } : null };
-  },
-
-  upsertSystemSetting: async (name: string, value: string) => {
-    await adminSettingsApi.saveSystemSettings({ [name]: value });
-    return { data: null };
   },
 };

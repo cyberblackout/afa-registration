@@ -6,6 +6,7 @@ import {
   getCorsHeaders,
 } from "../_shared/auth.ts";
 import { z, validateBody } from "../_shared/validation.ts";
+import { publicSystemSettingsOnly, redactSensitiveRows } from "../_shared/settings.ts";
 const actionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("get_whatsapp") }),
   z.object({ action: z.literal("update_whatsapp"), settings: z.record(z.string()) }),
@@ -34,14 +35,18 @@ Deno.serve(async (req) => {
       if (error) return errorResp("Failed to fetch announcements", 500, origin);
       return successResp(data, origin);
     }
-    // system_settings read for WhatsApp config (authenticated users)
+    // system_settings read for WhatsApp config.
+    // Authenticated-only AND default-deny: this path runs through the
+    // service role (which bypasses RLS), so it must never return
+    // secrets such as resend_api_key or sms_api_key. Only the
+    // explicit allow-list in _shared/settings.ts is returned.
     if (action === "system_settings") {
       const auth = await verifyAuth(req);
       if (auth.error) return auth.error;
       const admin = getSupabaseAdmin();
       const { data, error } = await admin.from("system_settings").select("setting_name, setting_value");
       if (error) return errorResp("Failed to fetch system settings", 500, origin);
-      return successResp(data, origin);
+      return successResp(publicSystemSettingsOnly(data || []), origin);
     }
     // All other GET endpoints require admin
     const auth = await verifyAuth(req, ["admin"]);
@@ -123,9 +128,11 @@ Deno.serve(async (req) => {
       return successResp({ message: "Announcement created" }, origin);
     }
     case "get_system_settings": {
+      // Admin-only. Secrets are still stripped: the API key is
+      // write-only and is never returned by any endpoint.
       const { data: settings, error } = await admin.from("system_settings").select("*");
       if (error) return errorResp("Failed to fetch system settings", 500, origin);
-      return successResp(settings, origin);
+      return successResp(redactSensitiveRows(settings || []), origin);
     }
     default:
       return errorResp("Invalid action", 400, origin);

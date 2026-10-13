@@ -5,32 +5,14 @@ import {
   successResp,
   getCorsHeaders,
 } from "../_shared/auth.ts";
-import { z, validateBody } from "../_shared/validation.ts";
+import { z, validateBody, emailConfigSchema } from "../_shared/validation.ts";
 import {
   loadEmailConfig,
   sendViaResend,
   checkResendDomainStatus,
   isValidEmail,
 } from "../_shared/email.ts";
-
-// Keys that must never leave the server, in either settings table.
-const SENSITIVE_KEYS = ["resend_api_key", "sms_api_key", "vapid_private_key"];
-
-// Strip any sensitive values from a settings row list before returning.
-function redactSensitive<T extends { key?: string; setting_name?: string; value?: unknown; setting_value?: unknown }>(
-  rows: T[]
-): T[] {
-  return rows.filter((r) => {
-    const k = r.key ?? r.setting_name;
-    return !k || !SENSITIVE_KEYS.includes(k);
-  });
-}
-
-// Mask an API key for the admin UI: "configured, ends in xxxx".
-function maskKey(v: string | null | undefined): string {
-  if (!v) return "";
-  return v.length > 8 ? `configured, ends in ${v.slice(-4)}` : "configured";
-}
+import { redactSensitiveRows, maskKey, PUBLIC_SYSTEM_SETTING_KEYS } from "../_shared/settings.ts";
 // Must stay byte-identical with the frontend schema in
 // src/pages/admin/SettingsPage.tsx (afaPriceSchema).
 const MAX_AFA_PRICE = 1000000;
@@ -67,6 +49,41 @@ const afaPriceSchema = (label: string) =>
   });
 const AFA_PRICE_RATE_LIMIT = 10;
 const AFA_PRICE_RATE_WINDOW_SECONDS = 60;
+
+// Server-side key allow-lists for the two generic save actions.
+// The client already splits keys, but it must not be trusted: an
+// arbitrary-key write would let a caller set email_from (bypassing the
+// Resend domain rule in save_email_config) or overwrite resend_api_key
+// outside that path. Default-deny — anything not listed is rejected.
+const ALLOWED_SYSTEM_SETTING_KEYS: ReadonlySet<string> = new Set(PUBLIC_SYSTEM_SETTING_KEYS);
+const ALLOWED_APP_SETTING_KEYS: ReadonlySet<string> = new Set([
+  "site_name",
+  "support_email",
+  "support_phone",
+  "address",
+  "sms_api_url",
+  "sms_api_key",
+  "sms_sender_id",
+  "agent_system_enabled",
+  "agent_auto_approve",
+  "agent_min_commission",
+  "vapid_public_key",
+  "vapid_private_key",
+  "referral_enabled",
+  "referral_reward_amount",
+  "referral_max_daily",
+  "referral_fraud_protection",
+  "agent_fee",
+]);
+
+function rejectUnknownKeys(
+  settings: Record<string, string>,
+  allowed: ReadonlySet<string>
+): string | null {
+  const bad = Object.keys(settings).filter((k) => !allowed.has(k));
+  return bad.length ? `Setting key(s) not allowed: ${bad.join(", ")}` : null;
+}
+
 const actionSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("get_all"),
@@ -90,20 +107,10 @@ const actionSchema = z.discriminatedUnion("action", [
     wallet_max_topup: z.number().min(0),
     wallet_min_topup: z.number().min(0),
   }),
-  z.object({
-    action: z.literal("save_email_config"),
-    // resend_api_key is write-only: a non-empty string replaces the key;
-    // omitted/empty leaves the stored key unchanged.
-    resend_api_key: z.string().trim().optional(),
-    email_from: z.string().trim().refine(isValidEmail, "From email must be a valid email address"),
-    email_from_name: z.string().trim().min(1, "From name is required").max(80),
-    email_reply_to: z
-      .string()
-      .trim()
-      .refine((v) => v === "" || isValidEmail(v), "Reply-to must be a valid email address")
-      .optional(),
-    email_enabled: z.boolean(),
-  }),
+  // Flat on the wire ({"action":"save_email_config", ...config}) but
+  // every field, limit and message comes from emailConfigSchema, which
+  // is mirrored byte-for-byte by src/utils/emailConfig.ts.
+  z.object({ action: z.literal("save_email_config") }).extend(emailConfigSchema.shape),
   z.object({
     action: z.literal("send_test_email"),
   }),
@@ -129,8 +136,8 @@ Deno.serve(async (req) => {
     ]);
     // Filter sensitive keys from BOTH tables (system_settings was previously
     // returned unfiltered — closed here).
-    const safeAppSettings = redactSensitive(appRes.data || []);
-    const safeSystemSettings = redactSensitive(sysRes.data || []);
+    const safeAppSettings = redactSensitiveRows(appRes.data || []);
+    const safeSystemSettings = redactSensitiveRows(sysRes.data || []);
     // Build the email section. The raw key is NEVER returned — masked only.
     const sysMap = new Map<string, string>();
     for (const r of sysRes.data ?? []) sysMap.set(r.setting_name, r.setting_value ?? "");
@@ -191,8 +198,8 @@ Deno.serve(async (req) => {
       // Redact sensitive keys (this path previously returned them raw).
       return successResp(
         {
-          app_settings: redactSensitive(appRes.data || []),
-          system_settings: redactSensitive(sysRes.data || []),
+          app_settings: redactSensitiveRows(appRes.data || []),
+          system_settings: redactSensitiveRows(sysRes.data || []),
         },
         origin
       );
@@ -200,6 +207,45 @@ Deno.serve(async (req) => {
     case "save_email_config": {
       // Allowlist: only the five email keys can be written. The API key is
       // write-only — it is stored but never echoed back.
+
+      // ── From-domain rule ────────────────────────────────────────
+      // The from address must sit on a domain Resend has verified for
+      // this account, otherwise Resend rejects the send or the mail
+      // fails SPF/DKIM at the receiver. Enforced server-side against
+      // Resend's own domain list; the client can only hint.
+      const suppliedKey = (data.resend_api_key ?? "").trim();
+      const { data: storedKeyRow } = await admin
+        .from("system_settings")
+        .select("setting_value")
+        .eq("setting_name", "resend_api_key")
+        .maybeSingle();
+      const effectiveKey = suppliedKey || storedKeyRow?.setting_value?.trim() || "";
+      if (!effectiveKey) {
+        return errorResp(
+          "Save the Resend API key first — the from email must be on a domain Resend has verified.",
+          400,
+          origin
+        );
+      }
+      const domainCheck = await checkResendDomainStatus(effectiveKey, data.email_from);
+      if (!domainCheck) {
+        return errorResp(
+          "Could not verify the sending domain with Resend. Check the API key and try again.",
+          502,
+          origin
+        );
+      }
+      if (!domainCheck.verified) {
+        const expected = domainCheck.verifiedDomains.join(", ");
+        return errorResp(
+          expected
+            ? `From email must be on your verified Resend domain (${expected}).`
+            : `The domain "${domainCheck.domain}" is not verified in Resend. Verify it before using it as the from email.`,
+          400,
+          origin
+        );
+      }
+
       const now = new Date().toISOString();
       const writes: Array<{ setting_name: string; setting_value: string }> = [
         { setting_name: "email_from", setting_value: data.email_from },
@@ -282,6 +328,8 @@ Deno.serve(async (req) => {
       return successResp({ id: result.id, status: "sent", to: adminEmail }, origin);
     }
     case "save_app_settings": {
+      const denied = rejectUnknownKeys(data.settings, ALLOWED_APP_SETTING_KEYS);
+      if (denied) return errorResp(denied, 400, origin);
       const entries = Object.entries(data.settings);
       for (const [key, value] of entries) {
         await admin
@@ -291,6 +339,8 @@ Deno.serve(async (req) => {
       return successResp({ message: "App settings saved" }, origin);
     }
     case "save_system_settings": {
+      const denied = rejectUnknownKeys(data.settings, ALLOWED_SYSTEM_SETTING_KEYS);
+      if (denied) return errorResp(denied, 400, origin);
       const entries = Object.entries(data.settings);
       for (const [key, value] of entries) {
         await admin

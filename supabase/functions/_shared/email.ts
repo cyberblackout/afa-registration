@@ -57,7 +57,9 @@ export async function loadEmailConfig(
 
   const apiKey = map.get("resend_api_key")?.trim() ?? "";
   const enabled = (map.get("email_enabled") ?? "false").toLowerCase() === "true";
-  const fromName = map.get("email_from_name")?.trim() || "MTN AFA Portal";
+  // No hardcoded display name: the sender identity comes from settings
+  // only. An empty name produces a bare RFC 5322 address.
+  const fromName = map.get("email_from_name")?.trim() ?? "";
   const fromEmail = map.get("email_from")?.trim() || "";
   const replyTo = map.get("email_reply_to")?.trim() || null;
 
@@ -65,7 +67,7 @@ export async function loadEmailConfig(
   if (!enabled) return { error: "Email sending is disabled in settings" };
   if (!fromEmail) return { error: "From email not configured" };
 
-  // Compose RFC 5322 from header: "Name <email>"
+  // Compose RFC 5322 from header: "Name <email>" or just "email"
   const from = fromName ? `${fromName} <${fromEmail}>` : fromEmail;
 
   return {
@@ -115,12 +117,14 @@ export async function sendViaResend(
 }
 
 // Check whether the Resend sending domain is verified. Used by the
-// admin-settings "email_status" action. Returns null if the domain
-// list cannot be fetched (e.g. invalid key).
+// admin-settings "email_status" action and by save_email_config to
+// enforce that the from address sits on a verified domain.
+// Returns null if the domain list cannot be fetched (e.g. invalid key)
+// — callers must treat that as "could not verify", never as "ok".
 export async function checkResendDomainStatus(
   apiKey: string,
   fromEmail: string
-): Promise<{ domain: string; verified: boolean } | null> {
+): Promise<{ domain: string; verified: boolean; verifiedDomains: string[] } | null> {
   const domain = fromEmail.split("@")[1]?.toLowerCase();
   if (!domain) return null;
   try {
@@ -130,8 +134,14 @@ export async function checkResendDomainStatus(
     if (!res.ok) return null;
     const data = await res.json();
     const domains: Array<{ domain: string; status: string }> = data?.data ?? [];
-    const match = domains.find((d) => d.domain.toLowerCase() === domain);
-    return { domain, verified: match?.status === "verified" };
+    const verifiedDomains = domains
+      .filter((d) => d.status === "verified")
+      .map((d) => d.domain.toLowerCase());
+    return {
+      domain,
+      verified: verifiedDomains.includes(domain),
+      verifiedDomains,
+    };
   } catch {
     return null;
   }

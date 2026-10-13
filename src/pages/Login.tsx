@@ -115,16 +115,20 @@ const Login: React.FC = () => {
       return;
     }
     setResetLoading(true);
+    // One identical response whether or not the account exists — the
+    // success and failure paths must be indistinguishable, otherwise
+    // the form leaks which emails are registered.
+    const genericMessage = 'If an account exists for this email, a reset link has been sent.';
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail.trim(), {
         redirectTo: `${window.location.origin}${import.meta.env.BASE_URL}reset-password`,
       });
       if (error) throw error;
-      setToast({ show: true, message: 'Password reset link sent to your email.' });
+      setToast({ show: true, message: genericMessage });
       setShowForgotModal(false);
     } catch {
       // Generic message — never expose internal errors (email enumeration, provider details).
-      setToast({ show: true, message: 'If an account exists for this email, a reset link has been sent.' });
+      setToast({ show: true, message: genericMessage });
     } finally {
       setResetLoading(false);
     }

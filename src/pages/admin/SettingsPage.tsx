@@ -25,6 +25,7 @@ import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { adminSettingsApi } from '../../services/api';
+import { emailConfigSchema, fromDomainMatchesHint } from '../../utils/emailConfig';
 import type { SaveEmailConfigInput } from '../../types';
 import AdminLayout from '../../layouts/AdminLayout';
 import Card from '../../components/Card';
@@ -187,25 +188,25 @@ const SettingsPage: React.FC = () => {
     JSON.stringify(emailValues) !== emailInitialSnapshot;
 
   const saveEmailConfig = async () => {
-    const trimmedFrom = emailValues.email_from.trim();
-    const trimmedName = emailValues.email_from_name.trim();
-    const trimmedReply = (emailValues.email_reply_to ?? '').trim();
+    const parsed = emailConfigSchema.safeParse({
+      resend_api_key: (emailValues.resend_api_key ?? '').trim(),
+      email_from: emailValues.email_from,
+      email_from_name: emailValues.email_from_name,
+      email_reply_to: emailValues.email_reply_to ?? '',
+      email_enabled: emailValues.email_enabled === true,
+    });
+    if (!parsed.success) {
+      setToastColor('danger');
+      setToastMessage(parsed.error.issues.map((i) => i.message).join('; ') || 'Invalid email settings');
+      setShowToast(true);
+      return;
+    }
 
-    if (!trimmedFrom) {
+    // Early warning only — the server enforces this against Resend.
+    const knownDomain = emailSettings?.status?.verified ? emailSettings.status.domain : null;
+    if (fromDomainMatchesHint(parsed.data.email_from, knownDomain) === false) {
       setToastColor('danger');
-      setToastMessage('From email is required');
-      setShowToast(true);
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedFrom)) {
-      setToastColor('danger');
-      setToastMessage('From email must be a valid email address');
-      setShowToast(true);
-      return;
-    }
-    if (trimmedReply && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedReply)) {
-      setToastColor('danger');
-      setToastMessage('Reply-to must be a valid email address');
+      setToastMessage(`From email must be on your verified Resend domain (${knownDomain}).`);
       setShowToast(true);
       return;
     }
@@ -213,11 +214,11 @@ const SettingsPage: React.FC = () => {
     setSavingEmail(true);
     try {
       await adminSettingsApi.saveEmailConfig({
-        resend_api_key: (emailValues.resend_api_key ?? '').trim(),
-        email_from: trimmedFrom,
-        email_from_name: trimmedName,
-        email_reply_to: trimmedReply,
-        email_enabled: emailValues.email_enabled === true,
+        resend_api_key: parsed.data.resend_api_key ?? '',
+        email_from: parsed.data.email_from,
+        email_from_name: parsed.data.email_from_name,
+        email_reply_to: parsed.data.email_reply_to ?? '',
+        email_enabled: parsed.data.email_enabled,
       });
       setEmailValues((prev: SaveEmailConfigInput) => ({ ...prev, resend_api_key: '' }));
       queryClient.invalidateQueries({ queryKey: ['admin_settings'] });
