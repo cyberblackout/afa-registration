@@ -5,14 +5,8 @@ import {
   successResp,
   getCorsHeaders,
 } from "../_shared/auth.ts";
-import { z, validateBody, emailConfigSchema } from "../_shared/validation.ts";
-import {
-  loadEmailConfig,
-  sendViaResend,
-  checkResendDomainStatus,
-  isValidEmail,
-} from "../_shared/email.ts";
-import { redactSensitiveRows, maskKey, PUBLIC_SYSTEM_SETTING_KEYS } from "../_shared/settings.ts";
+import { z, validateBody } from "../_shared/validation.ts";
+import { redactSensitiveRows, PUBLIC_SYSTEM_SETTING_KEYS } from "../_shared/settings.ts";
 // Must stay byte-identical with the frontend schema in
 // src/pages/admin/SettingsPage.tsx (afaPriceSchema).
 const MAX_AFA_PRICE = 1000000;
@@ -52,9 +46,10 @@ const AFA_PRICE_RATE_WINDOW_SECONDS = 60;
 
 // Server-side key allow-lists for the two generic save actions.
 // The client already splits keys, but it must not be trusted: an
-// arbitrary-key write would let a caller set email_from (bypassing the
-// Resend domain rule in save_email_config) or overwrite resend_api_key
-// outside that path. Default-deny — anything not listed is rejected.
+// arbitrary-key write would let a caller set email_from or overwrite
+// resend_api_key outside the sanctioned path. Email config has no write
+// path here at all any more — it is Supabase-owned. Default-deny:
+// anything not listed is rejected.
 const ALLOWED_SYSTEM_SETTING_KEYS: ReadonlySet<string> = new Set(PUBLIC_SYSTEM_SETTING_KEYS);
 const ALLOWED_APP_SETTING_KEYS: ReadonlySet<string> = new Set([
   "site_name",
@@ -107,13 +102,6 @@ const actionSchema = z.discriminatedUnion("action", [
     wallet_max_topup: z.number().min(0),
     wallet_min_topup: z.number().min(0),
   }),
-  // Flat on the wire ({"action":"save_email_config", ...config}) but
-  // every field, limit and message comes from emailConfigSchema, which
-  // is mirrored byte-for-byte by src/utils/emailConfig.ts.
-  z.object({ action: z.literal("save_email_config") }).extend(emailConfigSchema.shape),
-  z.object({
-    action: z.literal("send_test_email"),
-  }),
 ]);
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -124,7 +112,7 @@ Deno.serve(async (req) => {
   if (auth.error) return auth.error;
   if (req.method === "GET") {
     const admin = getSupabaseAdmin();
-    const [appRes, sysRes, pricingRes, emailCfg] = await Promise.all([
+    const [appRes, sysRes, pricingRes] = await Promise.all([
       admin.from("app_settings").select("key, value, category, updated_at"),
       admin.from("system_settings").select("setting_name, setting_value"),
       admin.from("pricing").select("key, amount, normal_price, agent_price").in("key", [
@@ -132,51 +120,18 @@ Deno.serve(async (req) => {
         "wallet_max_topup",
         "wallet_min_topup",
       ]),
-      loadEmailConfig(admin),
     ]);
     // Filter sensitive keys from BOTH tables (system_settings was previously
-    // returned unfiltered — closed here).
+    // returned unfiltered — closed here). Email config is no longer exposed
+    // at all: it is Supabase-owned (Edge Function secret + system_settings)
+    // and has no admin UI.
     const safeAppSettings = redactSensitiveRows(appRes.data || []);
     const safeSystemSettings = redactSensitiveRows(sysRes.data || []);
-    // Build the email section. The raw key is NEVER returned — masked only.
-    const sysMap = new Map<string, string>();
-    for (const r of sysRes.data ?? []) sysMap.set(r.setting_name, r.setting_value ?? "");
-    const rawKey = sysMap.get("resend_api_key") ?? "";
-    const enabled = (sysMap.get("email_enabled") ?? "false").toLowerCase() === "true";
-    let emailStatus: { configured: boolean; enabled: boolean; from: string; domain: string | null; verified: boolean | null };
-    if (!emailCfg.error && emailCfg.config) {
-      // Config is valid — fetch domain verification server-side.
-      const c = emailCfg.config;
-      const domainCheck = await checkResendDomainStatus(c.apiKey, c.fromEmail);
-      emailStatus = {
-        configured: true,
-        enabled: c.enabled,
-        from: `${c.fromName} <${c.fromEmail}>`,
-        domain: domainCheck?.domain ?? null,
-        verified: domainCheck?.verified ?? null,
-      };
-    } else {
-      emailStatus = {
-        configured: Boolean(rawKey),
-        enabled,
-        from: `${sysMap.get("email_from_name") ?? ""} <${sysMap.get("email_from") ?? ""}>`,
-        domain: null,
-        verified: null,
-      };
-    }
     return successResp(
       {
         app_settings: safeAppSettings,
         system_settings: safeSystemSettings,
         pricing: pricingRes.data || [],
-        email: {
-          resend_api_key: maskKey(rawKey),
-          email_from: sysMap.get("email_from") ?? "",
-          email_from_name: sysMap.get("email_from_name") ?? "",
-          email_reply_to: sysMap.get("email_reply_to") ?? "",
-          email_enabled: enabled,
-          status: emailStatus,
-        },
       },
       origin
     );
@@ -203,129 +158,6 @@ Deno.serve(async (req) => {
         },
         origin
       );
-    }
-    case "save_email_config": {
-      // Allowlist: only the five email keys can be written. The API key is
-      // write-only — it is stored but never echoed back.
-
-      // ── From-domain rule ────────────────────────────────────────
-      // The from address must sit on a domain Resend has verified for
-      // this account, otherwise Resend rejects the send or the mail
-      // fails SPF/DKIM at the receiver. Enforced server-side against
-      // Resend's own domain list; the client can only hint.
-      const suppliedKey = (data.resend_api_key ?? "").trim();
-      const { data: storedKeyRow } = await admin
-        .from("system_settings")
-        .select("setting_value")
-        .eq("setting_name", "resend_api_key")
-        .maybeSingle();
-      const effectiveKey = suppliedKey || storedKeyRow?.setting_value?.trim() || "";
-      if (!effectiveKey) {
-        return errorResp(
-          "Save the Resend API key first — the from email must be on a domain Resend has verified.",
-          400,
-          origin
-        );
-      }
-      const domainCheck = await checkResendDomainStatus(effectiveKey, data.email_from);
-      if (!domainCheck) {
-        return errorResp(
-          "Could not verify the sending domain with Resend. Check the API key and try again.",
-          502,
-          origin
-        );
-      }
-      if (!domainCheck.verified) {
-        const expected = domainCheck.verifiedDomains.join(", ");
-        return errorResp(
-          expected
-            ? `From email must be on your verified Resend domain (${expected}).`
-            : `The domain "${domainCheck.domain}" is not verified in Resend. Verify it before using it as the from email.`,
-          400,
-          origin
-        );
-      }
-
-      const now = new Date().toISOString();
-      const writes: Array<{ setting_name: string; setting_value: string }> = [
-        { setting_name: "email_from", setting_value: data.email_from },
-        { setting_name: "email_from_name", setting_value: data.email_from_name },
-        { setting_name: "email_reply_to", setting_value: data.email_reply_to ?? "" },
-        { setting_name: "email_enabled", setting_value: String(data.email_enabled) },
-      ];
-      // Only overwrite the key when a new non-empty value is supplied.
-      if (data.resend_api_key && data.resend_api_key.trim() !== "") {
-        writes.push({ setting_name: "resend_api_key", setting_value: data.resend_api_key.trim() });
-      }
-      for (const w of writes) {
-        const { error } = await admin
-          .from("system_settings")
-          .upsert(
-            { setting_name: w.setting_name, setting_value: w.setting_value, updated_at: now },
-            { onConflict: "setting_name" }
-          );
-        if (error) {
-          console.error("save_email_config upsert error:", error.message);
-          return errorResp("Failed to save email settings", 500, origin);
-        }
-      }
-      // Audit log — record the action but NEVER the key value.
-      await admin.from("audit_logs").insert({
-        user_id: auth.user.id,
-        action: "email_config_saved",
-        entity: "system_settings",
-        entity_id: "email_config",
-        new_value: {
-          email_from: data.email_from,
-          email_from_name: data.email_from_name,
-          email_reply_to: data.email_reply_to ?? "",
-          email_enabled: data.email_enabled,
-          resend_api_key_updated: Boolean(data.resend_api_key && data.resend_api_key.trim() !== ""),
-        },
-      });
-      return successResp({ message: "Email settings saved" }, origin);
-    }
-    case "send_test_email": {
-      // Admin-only (already gated). Sends to the logged-in admin's own
-      // address. Rate limited per admin.
-      const { data: allowed } = await admin.rpc("check_rate_limit", {
-        p_key: `email_test:${auth.user.id}`,
-        p_action: "send_test_email",
-        p_max_attempts: 3,
-        p_window_seconds: 300,
-      });
-      if (allowed === false) {
-        return errorResp("Rate limit exceeded. Try again later.", 429, origin);
-      }
-      const adminEmail = auth.user.email;
-      if (!adminEmail || !isValidEmail(adminEmail)) {
-        return errorResp("No valid admin email on file", 400, origin);
-      }
-      const loaded = await loadEmailConfig(admin);
-      if (loaded.error) {
-        return errorResp(loaded.error, 400, origin);
-      }
-      const result = await sendViaResend(loaded.config, {
-        to: adminEmail,
-        subject: "Test email — MTN AFA Portal",
-        html:
-          `<!doctype html><body style="font-family:Arial,sans-serif;padding:24px;">` +
-          `<h2 style="margin:0 0 12px;">Test email</h2>` +
-          `<p>This is a test email from the MTN AFA Portal admin settings.</p>` +
-          `<p>If you received it, Resend is configured correctly.</p></body>`,
-      });
-      if (!result.ok) {
-        return errorResp(result.error || "Test email failed", 502, origin);
-      }
-      // Log the test send (no key).
-      await admin.from("audit_logs").insert({
-        user_id: auth.user.id,
-        action: "email_test_sent",
-        entity: "system_settings",
-        entity_id: "email_config",
-        new_value: { to: adminEmail, provider_id: result.id },
-      });
-      return successResp({ id: result.id, status: "sent", to: adminEmail }, origin);
     }
     case "save_app_settings": {
       const denied = rejectUnknownKeys(data.settings, ALLOWED_APP_SETTING_KEYS);

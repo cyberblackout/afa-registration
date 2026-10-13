@@ -3,7 +3,9 @@
 //
 // Two distinct audiences:
 //   * admins          — read everything except secrets (secrets are
-//                       returned masked, never raw);
+//                       dropped from the response entirely, never raw
+//                       and never masked — a mask still confirms the
+//                       key exists);
 //   * any authenticated user — read an explicit allow-list only.
 //
 // The allow-list is DEFAULT-DENY. Migration 030 applied the same rule
@@ -64,11 +66,4 @@ export function publicSystemSettingsOnly<T extends Keyed>(rows: T[]): T[] {
     const k = rowKey(r);
     return isPublicSystemSettingKey(k) && !isSensitiveKey(k);
   });
-}
-
-// Mask an API key for the admin UI: "configured, ends in xxxx".
-// The raw value never leaves the server.
-export function maskKey(v: string | null | undefined): string {
-  if (!v) return "";
-  return v.length > 8 ? `configured, ends in ${v.slice(-4)}` : "configured";
 }

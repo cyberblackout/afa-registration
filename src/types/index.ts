@@ -421,37 +421,6 @@ export interface AdminSettingsBundle {
   app_settings?: AppSettingRow[];
   system_settings?: SystemSettingRow[];
   pricing?: PricingRow[];
-  email?: EmailSettings;
-}
-
-/** Email (Resend) settings returned by admin-settings GET — key is masked. */
-export interface EmailSettings {
-  resend_api_key: string; // masked: "configured, ends in xxxx" | ""
-  email_from: string;
-  email_from_name: string;
-  email_reply_to: string;
-  email_enabled: boolean;
-  status: {
-    configured: boolean;
-    enabled: boolean;
-    from: string;
-    domain: string | null;
-    verified: boolean | null;
-  } | null;
-}
-
-export interface SaveEmailConfigInput {
-  resend_api_key?: string;
-  email_from: string;
-  email_from_name: string;
-  email_reply_to?: string;
-  email_enabled: boolean;
-}
-
-export interface SendTestEmailResult {
-  id?: string;
-  status: string;
-  to: string;
 }
 
 /** Customer row returned by adminCustomerApi.list() — a User plus soft-delete flag */

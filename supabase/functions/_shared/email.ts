@@ -1,9 +1,13 @@
 // Shared email helper — single source of truth for Resend sending.
-// Used by: send-email, admin-registrations, auth-send-email, admin-settings
-// (test send). No duplicate Resend logic anywhere else.
+// Used by: send-email, admin-registrations, auth-send-email
+// (admin-settings no longer sends test mail — it has no email UI).
 //
-// Config lives in system_settings (admin-only RLS). The API key is
-// write-only: it is never returned by any endpoint (masked on read).
+// Config is Supabase-owned, not admin-UI-owned:
+//   * secret   → RESEND_API_KEY Edge Function secret (preferred), with
+//                system_settings.resend_api_key as a legacy fallback
+//   * non-secret → system_settings rows (email_enabled, email_from,
+//                email_from_name, email_reply_to), set via SQL/migration
+// The API key is never returned by any endpoint and is never logged.
 
 import { getSupabaseAdmin } from "./auth.ts";
 import type { SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -55,7 +59,9 @@ export async function loadEmailConfig(
   const map = new Map<string, string>();
   for (const r of rows ?? []) map.set(r.setting_name, r.setting_value ?? "");
 
-  const apiKey = map.get("resend_api_key")?.trim() ?? "";
+  // Secret: Supabase Edge Function secret first, legacy DB row second.
+  const apiKey = (Deno.env.get("RESEND_API_KEY") ?? "").trim() ||
+    (map.get("resend_api_key")?.trim() ?? "");
   const enabled = (map.get("email_enabled") ?? "false").toLowerCase() === "true";
   // No hardcoded display name: the sender identity comes from settings
   // only. An empty name produces a bare RFC 5322 address.
@@ -66,6 +72,15 @@ export async function loadEmailConfig(
   if (!apiKey) return { error: "Resend API key not configured" };
   if (!enabled) return { error: "Email sending is disabled in settings" };
   if (!fromEmail) return { error: "From email not configured" };
+
+  // Send-time from-domain enforcement. The admin UI that used to check
+  // this at save time is gone, so every send is checked here instead —
+  // cached per isolate so it costs one Resend call per TTL, not one per
+  // recipient. Fails CLOSED when Resend says the domain is unverified,
+  // OPEN when Resend cannot be reached (an outage must not block mail).
+  if (await isFromDomainVerified(apiKey, fromEmail) === false) {
+    return { error: "From email domain is not verified in Resend" };
+  }
 
   // Compose RFC 5322 from header: "Name <email>" or just "email"
   const from = fromName ? `${fromName} <${fromEmail}>` : fromEmail;
@@ -116,9 +131,9 @@ export async function sendViaResend(
   }
 }
 
-// Check whether the Resend sending domain is verified. Used by the
-// admin-settings "email_status" action and by save_email_config to
-// enforce that the from address sits on a verified domain.
+// Check whether the Resend sending domain is verified. Called by
+// isFromDomainVerified() on the send path so a from-address outside the
+// verified domain never reaches Resend.
 // Returns null if the domain list cannot be fetched (e.g. invalid key)
 // — callers must treat that as "could not verify", never as "ok".
 export async function checkResendDomainStatus(
@@ -145,4 +160,25 @@ export async function checkResendDomainStatus(
   } catch {
     return null;
   }
+}
+
+// Cached send-time verification of the from-domain (see loadEmailConfig).
+// Returns false only when Resend explicitly says the domain is not
+// verified; null/unreachable results are treated as "allow".
+let domainCheckAt = 0;
+let domainCheckKey = "";
+let domainCheckOk = true;
+const DOMAIN_CHECK_TTL_MS = 5 * 60 * 1000;
+
+export async function isFromDomainVerified(apiKey: string, fromEmail: string): Promise<boolean> {
+  const cacheKey = `${apiKey.length}:${fromEmail.toLowerCase()}`;
+  if (cacheKey === domainCheckKey && Date.now() - domainCheckAt < DOMAIN_CHECK_TTL_MS) {
+    return domainCheckOk;
+  }
+  const check = await checkResendDomainStatus(apiKey, fromEmail);
+  const ok = check === null ? true : check.verified;
+  domainCheckKey = cacheKey;
+  domainCheckAt = Date.now();
+  domainCheckOk = ok;
+  return ok;
 }

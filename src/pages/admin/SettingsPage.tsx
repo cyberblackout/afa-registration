@@ -16,17 +16,11 @@ import {
   saveOutline,
   logoWhatsapp,
   informationCircleOutline,
-  mailOutline,
-  sendOutline,
-  checkmarkCircleOutline,
-  alertCircleOutline,
 } from 'ionicons/icons';
 import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { adminSettingsApi } from '../../services/api';
-import { emailConfigSchema, fromDomainMatchesHint } from '../../utils/emailConfig';
-import type { SaveEmailConfigInput } from '../../types';
 import AdminLayout from '../../layouts/AdminLayout';
 import Card from '../../components/Card';
 import './SettingsPage.css';
@@ -80,18 +74,6 @@ const SettingsPage: React.FC = () => {
   const [toastColor, setToastColor] = useState<'success' | 'danger'>('success');
   const [saving, setSaving] = useState<string | null>(null);
   const [initialSnapshot, setInitialSnapshot] = useState<string>('');
-
-  // Email (Resend) — write-only key + config.
-  const [emailValues, setEmailValues] = useState<SaveEmailConfigInput>({
-    resend_api_key: '',
-    email_from: '',
-    email_from_name: '',
-    email_reply_to: '',
-    email_enabled: false,
-  });
-  const [emailInitialSnapshot, setEmailInitialSnapshot] = useState<string>('');
-  const [savingEmail, setSavingEmail] = useState(false);
-  const [sendingTest, setSendingTest] = useState(false);
 
   // AFA prices deliberately excluded: they have their own action below.
   const FEE_PRICING_KEYS = ['wallet_max_topup', 'wallet_min_topup'];
@@ -163,94 +145,6 @@ const SettingsPage: React.FC = () => {
   }, [afaPricingRow]);
 
   const afaDirty = afaInitialSnapshot !== '' && JSON.stringify(afaValues) !== afaInitialSnapshot;
-
-  const { data: emailSettings } = useQuery({
-    queryKey: ['admin_settings_email'],
-    queryFn: () => adminSettingsApi.getAll(),
-    select: (result) => result.email ?? null,
-  });
-
-  useEffect(() => {
-    if (emailSettings) {
-      const next: SaveEmailConfigInput = {
-        resend_api_key: '',
-        email_from: emailSettings.email_from ?? '',
-        email_from_name: emailSettings.email_from_name ?? '',
-        email_reply_to: emailSettings.email_reply_to ?? '',
-        email_enabled: emailSettings.email_enabled === true,
-      };
-      setEmailValues(next);
-      setEmailInitialSnapshot(JSON.stringify(next));
-    }
-  }, [emailSettings]);
-
-  const emailDirty = emailInitialSnapshot !== '' &&
-    JSON.stringify(emailValues) !== emailInitialSnapshot;
-
-  const saveEmailConfig = async () => {
-    const parsed = emailConfigSchema.safeParse({
-      resend_api_key: (emailValues.resend_api_key ?? '').trim(),
-      email_from: emailValues.email_from,
-      email_from_name: emailValues.email_from_name,
-      email_reply_to: emailValues.email_reply_to ?? '',
-      email_enabled: emailValues.email_enabled === true,
-    });
-    if (!parsed.success) {
-      setToastColor('danger');
-      setToastMessage(parsed.error.issues.map((i) => i.message).join('; ') || 'Invalid email settings');
-      setShowToast(true);
-      return;
-    }
-
-    // Early warning only — the server enforces this against Resend.
-    const knownDomain = emailSettings?.status?.verified ? emailSettings.status.domain : null;
-    if (fromDomainMatchesHint(parsed.data.email_from, knownDomain) === false) {
-      setToastColor('danger');
-      setToastMessage(`From email must be on your verified Resend domain (${knownDomain}).`);
-      setShowToast(true);
-      return;
-    }
-
-    setSavingEmail(true);
-    try {
-      await adminSettingsApi.saveEmailConfig({
-        resend_api_key: parsed.data.resend_api_key ?? '',
-        email_from: parsed.data.email_from,
-        email_from_name: parsed.data.email_from_name,
-        email_reply_to: parsed.data.email_reply_to ?? '',
-        email_enabled: parsed.data.email_enabled,
-      });
-      setEmailValues((prev: SaveEmailConfigInput) => ({ ...prev, resend_api_key: '' }));
-      queryClient.invalidateQueries({ queryKey: ['admin_settings'] });
-      queryClient.invalidateQueries({ queryKey: ['admin_settings_email'] });
-      setToastColor('success');
-      setToastMessage('Email settings saved');
-      setShowToast(true);
-      setEmailInitialSnapshot(JSON.stringify({ ...emailValues, resend_api_key: '' }));
-    } catch (err) {
-      setToastColor('danger');
-      setToastMessage(err instanceof Error ? err.message : 'Save failed');
-      setShowToast(true);
-    } finally {
-      setSavingEmail(false);
-    }
-  };
-
-  const sendTestEmail = async () => {
-    setSendingTest(true);
-    try {
-      const result = await adminSettingsApi.sendTestEmail();
-      setToastColor('success');
-      setToastMessage(`Test email sent to ${result.to}`);
-      setShowToast(true);
-    } catch (err) {
-      setToastColor('danger');
-      setToastMessage(err instanceof Error ? err.message : 'Test email failed');
-      setShowToast(true);
-    } finally {
-      setSendingTest(false);
-    }
-  };
 
   const isDirty = useMemo(() => {
     if (!initialSnapshot) return false;
@@ -705,81 +599,6 @@ const SettingsPage: React.FC = () => {
                   ])} disabled={saving === 'Notifications'}>
                     <IonIcon icon={saveOutline} slot="start" />
                     {saving === 'Notifications' ? 'Saving...' : 'Save Notifications'}
-                  </IonButton>
-                </div>
-              </Card>
-            </motion.div>
-
-            {/* ── Email (Resend) ── */}
-            <motion.div custom={5} variants={sectionVariants} initial="hidden" animate="visible">
-              <Card variant="accent" noPadding className="settings-card">
-                <div className="settings-card-header">
-                  <div className="section-icon-wrapper">
-                    <IonIcon icon={mailOutline} className="section-icon" />
-                  </div>
-                  <h2>Email (Resend)</h2>
-                </div>
-                <div className="settings-fields">
-
-                  <div className="settings-toggle-row">
-                    <div className="settings-toggle-label">
-                      <span>Enable Email Sending</span>
-                      <span>Send transactional and auth emails via Resend</span>
-                    </div>
-                    <IonToggle
-                      checked={emailValues.email_enabled === true}
-                      onIonChange={(e: CustomEvent<{ checked: boolean }>) => setEmailValues((prev: SaveEmailConfigInput) => ({ ...prev, email_enabled: e.detail.checked }))}
-                    />
-                  </div>
-
-                  {renderField('Resend API Key', emailValues.resend_api_key ?? '', (v) => setEmailValues((prev: SaveEmailConfigInput) => ({ ...prev, resend_api_key: v })), {
-                    type: 'password',
-                    placeholder: emailSettings?.resend_api_key ? emailSettings.resend_api_key : 're_xxxxxxxxxxxx',
-                  })}
-
-                  {renderField('From Email', emailValues.email_from, (v) => setEmailValues((prev: SaveEmailConfigInput) => ({ ...prev, email_from: v })), {
-                    type: 'email',
-                    placeholder: 'no-reply@afaregister.com',
-                  })}
-
-                  {renderField('From Name', emailValues.email_from_name, (v) => setEmailValues((prev: SaveEmailConfigInput) => ({ ...prev, email_from_name: v })), {
-                    placeholder: 'MTN AFA Portal',
-                  })}
-
-                  {renderField('Reply-To Email', emailValues.email_reply_to ?? '', (v) => setEmailValues((prev: SaveEmailConfigInput) => ({ ...prev, email_reply_to: v })), {
-                    type: 'email',
-                    placeholder: 'support@afaregister.com',
-                  })}
-
-                  {emailSettings?.status && (
-                    <div className="field-helper">
-                      <IonIcon icon={emailSettings.status.verified ? checkmarkCircleOutline : alertCircleOutline} />
-                      <span>
-                        Domain <strong>{emailSettings.status.domain}</strong>{' '}
-                        {emailSettings.status.verified ? 'verified' : 'unverified'}.
-                        {emailSettings.status.configured && !emailSettings.status.enabled && ' Sending is currently disabled.'}
-                        {!emailSettings.status.configured && ' API key not configured.'}
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="section-save-row">
-                  <IonButton
-                    className="section-save-btn"
-                    onClick={saveEmailConfig}
-                    disabled={savingEmail || !emailDirty}
-                  >
-                    <IonIcon icon={saveOutline} slot="start" />
-                    {savingEmail ? 'Saving...' : 'Save Email Settings'}
-                  </IonButton>
-                  <IonButton
-                    className="section-save-btn"
-                    fill="outline"
-                    onClick={sendTestEmail}
-                    disabled={sendingTest || !emailSettings?.status?.configured}
-                  >
-                    <IonIcon icon={sendOutline} slot="start" />
-                    {sendingTest ? 'Sending...' : 'Send Test Email'}
                   </IonButton>
                 </div>
               </Card>

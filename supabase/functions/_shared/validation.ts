@@ -14,47 +14,6 @@ export function validateBody<T>(
   return { data: result.data };
 }
 
-// ─────────────────────────────────────────────────────────────
-// Email (Resend) config schema.
-//
-// MUST STAY BYTE-IDENTICAL to src/utils/emailConfig.ts
-// (emailConfigSchema). Both packages resolve zod ^4.4.3, so the two
-// definitions produce the same issues and the same messages. The
-// server copy is authoritative: the domain rule below is only
-// enforceable client-side as a hint, because only the server can ask
-// Resend which domain is verified.
-// ─────────────────────────────────────────────────────────────
-export const EMAIL_MAX_FROM_NAME = 80;
-
-export const emailConfigSchema = z.object({
-  // Write-only. Non-empty replaces the stored key; empty/omitted
-  // leaves it unchanged. Never echoed back by any endpoint.
-  resend_api_key: z.string().trim().optional(),
-  email_from: z
-    .string()
-    .trim()
-    .refine(
-      (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
-      "From email must be a valid email address"
-    ),
-  email_from_name: z
-    .string()
-    .trim()
-    .min(1, "From name is required")
-    .max(EMAIL_MAX_FROM_NAME, `From name must be ${EMAIL_MAX_FROM_NAME} characters or fewer`),
-  email_reply_to: z
-    .string()
-    .trim()
-    .refine(
-      (v) => v === "" || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
-      "Reply-to must be a valid email address"
-    )
-    .optional(),
-  email_enabled: z.boolean(),
-});
-
-export type EmailConfigInput = z.infer<typeof emailConfigSchema>;
-
 /**
  * Server-side counterpart of src/utils/number.ts `safeNumber`.
  * PostgREST returns Postgres `numeric` columns as strings, so anything that
