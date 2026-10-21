@@ -67,11 +67,21 @@
   border-left-color: var(--card-accent);
 }
 
-/* ── Dark mode overrides ── */
-.dark .shared-card--default,
+/* ── Dark mode overrides ──
+   On near-black surfaces a shadow alone loses definition — every card
+   gets a 1px hairline so edges stay crisp (accent keeps its 4px
+   yellow rule). */
+.dark .shared-card--default {
+  background: var(--card-bg);
+  box-shadow: var(--card-shadow);
+  border: 1px solid var(--card-border-color);
+}
+
 .dark .shared-card--accent {
   background: var(--card-bg);
   box-shadow: var(--card-shadow);
+  border: 1px solid var(--card-border-color);
+  border-left: 4px solid var(--card-accent);
 }
 
 .dark .shared-card--bordered {

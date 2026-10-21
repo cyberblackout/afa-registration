@@ -16,7 +16,6 @@ import {
   closeOutline,
   giftOutline,
   ribbonOutline,
-  logoWhatsapp,
   sunnyOutline,
   moonOutline,
   ellipsisHorizontal,
@@ -103,9 +102,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
   const { isDark, toggle: toggleTheme } = useThemeStore();
   const activePath = location.pathname;
 
-  const [whatsappNumber, setWhatsappNumber] = useState('');
-  const [whatsappEnabled, setWhatsappEnabled] = useState(true);
-  const [whatsappMessage, setWhatsappMessage] = useState('');
   const contentRef = useRef<HTMLIonContentElement>(null);
   const logoutRef = useRef(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -156,29 +152,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
 
   const pendingCount = stats?.pending_registrations ?? 0;
   const unreadCount = unread?.count ?? 0;
-
-  useEffect(() => {
-    const fetchConfig = async () => {
-      try {
-        const { adminConfigApi } = await import('../services/api');
-        const data = await adminConfigApi.getSystemSettings();
-        if (!data) return;
-        const map: Record<string, string> = {};
-        data.forEach((s) => { map[s.setting_name] = s.setting_value; });
-        const enabled = map['whatsapp_enabled'] !== 'false';
-        const number = (map['whatsapp_user_number'] || '').replace(/[^0-9]/g, '');
-        const message = map['whatsapp_user_message'] || 'Hello, I need help with my account.';
-        setWhatsappEnabled(enabled);
-        setWhatsappNumber(number);
-        setWhatsappMessage(message);
-      } catch (_e) {
-        // Non-critical
-      }
-    };
-    fetchConfig();
-  }, []);
-
-  const waLink = whatsappNumber ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(whatsappMessage)}` : '#';
 
   const handleLogout = async () => {
     if (logoutRef.current) return;
@@ -272,7 +245,15 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
             <IonIcon icon={isDark ? moonOutline : sunnyOutline} />
           </button>
           <span className="admin-user-name">{user?.full_name || 'Admin'}</span>
-          <div className="admin-avatar">{user?.full_name?.charAt(0) || 'A'}</div>
+          <Link
+            to="/cyberin/settings"
+            className="admin-settings-btn"
+            aria-label="Settings"
+            title="Settings"
+            onClick={() => haptic(8)}
+          >
+            <IonIcon icon={settingsOutline} />
+          </Link>
         </div>
       </nav>
 
@@ -427,12 +408,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
 
       <NotificationHub open={hubOpen} onClose={() => setHubOpen(false)} />
       <AuditLogSheet open={auditOpen} onClose={() => setAuditOpen(false)} />
-
-      {whatsappEnabled && whatsappNumber && (
-        <a href={waLink} target="_blank" rel="noopener noreferrer" className="whatsapp-float" title="WhatsApp Support">
-          <IonIcon icon={logoWhatsapp} />
-        </a>
-      )}
     </>
   );
 };

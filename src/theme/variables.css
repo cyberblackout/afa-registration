@@ -67,29 +67,32 @@ ion-card {
   --card-page-bg: #f5f5f7;
 }
 
+/* Dark mode aligned to the M3 neutral scale (m3-tokens.css) — the old
+   navy (#0f0f1a/#1a1a2e) palette competed with M3 surface tokens and
+   produced an inconsistent, low-contrast finish. */
 .dark {
-  --card-bg: rgba(30, 30, 50, 0.95);
+  --card-bg: rgba(30, 31, 35, 0.96);
   --card-bg-subtle: rgba(255, 255, 255, 0.04);
-  --card-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
-  --card-shadow-hover: 0 4px 20px rgba(0, 0, 0, 0.3);
-  --card-border-color: rgba(255, 255, 255, 0.06);
-  --card-page-bg: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 50%, #0f0f1a 100%);
+  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 4px 16px rgba(0, 0, 0, 0.32);
+  --card-shadow-hover: 0 2px 4px rgba(0, 0, 0, 0.5), 0 8px 24px rgba(0, 0, 0, 0.38);
+  --card-border-color: rgba(255, 255, 255, 0.09);
+  --card-page-bg: linear-gradient(135deg, #0d0e11 0%, #121316 50%, #0d0e11 100%);
 }
 
 .dark,
 .dark ion-app {
-  --ion-background-color: #0f0f1a;
-  --ion-background-color-rgb: 15, 15, 26;
-  --ion-text-color: #ffffff;
-  --ion-text-color-rgb: 255, 255, 255;
-  --ion-item-background: #1a1a2e;
-  --ion-toolbar-background: #1a1a2e;
-  --ion-tab-bar-background: #1a1a2e;
+  --ion-background-color: #121316;
+  --ion-background-color-rgb: 18, 19, 22;
+  --ion-text-color: #e3e1e6;
+  --ion-text-color-rgb: 227, 225, 230;
+  --ion-item-background: #1e1f23;
+  --ion-toolbar-background: #1e1f23;
+  --ion-tab-bar-background: #1e1f23;
 }
 
 .dark html,
 .dark body {
-  background-color: #0f0f1a;
+  background-color: #121316;
 }
 
 ion-button {

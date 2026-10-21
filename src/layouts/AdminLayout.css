@@ -55,6 +55,15 @@
   font-weight: 700;
   font-size: 1.1rem;
   color: var(--admin-text);
+  min-width: 0;
+}
+
+/* Brand title never wraps — it truncates with an ellipsis instead so the
+   right-side icon cluster always has room on narrow viewports. */
+.admin-brand span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .admin-brand-logo {
@@ -236,17 +245,34 @@ html.admin-banner-open .admin-main {
   font-weight: 500;
 }
 
-.admin-avatar {
+.admin-settings-btn {
   width: 36px;
   height: 36px;
-  border-radius: 50%;
+  border-radius: var(--m3-radius-full);
   background: var(--mtn-yellow);
   color: #000;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 18px;
+  flex-shrink: 0;
+  text-decoration: none;
+  transition: transform var(--m3-motion-duration-short) var(--m3-motion-standard),
+    box-shadow var(--m3-motion-duration-short) var(--m3-motion-standard);
+}
+
+.admin-settings-btn:hover {
+  transform: scale(1.06);
+  box-shadow: var(--m3-elevation-1);
+}
+
+.admin-settings-btn:active {
+  transform: scale(0.96);
+}
+
+.admin-settings-btn:focus-visible {
+  outline: 2px solid var(--m3-primary);
+  outline-offset: 2px;
 }
 
 /* ============================================================
@@ -349,34 +375,6 @@ ion-refresher {
   --color: var(--mtn-yellow);
 }
 
-/* WhatsApp support float (positioned above the bottom nav via the
-   ≤768px media block below — keep base rule BEFORE that block so the
-   media override wins the cascade). */
-.whatsapp-float {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: #25D366;
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  box-shadow: 0 4px 16px rgba(37, 211, 102, 0.4);
-  z-index: 190;
-  transition: all 0.2s;
-  text-decoration: none;
-}
-
-.whatsapp-float:hover {
-  transform: scale(1.1);
-  box-shadow: 0 6px 24px rgba(37, 211, 102, 0.5);
-  color: #fff;
-}
-
 /* ============================================================
    Mobile: M3 bottom navigation bar (≤768px)
    ============================================================ */
@@ -410,13 +408,13 @@ ion-refresher {
     padding-right: var(--m3-space-4);
   }
 
-  /* Username text is redundant on mobile — the yellow avatar button
-     is the profile affordance. */
+  /* Username text is redundant on mobile — the yellow settings gear
+     is the single action affordance in this slot. */
   .admin-user-name {
     display: none;
   }
 
-  .admin-avatar {
+  .admin-settings-btn {
     flex-shrink: 0;
   }
 
@@ -424,7 +422,10 @@ ion-refresher {
     --padding-top: calc(var(--admin-navbar-height) + env(safe-area-inset-top, 0px) + 1rem);
     --padding-start: 0;
     --padding-end: 0;
-    --padding-bottom: calc(var(--m3-nav-height) + env(safe-area-inset-bottom, 0px) + 1rem);
+    /* 88px clears the fixed bottom nav (80px + hairline) plus the
+       iOS/Android home-indicator safe area, so the last content row
+       is never trapped underneath the nav. */
+    --padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   }
 
   html.admin-banner-open .admin-main {
@@ -446,7 +447,7 @@ ion-refresher {
     padding-bottom: env(safe-area-inset-bottom, 0px);
     background: var(--m3-surface-container);
     border-top: 1px solid var(--m3-outline-variant);
-    z-index: 150;
+    z-index: 1050;
   }
 
   .m3-nav-item {
@@ -539,7 +540,7 @@ ion-refresher {
     cursor: pointer;
     transition: transform var(--m3-motion-duration-short) var(--m3-motion-standard),
       border-radius var(--m3-motion-duration-short) var(--m3-motion-standard);
-    z-index: 160;
+    z-index: 1060;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -556,7 +557,7 @@ ion-refresher {
     position: fixed;
     inset: 0;
     background: var(--m3-scrim);
-    z-index: 140;
+    z-index: 1040;
     animation: m3-fade-in var(--m3-motion-duration-short) var(--m3-motion-standard);
   }
 
@@ -569,7 +570,7 @@ ion-refresher {
     bottom: calc(var(--m3-nav-height) + env(safe-area-inset-bottom, 0px) + 16px);
     left: 50%;
     transform: translateX(-28px);
-    z-index: 160;
+    z-index: 1060;
     pointer-events: none;
   }
 
@@ -625,7 +626,7 @@ ion-refresher {
     position: fixed;
     inset: 0;
     background: var(--m3-scrim);
-    z-index: 200;
+    z-index: 1200;
     animation: m3-fade-in var(--m3-motion-duration-short) var(--m3-motion-standard);
   }
 
@@ -638,7 +639,7 @@ ion-refresher {
     background: var(--m3-surface-container);
     border-radius: 28px 28px 0 0;
     padding: var(--m3-space-2) var(--m3-space-4) calc(var(--m3-space-4) + env(safe-area-inset-bottom, 0px));
-    z-index: 210;
+    z-index: 1210;
     box-shadow: var(--m3-elevation-3);
     animation: m3-sheet-up var(--m3-motion-duration-medium) var(--m3-motion-emphasized);
   }
@@ -711,12 +712,6 @@ ion-refresher {
 
   .m3-more-logout:disabled {
     opacity: 0.6;
-  }
-
-  /* WhatsApp float clears the bottom nav on mobile */
-  .whatsapp-float {
-    bottom: calc(var(--m3-nav-height) + env(safe-area-inset-bottom, 0px) + 16px);
-    z-index: 190;
   }
 }
 
