@@ -31,6 +31,7 @@ const AdminNotifs = lazy(() => import('./pages/admin/NotificationsPage'));
 const AdminReferrals = lazy(() => import('./pages/admin/ReferralManagementPage'));
 const AdminReports = lazy(() => import('./pages/admin/ReportsPage'));
 const AdminSettings = lazy(() => import('./pages/admin/SettingsPage'));
+const AdminAuditLog = lazy(() => import('./pages/admin/AuditLogPage'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 
 import '@ionic/react/css/core.css';
@@ -44,6 +45,7 @@ import '@ionic/react/css/text-transformation.css';
 import '@ionic/react/css/flex-utils.css';
 import '@ionic/react/css/display.css';
 import './theme/variables.css';
+import './theme/m3-tokens.css';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -265,6 +267,7 @@ const App: React.FC = () => (
                   <ProtectedRoute exact path="/cyberin/referrals" component={AdminReferrals} requireAdmin />
                   <ProtectedRoute exact path="/cyberin/agents" component={AdminAgentManagement} requireAdmin />
                   <ProtectedRoute exact path="/cyberin/reports" component={AdminReports} requireAdmin />
+                  <ProtectedRoute exact path="/cyberin/audit" component={AdminAuditLog} requireAdmin />
                   <ProtectedRoute exact path="/cyberin/settings" component={AdminSettings} requireAdmin />
                   <Route exact path="/">
                     <Redirect to="/login" />

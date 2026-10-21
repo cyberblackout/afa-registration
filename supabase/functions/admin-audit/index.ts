@@ -35,7 +35,28 @@ Deno.serve(async (req) => {
       entity: url.searchParams.get("entity") || undefined,
     };
   } else if (req.method === "POST") {
-    const body = await req.json();
+    // .catch keeps a malformed body from throwing past the CORS layer
+    // (an unhandled error would return a 500 the browser cannot read).
+    const body = await req.json().catch(() => null);
+    // Create path: { action: 'create', log_action, entity, entity_id, details }
+    // (`log_action` is the semantic action stored in audit_logs.action; the
+    // top-level `action` field is consumed as the API verb.)
+    if (body?.action === "create") {
+      const logAction = String(body.log_action || body.entity || "admin_action").slice(0, 100);
+      const entity = body.entity ? String(body.entity).slice(0, 100) : null;
+      const entityId = body.entity_id ? String(body.entity_id) : null;
+      const details =
+        body.details && typeof body.details === "object" ? body.details : {};
+      const { error: insertError } = await admin.from("audit_logs").insert({
+        user_id: auth.user.id,
+        action: logAction,
+        entity,
+        entity_id: entityId,
+        new_value: details,
+      });
+      if (insertError) return errorResp("Failed to record audit log", 500, origin);
+      return successResp({ success: true }, origin);
+    }
     const validation = validateBody(body, querySchema);
     if (validation.error) return errorResp(validation.error, 400, origin);
     filters = validation.data!;

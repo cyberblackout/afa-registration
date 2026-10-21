@@ -13,13 +13,13 @@
 .dashboard-header h1 {
   font-size: 1.65rem;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--m3-on-surface);
   margin: 0 0 0.25rem;
 }
 
 .dashboard-subtitle {
   font-size: 0.88rem;
-  color: #6b7280;
+  color: var(--m3-on-surface-variant);
   margin: 0;
 }
 
@@ -27,8 +27,8 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  background: #FFF3CD;
-  color: #b8860b;
+  background: var(--m3-primary-container);
+  color: var(--m3-on-primary-container);
   padding: 0.5rem 1rem;
   border-radius: 100px;
   font-size: 0.82rem;
@@ -90,6 +90,76 @@
 
 .stat-card-icon ion-icon {
   font-size: 1.3rem;
+}
+
+/* ============================================================
+   Mobile KPI carousel (M3 surface containers + SVG sparklines)
+   ============================================================ */
+.kpi-carousel {
+  display: none;
+}
+
+.kpi-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m3-space-2);
+  text-align: left;
+  border: none;
+  font: inherit;
+  cursor: default;
+}
+
+button.kpi-card {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.kpi-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.kpi-label {
+  font: var(--m3-font-label-md);
+  color: var(--m3-on-surface-variant);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin: 0;
+}
+
+.kpi-icon {
+  font-size: 18px;
+  color: var(--m3-on-surface-variant);
+}
+
+.kpi-value {
+  font: var(--m3-font-title-lg);
+  color: var(--m3-on-surface);
+  margin: 0;
+}
+
+.kpi-spark {
+  width: 100%;
+  height: 36px;
+  margin-top: var(--m3-space-1);
+}
+
+.kpi-footnote {
+  font: var(--m3-font-label-sm);
+  color: var(--m3-on-surface-variant);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.kpi-footnote--action {
+  color: var(--m3-on-warning-container);
+  font-weight: 600;
+}
+
+.kpi-footnote--action ion-icon {
+  font-size: 14px;
 }
 
 .charts-grid {
@@ -369,26 +439,105 @@
   .admin-dashboard {
     max-width: none;
     margin: 0;
+    /* Consistent 16px gutters so headers/captions never touch the
+       screen edges (admin-main sets padding-start/end: 0 on mobile). */
+    padding: 0 var(--m3-space-4);
   }
 
   .dashboard-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.75rem;
+    margin-bottom: var(--m3-space-4);
   }
 
-  .stat-cards-row {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
+  .dashboard-header h1 {
+    font-size: 1.4rem;
   }
 
-  .stat-card-value {
-    font-size: 1.25rem;
-  }
-
+  /* Carousel replaces the desktop stat grid + heavy Recharts on mobile */
+  .stat-cards-row,
   .charts-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
+    display: none;
+  }
+
+  /* Full-bleed snap carousel: breaks out of the page gutters so cards
+     can span ~88% of the viewport with a peek of the next card. */
+  .kpi-carousel {
+    display: flex;
+    gap: var(--m3-space-3);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--m3-space-4);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: var(--m3-space-1) var(--m3-space-4) var(--m3-space-4);
+    margin: var(--m3-space-1) calc(-1 * var(--m3-space-4)) var(--m3-space-2);
+  }
+
+  .kpi-carousel::-webkit-scrollbar {
+    display: none;
+  }
+
+  .kpi-card {
+    flex: 0 0 88%;
+    width: 88%;
+    max-width: 88%;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    background: var(--m3-surface-container-low);
+    border-radius: var(--m3-radius-md);
+    padding: var(--m3-space-4);
+    box-shadow: var(--m3-elevation-1);
+    min-height: 132px;
+    box-sizing: border-box;
+  }
+
+  .kpi-card--skeleton {
+    display: block;
+    background: var(--m3-surface-container-high);
+  }
+
+  .kpi-card--warning {
+    background: var(--m3-warning-container);
+  }
+
+  .kpi-card--warning .kpi-label,
+  .kpi-card--warning .kpi-icon,
+  .kpi-card--warning .kpi-value {
+    color: var(--m3-on-warning-container);
+  }
+
+  .kpi-card--error {
+    align-items: flex-start;
+    justify-content: center;
+    background: var(--m3-error-container);
+    color: var(--m3-on-error-container);
+    min-width: 200px;
+  }
+
+  /* Trend delta chip on the revenue trend card */
+  .kpi-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font: var(--m3-font-label-sm);
+    padding: 2px 8px;
+    border-radius: var(--m3-radius-full);
+  }
+
+  .kpi-trend--up {
+    background: var(--m3-success-container);
+    color: var(--m3-on-success-container);
+  }
+
+  .kpi-trend--down {
+    background: var(--m3-error-container);
+    color: var(--m3-on-error-container);
+  }
+
+  .kpi-trend ion-icon {
+    font-size: 12px;
   }
 
   .dashboard-bottom-grid {
@@ -409,21 +558,5 @@
   }
 }
 
-@media (max-width: 480px) {
-  .stat-cards-row {
-    grid-template-columns: 1fr 1fr;
-    gap: 0.6rem;
-  }
-
-  .stat-card {
-    padding: 0.9rem;
-  }
-
-  .stat-card-value {
-    font-size: 1.1rem;
-  }
-
-  .stat-card-label {
-    font-size: 0.7rem;
-  }
-}
+/* Note: stat-cards-row is display:none below 768px (mobile KPI carousel
+   takes over) — no ≤480px overrides are needed for it. */

@@ -2,7 +2,9 @@
   max-width: 1100px;
   margin: 0 auto;
   padding: 1.5rem;
+  --chip-row-gutter: 24px;
 }
+
 
 .page-header {
   margin-bottom: 1.5rem;

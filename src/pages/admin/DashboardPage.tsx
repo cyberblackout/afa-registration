@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { IonButton, IonIcon, IonPage } from '@ionic/react';
+import { useHistory } from 'react-router-dom';
 import {
   peopleOutline,
   documentTextOutline,
@@ -7,22 +8,25 @@ import {
   cashOutline,
   timeOutline,
   trendingUpOutline,
+  trendingDownOutline,
   arrowForward,
   checkmarkCircle,
   closeCircle,
   hourglassOutline,
 } from 'ionicons/icons';
 import { motion } from 'framer-motion';
-import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-} from 'recharts';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { adminDashboardApi } from '../../services/api';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate } from '../../utils/date';
 import Card from '../../components/Card';
+import { M3Skeleton, M3SkeletonList } from '../../components/M3Skeleton';
+import { Sparkline } from '../../components/Sparkline';
+import { useIsMobile } from '../../hooks/useIsMobile';
 import { safeNumber } from '../../utils/number';
 import './DashboardPage.css';
+
+const DashboardCharts = React.lazy(() => import('./DashboardCharts'));
 
 const statusConfig = {
   approved: { label: 'Approved', icon: checkmarkCircle, className: 'status-approved' },
@@ -40,26 +44,10 @@ const cardVariants = {
 const formatCurrency = (value: number) =>
   `GH₵ ${safeNumber(value).toLocaleString()}`;
 
-const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: { color?: string; name?: string; value?: number | string }[]; label?: string | number }) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="chart-tooltip">
-      <p className="chart-tooltip-label">{label}</p>
-      {payload?.map((entry, idx) => (
-        <p key={idx} className="chart-tooltip-value" style={{ color: entry.color }}>
-          {entry.name === 'revenue' ? formatCurrency(Number(entry.value ?? 0)) : entry.value}
-        </p>
-      ))}
-    </div>
-  );
-};
-
-const Skeleton = ({ width, height }: { width?: string; height?: string }) => (
-  <div className="skeleton-box" style={{ width: width || '100%', height: height || '60px', background: '#2a2a2a', borderRadius: '8px', animation: 'pulse 1.5s infinite' }} />
-);
-
 const DashboardPage: React.FC = () => {
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
+  const history = useHistory();
 
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['admin_dashboard'] });
@@ -83,14 +71,15 @@ const DashboardPage: React.FC = () => {
     },
   });
 
-  const chartFallback = weeklyError ? (
-    <div
-      style={{ height: 280, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-    >
-      <p style={{ color: '#6b7280', margin: 0 }}>Failed to load chart</p>
-      <IonButton fill="clear" onClick={() => refetchWeekly()}>Retry</IonButton>
-    </div>
-  ) : null;
+  const series = (weeklyData ?? []) as { day?: string; revenue?: number; registrations?: number }[];
+  const revenueSeries = series.map((d) => safeNumber(d.revenue));
+  const regsSeries = series.map((d) => safeNumber(d.registrations));
+
+  // Lightweight mobile trend summary: last day vs previous day of the
+  // 7-day revenue series (feeds the sparkline card's delta chip).
+  const revenueDelta =
+    revenueSeries.length >= 2 ? revenueSeries[revenueSeries.length - 1] - revenueSeries[revenueSeries.length - 2] : null;
+  const revenueTrendUp = revenueDelta !== null && revenueDelta >= 0;
 
   const statCards = [
     { label: 'Total Users', value: stats ? stats.total_users.toLocaleString() : '...', icon: peopleOutline, color: '#3b82f6' },
@@ -128,93 +117,147 @@ const DashboardPage: React.FC = () => {
           </div>
         </motion.div>
 
-        <div className="stat-cards-row">
-          {isError ? (
-            <div className="empty-state" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem' }}>
-              <p>Failed to load dashboard. Please try again.</p>
-              <IonButton fill="clear" onClick={() => refetch()}>Retry</IonButton>
-            </div>
-          ) : isLoading ? (
-            Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} height="80px" />)
-          ) : statCards.map((card, i) => (
-            <Card
-              key={card.label}
-              variant="accent"
-              className="stat-card"
-              custom={i}
-              variants={cardVariants}
-              initial="hidden"
-              animate="visible"
-              style={{ borderLeftColor: card.color }}
-            >
-              <div className="stat-card-top">
-                <div className="stat-card-info">
-                  <p className="stat-card-label">{card.label}</p>
-                  <p className="stat-card-value">{card.value}</p>
-                </div>
-                <div className="stat-card-icon" style={{ background: `${card.color}15`, color: card.color }}>
-                  <IonIcon icon={card.icon} />
-                </div>
+        {/* Mobile: swipeable M3 KPI carousel with SVG sparklines.
+            Desktop: 5-card grid + Recharts (lazy chunk, never loaded here). */}
+        {isMobile && (
+          <div className="kpi-carousel" role="list" aria-label="Key metrics">
+            {isError ? (
+              <div className="kpi-card kpi-card--error" role="listitem">
+                <p className="kpi-label">Failed to load</p>
+                <IonButton fill="clear" size="small" onClick={() => refetch()}>Retry</IonButton>
               </div>
-            </Card>
-          ))}
-        </div>
-
-        <div className="charts-grid">
-          <Card
-            className="chart-card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.3 }}
-          >
-            <div className="chart-card-header">
-              <h3>Revenue Trend</h3>
-              <span className="chart-period">Last 7 days</span>
-            </div>
-            {weeklyError ? (
-              chartFallback
-            ) : !weeklyData ? (
-              <Skeleton height="280px" />
+            ) : isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <M3Skeleton key={i} className="kpi-card kpi-card--skeleton" height={132} radius="var(--m3-radius-md)" />
+              ))
             ) : (
-              <ResponsiveContainer width="100%" height={280}>
-                <LineChart data={weeklyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="day" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} tickFormatter={formatCurrency} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Line type="monotone" dataKey="revenue" stroke="#FFCB05" strokeWidth={3} dot={{ fill: '#FFCB05', strokeWidth: 2, r: 4 }} activeDot={{ r: 6 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </Card>
+              <>
+                <div className="kpi-card" role="listitem">
+                  <div className="kpi-card-top">
+                    <span className="kpi-label">Revenue trend</span>
+                    <IonIcon icon={cashOutline} className="kpi-icon" />
+                  </div>
+                  <p className="kpi-value m3-numeric">{formatCurrency(stats?.revenue ?? 0)}</p>
+                  {revenueSeries.length > 1 && (
+                    <Sparkline data={revenueSeries} width={140} height={36} className="kpi-spark" />
+                  )}
+                  <span className="kpi-footnote">
+                    {revenueDelta !== null ? (
+                      <>
+                        <span className={`kpi-trend ${revenueTrendUp ? 'kpi-trend--up' : 'kpi-trend--down'}`}>
+                          <IonIcon icon={revenueTrendUp ? trendingUpOutline : trendingDownOutline} />
+                          {revenueTrendUp ? '+' : '−'}{formatCurrency(Math.abs(revenueDelta))}
+                        </span>
+                        vs prev day
+                      </>
+                    ) : (
+                      'Last 7 days'
+                    )}
+                  </span>
+                </div>
 
-          <Card
-            className="chart-card"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, delay: 0.4 }}
-          >
-            <div className="chart-card-header">
-              <h3>Registrations Trend</h3>
-              <span className="chart-period">Last 7 days</span>
-            </div>
-            {weeklyError ? (
-              chartFallback
-            ) : !weeklyData ? (
-              <Skeleton height="280px" />
-            ) : (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={weeklyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="day" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="registrations" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={32} />
-                </BarChart>
-              </ResponsiveContainer>
+                <div className="kpi-card" role="listitem">
+                  <div className="kpi-card-top">
+                    <span className="kpi-label">Today's Regs</span>
+                    <IonIcon icon={documentTextOutline} className="kpi-icon" />
+                  </div>
+                  <p className="kpi-value m3-numeric">{stats?.today_registrations ?? 0}</p>
+                  {regsSeries.length > 1 && (
+                    <Sparkline data={regsSeries} width={140} height={36} stroke="var(--m3-info)" className="kpi-spark" />
+                  )}
+                  <span className="kpi-footnote">Daily volume</span>
+                </div>
+
+                <button
+                  type="button"
+                  className="kpi-card kpi-card--warning"
+                  role="listitem"
+                  onClick={() => history.push('/cyberin/registrations')}
+                >
+                  <div className="kpi-card-top">
+                    <span className="kpi-label">Pending approvals</span>
+                    <IonIcon icon={timeOutline} className="kpi-icon" />
+                  </div>
+                  <p className="kpi-value m3-numeric">{stats?.pending_registrations ?? 0}</p>
+                  <span className="kpi-footnote kpi-footnote--action">
+                    Review queue <IonIcon icon={arrowForward} />
+                  </span>
+                </button>
+
+                <div className="kpi-card" role="listitem">
+                  <div className="kpi-card-top">
+                    <span className="kpi-label">Total Users</span>
+                    <IonIcon icon={peopleOutline} className="kpi-icon" />
+                  </div>
+                  <p className="kpi-value m3-numeric">{(stats?.total_users ?? 0).toLocaleString()}</p>
+                  <span className="kpi-footnote">All accounts</span>
+                </div>
+
+                <div className="kpi-card" role="listitem">
+                  <div className="kpi-card-top">
+                    <span className="kpi-label">Wallet Pool</span>
+                    <IonIcon icon={walletOutline} className="kpi-icon" />
+                  </div>
+                  <p className="kpi-value m3-numeric">{formatCurrency(stats?.total_wallet_balance ?? 0)}</p>
+                  <span className="kpi-footnote">User balances</span>
+                </div>
+              </>
             )}
-          </Card>
-        </div>
+          </div>
+        )}
+
+        {!isMobile && (
+          <div className="stat-cards-row">
+            {isError ? (
+              <div className="empty-state" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '2rem' }}>
+                <p>Failed to load dashboard. Please try again.</p>
+                <IonButton fill="clear" onClick={() => refetch()}>Retry</IonButton>
+              </div>
+            ) : isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => <M3Skeleton key={i} height={80} radius="var(--m3-radius-md)" />)
+            ) : statCards.map((card, i) => (
+              <Card
+                key={card.label}
+                variant="accent"
+                className="stat-card"
+                custom={i}
+                variants={cardVariants}
+                initial="hidden"
+                animate="visible"
+                style={{ borderLeftColor: card.color }}
+              >
+                <div className="stat-card-top">
+                  <div className="stat-card-info">
+                    <p className="stat-card-label">{card.label}</p>
+                    <p className="stat-card-value">{card.value}</p>
+                  </div>
+                  <div className="stat-card-icon" style={{ background: `${card.color}15`, color: card.color }}>
+                    <IonIcon icon={card.icon} />
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {!isMobile && (
+          <div className="charts-grid">
+            <Suspense
+              fallback={
+                <>
+                  <M3Skeleton height={340} radius="var(--m3-radius-md)" />
+                  <M3Skeleton height={340} radius="var(--m3-radius-md)" />
+                </>
+              }
+            >
+              <DashboardCharts
+                weeklyData={weeklyData ?? []}
+                isError={weeklyError}
+                onRetry={() => refetchWeekly()}
+              />
+            </Suspense>
+          </div>
+        )}
 
         <div className="dashboard-bottom-grid">
           <Card
@@ -225,13 +268,17 @@ const DashboardPage: React.FC = () => {
           >
             <div className="card-header-row">
               <h3>Recent Registrations</h3>
-              <a href="/cyberin/registrations" className="view-all-link">
+              <a
+                href="/cyberin/registrations"
+                className="view-all-link"
+                onClick={(e) => { e.preventDefault(); history.push('/cyberin/registrations'); }}
+              >
                 View All <IonIcon icon={arrowForward} />
               </a>
             </div>
             <div className="recent-list">
               {!stats ? (
-                Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} height="48px" />)
+                <M3SkeletonList count={3} lines={1} />
               ) : stats.recent_registrations.length === 0 ? (
                 <p className="no-data-text">No recent registrations</p>
               ) : (
@@ -253,7 +300,13 @@ const DashboardPage: React.FC = () => {
                           {status.label}
                         </span>
                       </div>
-                      <a href={`/cyberin/registrations`} className="recent-action-btn">View</a>
+                      <a
+                        href="/cyberin/registrations"
+                        className="recent-action-btn"
+                        onClick={(e) => { e.preventDefault(); history.push('/cyberin/registrations'); }}
+                      >
+                        View
+                      </a>
                     </div>
                   );
                 })

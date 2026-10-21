@@ -835,4 +835,62 @@
   .reg-table-row {
     display: none;
   }
+
+  /* ===== Swipe-to-action layers (behind the card) ===== */
+  .swipe-wrapper {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .swipe-bg {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 1.25rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    pointer-events: none;
+  }
+
+  .swipe-bg ion-icon {
+    font-size: 1.4rem;
+  }
+
+  .swipe-bg--approve {
+    background: var(--m3-success-container);
+    color: var(--m3-on-success-container);
+    justify-content: flex-start;
+  }
+
+  .swipe-bg--reject {
+    background: var(--m3-critical-container);
+    color: var(--m3-on-critical-container);
+    justify-content: flex-end;
+  }
+
+  .reg-card--swipe {
+    position: relative;
+    touch-action: pan-y;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .reg-card--swipe:active {
+    cursor: grabbing;
+  }
+
+  .regs-skeleton {
+    padding: 0 1rem;
+  }
+}
+
+/* Dark mode: cards follow the shared --card-bg token */
+.dark .reg-card {
+  background: var(--card-bg);
 }

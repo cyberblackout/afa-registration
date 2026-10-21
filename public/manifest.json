@@ -1,16 +1,46 @@
 {
   "name": "MTN AFA Portal",
   "short_name": "AFA Portal",
-  "start_url": "/",
+  "description": "MTN AFA — registration, wallet and agent operations portal for Ghana.",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ffc409",
-  "orientation": "portrait",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#FFFBFE",
+  "theme_color": "#FFCB05",
+  "orientation": "portrait-primary",
+  "categories": ["finance", "business"],
   "icons": [
     {
-      "src": "/favicon.png",
+      "src": "favicon.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "mtn-woman-afa-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "favicon.png",
+      "sizes": "225x225",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Registrations",
+      "short_name": "Regs",
+      "url": "cyberin/registrations"
+    },
+    {
+      "name": "Payments",
+      "short_name": "Pay",
+      "url": "cyberin/payments"
     }
   ]
 }

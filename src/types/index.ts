@@ -372,10 +372,11 @@ export interface AuditLog {
   created_at: string;
 }
 
-/** Result of adminCustomerApi.deleteUser — may carry auth-ban warning */
+/** Result of adminCustomerApi.deleteUser — hard-delete status */
 export interface DeleteUserResult extends ActionResult {
   data?: {
-    auth_ban_status?: string;
+    hard_deleted?: boolean;
+    auth_delete_status?: string;
     [key: string]: unknown;
   };
 }
@@ -423,7 +424,7 @@ export interface AdminSettingsBundle {
   pricing?: PricingRow[];
 }
 
-/** Customer row returned by adminCustomerApi.list() — a User plus soft-delete flag */
+/** Customer row returned by adminCustomerApi.list() — a User plus soft-delete flag (legacy rows only; new deletes are hard) */
 export interface AdminCustomer extends User {
   deleted_at?: string | null;
 }

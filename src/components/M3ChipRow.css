@@ -1,0 +1,56 @@
+/* M3 filter chip row — mobile sticky quick-filters */
+
+.m3-chip-row {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .m3-chip-row {
+    display: flex;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    gap: var(--m3-space-2);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding: var(--m3-space-2) var(--chip-row-gutter, var(--m3-space-4));
+    margin: 0 calc(-1 * var(--chip-row-gutter, var(--m3-space-4)));
+    background: var(--m3-surface-container-low);
+    border-bottom: 1px solid var(--m3-outline-variant);
+  }
+
+  .m3-chip-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .m3-chip {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--m3-outline-variant);
+    border-radius: var(--m3-radius-xs);
+    background: transparent;
+    color: var(--m3-on-surface-variant);
+    font: var(--m3-font-label-lg);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background var(--m3-motion-duration-short) var(--m3-motion-standard),
+      color var(--m3-motion-duration-short) var(--m3-motion-standard);
+  }
+
+  .m3-chip--active {
+    background: var(--m3-secondary-container);
+    color: var(--m3-on-secondary-container);
+    border-color: transparent;
+  }
+
+  .m3-chip-count {
+    font-size: 11px;
+    font-weight: 700;
+    opacity: 0.75;
+  }
+}

@@ -38,8 +38,11 @@ Deno.serve(async (req) => {
   if (allowed === false) {
     return errorResp("Rate limit exceeded. Try again later.", 429, origin);
   }
-  // Step 1: Database soft-delete via RPC
-  const { data, error } = await admin.rpc("admin_soft_delete_user", {
+  // Step 1: Database hard-delete preparation via RPC.
+  // Snapshots the target into deleted_users_audit, writes an audit_logs entry,
+  // and purges ephemeral data (notifications, push_subscriptions). All
+  // safety checks (caller admin, no self-delete, no admin targets) live here.
+  const { data, error } = await admin.rpc("admin_hard_delete_user", {
     p_caller_id: auth.user.id,
     p_target_user_id: target_user_id,
     p_reason: reason || null,
@@ -50,9 +53,9 @@ Deno.serve(async (req) => {
       message.includes("Authentication required") ||
       message.includes("Insufficient permissions") ||
       message.includes("Cannot delete your own") ||
-      message.includes("already soft-deleted") ||
       message.includes("Cannot delete admin") ||
-      message.includes("not found")
+      message.includes("User not found") ||
+      message.includes("caller mismatch")
     ) {
       return errorResp(message, 400, origin);
     }
@@ -61,34 +64,38 @@ Deno.serve(async (req) => {
   if (data && !data.success) {
     return errorResp(data.message || "Delete failed", 400, origin);
   }
-  // Step 2: Auth ban (after DB soft-delete succeeds)
-  let authBanFailed = false;
-  let authBanError = "";
+  // Step 2: TRUE HARD DELETE of the Supabase Auth account via the Admin API.
+  // Deleting auth.users cascades to public.profiles (FK ON DELETE CASCADE),
+  // which in turn cascades to orders and wallet_transactions — a complete,
+  // clean purge of the user and every linked record.
+  let authDeleteFailed = false;
+  let authDeleteError = "";
   try {
-    const { error: banError } = await admin.auth.admin.updateUserById(target_user_id, {
-      ban_duration: "100y",
-    });
-    if (banError) {
-      authBanFailed = true;
-      authBanError = banError.message || "Ban failed";
+    const { error: deleteError } = await admin.auth.admin.deleteUser(target_user_id);
+    if (deleteError) {
+      authDeleteFailed = true;
+      authDeleteError = deleteError.message || "Auth delete failed";
     }
   } catch (e) {
-    authBanFailed = true;
-    authBanError = (e instanceof Error ? e.message : null) || "Ban request failed";
+    authDeleteFailed = true;
+    authDeleteError = (e instanceof Error ? e.message : null) || "Auth delete request failed";
   }
-  if (authBanFailed) {
-    return successResp(
-      {
-        ...data,
-        data: {
-          ...data.data,
-          auth_ban_status: "failed",
-          auth_ban_error: authBanError,
-          note: "User was soft-deleted in database but auth ban failed. The user cannot access admin/agent features (role reset to user, PII scrubbed) but may still be able to log in. Retry the auth ban manually or via re-invocation.",
-        },
-      },
+  if (authDeleteFailed) {
+    return errorResp(
+      "Database cleanup succeeded but deleting the authentication account failed: " +
+        authDeleteError +
+        ". The user still exists — retry the deletion.",
+      500,
       origin,
     );
   }
-  return successResp(data, origin);
+  return successResp(
+    {
+      success: true,
+      target_user_id,
+      hard_deleted: true,
+      auth_delete_status: "success",
+    },
+    origin,
+  );
 });

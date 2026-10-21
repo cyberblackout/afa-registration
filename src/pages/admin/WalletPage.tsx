@@ -31,6 +31,9 @@ import type { AdminWalletUser } from '../../types';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate } from '../../utils/date';
 import Card from '../../components/Card';
+import { M3SkeletonList } from '../../components/M3Skeleton';
+import { SecurityGate } from '../../components/SecurityGate';
+import { recordAudit } from '../../services/auditLog';
 import { safeNumber } from '../../utils/number';
 import './WalletPage.css';
 
@@ -54,6 +57,7 @@ const WalletPage: React.FC = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [gate, setGate] = useState<{ reason: string; run: () => void } | null>(null);
 
   const { data: profiles = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_wallets'],
@@ -103,9 +107,23 @@ const WalletPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['admin_wallets'] });
       queryClient.invalidateQueries({ queryKey: ['admin_wallet_tx'] });
       setShowTxModal(false);
+      recordAudit({
+        action: txType === 'credit' ? 'wallet_credit' : 'wallet_debit',
+        entity: 'wallet',
+        entity_id: selectedWallet.id,
+        status: 'success',
+        details: { amount, description: txDescription || undefined, target: selectedWallet.full_name },
+      });
       setToastMessage(`${txType === 'credit' ? 'Credited' : 'Debited'} GH₵ ${safeNumber(amount).toFixed(2)} ${txType === 'credit' ? 'to' : 'from'} ${selectedWallet.full_name}`);
       setShowToast(true);
     } catch (err) {
+      recordAudit({
+        action: txType === 'credit' ? 'wallet_credit' : 'wallet_debit',
+        entity: 'wallet',
+        entity_id: selectedWallet.id,
+        status: 'failed',
+        details: { amount: parseFloat(txAmount), error: err instanceof Error ? err.message : 'unknown' },
+      });
       setToastMessage(err instanceof Error ? err.message : 'Transaction failed');
       setShowToast(true);
     } finally {
@@ -120,9 +138,23 @@ const WalletPage: React.FC = () => {
         const frozen = profile.wallet_status === 'frozen';
         await walletApi.adminUpdateStatus(profile.id, frozen ? 'active' : 'frozen');
         queryClient.invalidateQueries({ queryKey: ['admin_wallets'] });
+        recordAudit({
+          action: 'wallet_freeze',
+          entity: 'wallet',
+          entity_id: profile.id,
+          status: 'success',
+          details: { to_status: frozen ? 'active' : 'frozen', target: profile.full_name },
+        });
         setToastMessage(`${profile.full_name}'s wallet has been ${frozen ? 'unfrozen' : 'frozen'}`);
         setShowToast(true);
       } catch (err) {
+        recordAudit({
+          action: 'wallet_freeze',
+          entity: 'wallet',
+          entity_id: profile.id,
+          status: 'failed',
+          details: { error: err instanceof Error ? err.message : 'unknown' },
+        });
         setToastMessage(err instanceof Error ? err.message : 'Failed to update wallet status');
         setShowToast(true);
       }
@@ -195,10 +227,7 @@ const WalletPage: React.FC = () => {
 
         <div className="wallets-section">
           {isLoading ? (
-            <div className="empty-state">
-              <IonIcon icon={walletOutline} className="empty-icon" />
-              <p>Loading wallets...</p>
-            </div>
+            <M3SkeletonList count={5} lines={2} />
           ) : isError ? (
             <div className="empty-state">
               <IonIcon icon={walletOutline} className="empty-icon" />
@@ -333,7 +362,18 @@ const WalletPage: React.FC = () => {
             <IonLabel position="stacked">Description</IonLabel>
             <IonTextarea value={txDescription} onIonChange={(e) => setTxDescription(e.detail.value || '')} placeholder="Reason for transaction..." rows={3} />
           </IonItem>
-          <IonButton expand="block" className={`save-btn ${txType === 'debit' ? 'debit-submit' : ''}`} onClick={handleTxSubmit} disabled={!txAmount || parseFloat(txAmount) <= 0 || submitting}>
+          <IonButton
+            expand="block"
+            className={`save-btn ${txType === 'debit' ? 'debit-submit' : ''}`}
+            onClick={() =>
+              selectedWallet &&
+              setGate({
+                reason: `${txType === 'credit' ? 'Credit' : 'Debit'} GH₵ ${parseFloat(txAmount || '0').toFixed(2)} ${txType === 'credit' ? 'to' : 'from'} ${selectedWallet.full_name}`,
+                run: () => void handleTxSubmit(),
+              })
+            }
+            disabled={!txAmount || parseFloat(txAmount) <= 0 || submitting}
+          >
             {submitting ? 'Processing...' : txType === 'credit' ? 'Credit Wallet' : 'Debit Wallet'}
           </IonButton>
         </div>
@@ -368,6 +408,16 @@ const WalletPage: React.FC = () => {
         duration={3000}
         position="top"
         color="success"
+      />
+
+      <SecurityGate
+        open={!!gate}
+        reason={gate?.reason || ''}
+        onSuccess={() => {
+          gate?.run();
+          setGate(null);
+        }}
+        onCancel={() => setGate(null)}
       />
     </IonPage>
   );

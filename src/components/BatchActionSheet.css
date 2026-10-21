@@ -1,0 +1,273 @@
+/* M3 bottom sheet for batch actions + sticky selection bar
+   (also carries the shared select-mode chip + row checkbox styles) */
+
+.select-mode-btn {
+  margin-left: auto;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--m3-outline-variant);
+  border-radius: var(--m3-radius-full);
+  background: transparent;
+  color: var(--m3-primary);
+  font: var(--m3-font-label-lg);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.select-mode-btn--on {
+  background: var(--m3-primary);
+  color: var(--m3-on-primary);
+  border-color: transparent;
+}
+
+.cust-check {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 2px solid var(--m3-outline);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--m3-on-primary);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.cust-check--on {
+  background: var(--m3-primary);
+  border-color: var(--m3-primary);
+}
+
+.m3-batch-scrim {
+  position: fixed;
+  inset: 0;
+  background: var(--m3-scrim);
+  z-index: 200;
+  animation: m3-batch-fade var(--m3-motion-duration-short) var(--m3-motion-standard);
+}
+
+.m3-batch-sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--m3-surface-container);
+  border-radius: 28px 28px 0 0;
+  padding: var(--m3-space-2) var(--m3-space-4) calc(var(--m3-space-4) + env(safe-area-inset-bottom, 0px));
+  z-index: 210;
+  box-shadow: var(--m3-elevation-3);
+  animation: m3-batch-up var(--m3-motion-duration-medium) var(--m3-motion-emphasized);
+}
+
+.m3-batch-header {
+  margin-bottom: var(--m3-space-3);
+}
+
+.m3-batch-title {
+  font: var(--m3-font-title-md);
+  color: var(--m3-on-surface);
+  margin: 0;
+}
+
+.m3-batch-subtitle {
+  font: var(--m3-font-body-sm);
+  color: var(--m3-on-surface-variant);
+  margin: 2px 0 0;
+}
+
+.m3-batch-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--m3-space-1);
+}
+
+.m3-batch-action {
+  display: flex;
+  align-items: center;
+  gap: var(--m3-space-3);
+  min-height: var(--m3-touch-target);
+  padding: var(--m3-space-2) var(--m3-space-2);
+  border: none;
+  border-radius: var(--m3-radius-sm);
+  background: transparent;
+  color: var(--m3-on-surface);
+  font: var(--m3-font-body-lg);
+  text-align: left;
+  cursor: pointer;
+}
+
+.m3-batch-action:active {
+  background: var(--m3-surface-container-high);
+}
+
+.m3-batch-action--destructive {
+  color: var(--m3-error);
+}
+
+.m3-batch-action-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--m3-radius-xs);
+  background: var(--m3-surface-container-high);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.m3-batch-action--destructive .m3-batch-action-icon {
+  background: var(--m3-error-container);
+  color: var(--m3-on-error-container);
+}
+
+.m3-batch-cancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--m3-space-2);
+  width: 100%;
+  min-height: var(--m3-touch-target);
+  margin-top: var(--m3-space-3);
+  border: none;
+  border-radius: var(--m3-radius-full);
+  background: var(--m3-surface-container-high);
+  color: var(--m3-on-surface);
+  font: var(--m3-font-label-lg);
+  cursor: pointer;
+}
+
+/* Compose step */
+.m3-batch-compose-header {
+  display: flex;
+  align-items: center;
+  gap: var(--m3-space-3);
+  margin-bottom: var(--m3-space-3);
+}
+
+.m3-batch-compose-back {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: var(--m3-surface-container-high);
+  color: var(--m3-on-surface);
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.m3-batch-compose-input {
+  width: 100%;
+  border: 1px solid var(--m3-outline-variant);
+  border-radius: var(--m3-radius-sm);
+  background: var(--m3-surface-container-low);
+  color: var(--m3-on-surface);
+  font: var(--m3-font-body-lg);
+  padding: var(--m3-space-3);
+  resize: vertical;
+  min-height: 96px;
+  margin-bottom: var(--m3-space-3);
+}
+
+.m3-batch-compose-input:focus {
+  outline: 2px solid var(--m3-primary);
+  outline-offset: 1px;
+}
+
+.m3-batch-compose-send {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--m3-space-2);
+  width: 100%;
+  min-height: var(--m3-touch-target);
+  border: none;
+  border-radius: var(--m3-radius-full);
+  background: var(--m3-primary);
+  color: var(--m3-on-primary);
+  font: var(--m3-font-label-lg);
+  cursor: pointer;
+}
+
+.m3-batch-compose-send:disabled {
+  opacity: 0.5;
+}
+
+/* Sticky selection bar */
+.m3-batch-bar {
+  position: fixed;
+  left: var(--m3-space-4);
+  right: var(--m3-space-4);
+  bottom: calc(var(--m3-nav-height) + env(safe-area-inset-bottom, 0px) + 12px);
+  z-index: 155;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--m3-space-3);
+  padding: var(--m3-space-2) var(--m3-space-2) var(--m3-space-2) var(--m3-space-4);
+  background: var(--m3-inverse-surface);
+  color: var(--m3-inverse-on-surface);
+  border-radius: var(--m3-radius-full);
+  box-shadow: var(--m3-elevation-3);
+}
+
+.m3-batch-bar-count {
+  font: var(--m3-font-label-lg);
+}
+
+.m3-batch-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--m3-space-1);
+}
+
+.m3-batch-bar-clear,
+.m3-batch-bar-cta {
+  min-height: 36px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--m3-radius-full);
+  font: var(--m3-font-label-lg);
+  cursor: pointer;
+}
+
+.m3-batch-bar-clear {
+  background: transparent;
+  color: var(--m3-inverse-on-surface);
+}
+
+.m3-batch-bar-cta {
+  background: var(--m3-inverse-primary);
+  color: var(--m3-inverse-surface);
+  font-weight: 600;
+}
+
+@media (min-width: 769px) {
+  .m3-batch-bar {
+    bottom: 24px;
+  }
+}
+
+@keyframes m3-batch-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes m3-batch-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m3-batch-scrim,
+  .m3-batch-sheet {
+    animation: none;
+  }
+}

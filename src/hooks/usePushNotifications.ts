@@ -13,7 +13,10 @@ export function usePushNotifications(enabled: boolean) {
   const registerSw = useCallback(async (): Promise<ServiceWorkerRegistration | null> => {
     if (!('serviceWorker' in navigator)) return null;
     try {
-      const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+      // BASE_URL keeps the registration working on sub-path deployments
+      // (GH Pages mirror at /afa-registration/) as well as at the root.
+      const base = import.meta.env.BASE_URL;
+      const reg = await navigator.serviceWorker.register(`${base}sw.js`, { scope: base });
       await navigator.serviceWorker.ready;
       swRef.current = reg;
       return reg;

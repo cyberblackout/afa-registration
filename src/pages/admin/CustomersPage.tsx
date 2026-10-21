@@ -8,7 +8,6 @@ import {
   IonLabel,
   IonModal,
   IonToast,
-  IonAlert,
   IonActionSheet,
   IonSpinner,
   IonToggle,
@@ -31,25 +30,34 @@ import {
   warningOutline,
   eyeOffOutline,
   eyeOutline,
+  checkmarkOutline,
+  downloadOutline,
+  chatbubblesOutline,
 } from 'ionicons/icons';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { adminCustomerApi, walletApi, orderApi } from '../../services/api';
+import { adminCustomerApi, walletApi, orderApi, notificationApi } from '../../services/api';
 import type { AdminCustomer } from '../../types';
 import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate } from '../../utils/date';
 import Card from '../../components/Card';
+import { M3SkeletonList } from '../../components/M3Skeleton';
+import { M3ChipRow } from '../../components/M3ChipRow';
+import { BatchActionSheet, BatchBar, type BatchAction } from '../../components/BatchActionSheet';
+import { SecurityGate } from '../../components/SecurityGate';
+import { useAuthStore } from '../../store/authStore';
+import { recordAudit } from '../../services/auditLog';
 import { safeNumber } from '../../utils/number';
+import { downloadCsv } from '../../utils/csv';
 import './CustomersPage.css';
 
 const CustomersPage: React.FC = () => {
   const queryClient = useQueryClient();
+  const { user: authUser } = useAuthStore();
   const [search, setSearch] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editCustomer, setEditCustomer] = useState<AdminCustomer | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showAlert, setShowAlert] = useState(false);
-  const [alertConfig] = useState<{ header: string; message: string; action: () => void }>({ header: '', message: '', action: () => {} });
   const [toastMessage, setToastMessage] = useState('');
   const [showToast, setShowToast] = useState(false);
   const [editName, setEditName] = useState('');
@@ -64,6 +72,13 @@ const CustomersPage: React.FC = () => {
   const [deleteReason, setDeleteReason] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
   const [showDeletedUsers, setShowDeletedUsers] = useState(false);
+
+  // ===== Multi-select + batch actions =====
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [batchOpen, setBatchOpen] = useState(false);
+  const [gate, setGate] = useState<{ reason: string; run: () => void } | null>(null);
 
   const { data: customers = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_customers'],
@@ -94,6 +109,7 @@ const CustomersPage: React.FC = () => {
 
   const filtered = customers
     .filter((c) => showDeletedUsers ? true : !c.deleted_at)
+    .filter((c) => roleFilter === 'all' || (c.role || 'user') === roleFilter)
     .filter((c) =>
       c.full_name?.toLowerCase().includes(search.toLowerCase()) ||
       c.email?.toLowerCase().includes(search.toLowerCase()) ||
@@ -102,6 +118,79 @@ const CustomersPage: React.FC = () => {
 
   const activeCount = customers.filter((c) => !c.deleted_at).length;
   const deletedCount = customers.filter((c) => c.deleted_at).length;
+
+  const roleChips = [
+    { value: 'all', label: 'All', count: customers.filter((c) => showDeletedUsers || !c.deleted_at).length },
+    { value: 'user', label: 'Users', count: customers.filter((c) => (c.role || 'user') === 'user' && (showDeletedUsers || !c.deleted_at)).length },
+    { value: 'agent', label: 'Agents', count: customers.filter((c) => c.role === 'agent' && (showDeletedUsers || !c.deleted_at)).length },
+    { value: 'admin', label: 'Admins', count: customers.filter((c) => c.role === 'admin' && (showDeletedUsers || !c.deleted_at)).length },
+  ];
+
+  const toggleSelect = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelected(new Set());
+
+  const toggleSelectMode = () => {
+    setSelectMode((v) => !v);
+    clearSelection();
+  };
+
+  const selectedCustomers = () => filtered.filter((c) => selected.has(c.id));
+
+  const exportSelected = () => {
+    const rows = selectedCustomers();
+    downloadCsv(
+      'customers.csv',
+      ['Full Name', 'Email', 'Phone', 'Role', 'Wallet Balance', 'Created'],
+      rows.map((c) => [c.full_name || '', c.email || '', c.phone || '', c.role || 'user', safeNumber(c.wallet_balance).toFixed(2), formatGhanaDate(c.created_at)])
+    );
+    recordAudit({ action: 'batch_export', entity: 'customer', status: 'success', details: { count: rows.length, format: 'csv' } });
+    setToastMessage(`Exported ${rows.length} customer${rows.length === 1 ? '' : 's'}`);
+    setShowToast(true);
+  };
+
+  const sendBatchNotification = async (message: string) => {
+    const rows = selectedCustomers();
+    const ids = rows.map((c) => c.id);
+    try {
+      await notificationApi.adminSend('Update from MTN AFA', message, 'info', ids);
+      recordAudit({ action: 'batch_notification', entity: 'customer', status: 'success', details: { recipients: ids.length } });
+      setToastMessage(`Notification sent to ${ids.length} user${ids.length === 1 ? '' : 's'}`);
+      setShowToast(true);
+    } catch (err) {
+      recordAudit({
+        action: 'batch_notification',
+        entity: 'customer',
+        status: 'failed',
+        details: { recipients: ids.length, error: err instanceof Error ? err.message : 'unknown' },
+      });
+      setToastMessage(err instanceof Error ? err.message : 'Failed to send notification');
+      setShowToast(true);
+      throw err;
+    }
+  };
+
+  const batchActions: BatchAction[] = [
+    {
+      key: 'export',
+      label: `Export ${selected.size} selected as CSV`,
+      icon: downloadOutline,
+      onRun: exportSelected,
+    },
+    {
+      key: 'notify',
+      label: 'Send notification',
+      icon: chatbubblesOutline,
+      compose: { placeholder: 'Type the message to send to selected users…' },
+    },
+  ];
 
   const toggleExpand = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
@@ -135,35 +224,67 @@ const CustomersPage: React.FC = () => {
     setShowRoleSheet(true);
   };
 
-  const confirmRoleChange = async (newRole: string) => {
-    if (!roleActionTarget) return;
-    if (roleActionTarget.role === newRole) {
-      setToastMessage(`${roleActionTarget.full_name} is already ${newRole}`);
-      setShowToast(true);
-      setRoleActionTarget(null);
-      return;
-    }
+  const applyRoleChange = async (target: AdminCustomer, newRole: string) => {
     setIsChangingRole(true);
-    setShowRoleSheet(false);
     try {
-      await adminCustomerApi.setRole(roleActionTarget.id, newRole);
-      queryClient.invalidateQueries({ queryKey: ['admin_customers'] });
+      // Optimistic cache update so the UI reflects the change immediately.
+      queryClient.setQueryData<AdminCustomer[]>(['admin_customers'], (old) =>
+        old ? old.map((c) => (c.id === target.id ? { ...c, role: newRole as AdminCustomer['role'] } : c)) : old
+      );
+      await adminCustomerApi.setRole(target.id, newRole);
+      await queryClient.invalidateQueries({ queryKey: ['admin_customers'] });
       // A role change re-resolves the AFA price for that user.
       queryClient.invalidateQueries({ queryKey: ['afa-pricing'] });
-      setToastMessage(`${roleActionTarget.full_name} is now ${newRole}`);
+      recordAudit({
+        action: 'role_change',
+        entity: 'customer',
+        entity_id: target.id,
+        status: 'success',
+        details: { from: target.role, to: newRole },
+      });
+      setToastMessage(`${target.full_name || target.email} is now ${newRole}`);
       setShowToast(true);
     } catch (err) {
+      // Roll back the optimistic update by re-syncing with the server.
+      await queryClient.invalidateQueries({ queryKey: ['admin_customers'] });
+      recordAudit({
+        action: 'role_change',
+        entity: 'customer',
+        entity_id: target.id,
+        status: 'failed',
+        details: { from: target.role, to: newRole, error: err instanceof Error ? err.message : 'unknown' },
+      });
       setToastMessage(err instanceof Error ? err.message : 'Failed to update role');
       setShowToast(true);
     } finally {
       setIsChangingRole(false);
-      setRoleActionTarget(null);
     }
   };
 
-  const _showToastMsg = (msg: string) => {
-    setToastMessage(msg);
-    setShowToast(true);
+  const confirmRoleChange = (newRole: string) => {
+    const target = roleActionTarget;
+    if (!target) return;
+    const currentRole = (target.role || 'user') as string;
+    if (currentRole === newRole) {
+      setToastMessage(`${target.full_name || target.email} is already ${newRole}`);
+      setShowToast(true);
+      setRoleActionTarget(null);
+      return;
+    }
+    // Self-demotion safety check: an active admin cannot revoke their own admin access.
+    if (authUser && target.id === authUser.id) {
+      setToastMessage('You cannot change your own role. Ask another admin to do it.');
+      setShowToast(true);
+      setRoleActionTarget(null);
+      return;
+    }
+    setShowRoleSheet(false);
+    // Bi-directional switching (USER <-> AGENT <-> ADMIN), including ADMIN -> USER
+    // downgrades, is confirmed through the SecurityGate re-auth step.
+    setGate({
+      reason: `Change ${target.full_name || target.email} from ${currentRole.toUpperCase()} to ${newRole.toUpperCase()}`,
+      run: () => applyRoleChange(target, newRole),
+    });
   };
 
   const openDeleteConfirm = (c: AdminCustomer) => {
@@ -180,19 +301,38 @@ const CustomersPage: React.FC = () => {
       setShowToast(true);
       return;
     }
+    const target = deleteTarget;
     setIsDeleting(true);
     setShowDeleteConfirm(false);
     try {
-      const result = await adminCustomerApi.deleteUser(deleteTarget.id, deleteReason || undefined);
+      const result = await adminCustomerApi.deleteUser(target.id, deleteReason || undefined);
+      // Hard delete: purge the user from the local cache immediately so the
+      // row disappears without a page refresh, then re-sync with the server.
+      queryClient.setQueryData<AdminCustomer[]>(['admin_customers'], (old) =>
+        old ? old.filter((c) => c.id !== target.id) : old
+      );
       queryClient.invalidateQueries({ queryKey: ['admin_customers'] });
-      const authWarning = result?.data?.auth_ban_status === 'failed'
-        ? ' (Auth ban failed — user may still log in)'
-        : '';
-      setToastMessage(`${deleteTarget.full_name || 'User'} has been deleted${authWarning}`);
+      recordAudit({
+        action: 'customer_delete',
+        entity: 'customer',
+        entity_id: target.id,
+        status: 'success',
+        details: { email: target.email, reason: deleteReason || undefined, hard_deleted: true, auth_delete: result?.data?.auth_delete_status },
+      });
+      setToastMessage(`${target.full_name || 'User'} has been permanently deleted`);
       setShowToast(true);
     } catch (err) {
+      recordAudit({
+        action: 'customer_delete',
+        entity: 'customer',
+        entity_id: target.id,
+        status: 'failed',
+        details: { email: target.email, error: err instanceof Error ? err.message : 'unknown' },
+      });
       setToastMessage(err instanceof Error ? err.message : 'Failed to delete user');
       setShowToast(true);
+      // Re-sync in case the server partially completed the deletion.
+      queryClient.invalidateQueries({ queryKey: ['admin_customers'] });
     } finally {
       setIsDeleting(false);
       setDeleteTarget(null);
@@ -222,6 +362,9 @@ const CustomersPage: React.FC = () => {
             <IonIcon icon={peopleOutline} className="page-icon" />
             <h1>Customers</h1>
             <span className="customer-count">{activeCount} active{deletedCount > 0 ? ` / ${deletedCount} deleted` : ''}</span>
+            <button type="button" className={`select-mode-btn ${selectMode ? 'select-mode-btn--on' : ''}`} onClick={toggleSelectMode}>
+              {selectMode ? 'Done' : 'Select'}
+            </button>
           </div>
           <div className="search-bar">
             <IonIcon icon={searchOutline} className="search-icon" />
@@ -241,12 +384,11 @@ const CustomersPage: React.FC = () => {
           )}
         </motion.div>
 
+        <M3ChipRow options={roleChips} value={roleFilter} onChange={setRoleFilter} ariaLabel="Filter by role" />
+
         <div className="customers-list">
           {isLoading ? (
-            <div className="empty-state">
-              <IonIcon icon={peopleOutline} />
-              <p>Loading customers...</p>
-            </div>
+            <M3SkeletonList count={5} lines={2} />
           ) : isError ? (
             <div className="empty-state">
               <IonIcon icon={peopleOutline} />
@@ -272,8 +414,19 @@ const CustomersPage: React.FC = () => {
                     transition={{ delay: index * 0.03 }}
                     className="customer-card-wrapper"
                   >
-                    <Card hover noPadding className="customer-card" onClick={() => toggleExpand(customer.id)}>
+                    <Card hover noPadding className="customer-card" onClick={() => (selectMode ? toggleSelect(customer.id) : toggleExpand(customer.id))}>
                       <div className="customer-main">
+                        {selectMode && (
+                          <button
+                            type="button"
+                            className={`cust-check ${selected.has(customer.id) ? 'cust-check--on' : ''}`}
+                            onClick={(e) => { e.stopPropagation(); toggleSelect(customer.id); }}
+                            aria-label={`Select ${customer.full_name || 'customer'}`}
+                            aria-pressed={selected.has(customer.id)}
+                          >
+                            {selected.has(customer.id) && <IonIcon icon={checkmarkOutline} />}
+                          </button>
+                        )}
                         <div className={`status-dot ${customer.role === 'admin' ? 'dot-active' : customer.role === 'agent' ? 'dot-agent' : 'dot-suspended'}`} />
                         <div className="customer-info">
                           <span className="customer-name">{customer.full_name || 'Unknown'}</span>
@@ -301,7 +454,13 @@ const CustomersPage: React.FC = () => {
                               {customer.role !== 'admin' && (
                                 <button
                                   className="action-btn delete-btn"
-                                  onClick={(e) => { e.stopPropagation(); openDeleteConfirm(customer); }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setGate({
+                                      reason: `Delete ${customer.full_name || customer.email}`,
+                                      run: () => openDeleteConfirm(customer),
+                                    });
+                                  }}
                                   title="Delete User"
                                   disabled={isDeleting}
                                 >
@@ -400,6 +559,19 @@ const CustomersPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {selectMode && selected.size > 0 && (
+        <BatchBar count={selected.size} onActions={() => setBatchOpen(true)} onClear={clearSelection} />
+      )}
+      <BatchActionSheet
+        open={batchOpen}
+        onClose={() => setBatchOpen(false)}
+        count={selected.size}
+        title="Customers"
+        actions={batchActions}
+        onComposeSend={sendBatchNotification}
+        onClearSelection={clearSelection}
+      />
     </AdminLayout>
 
       {/* Overlays must live at IonPage level, outside IonContent's scroll container. */}
@@ -429,17 +601,6 @@ const CustomersPage: React.FC = () => {
         </div>
       </IonModal>
 
-      <IonAlert
-        isOpen={showAlert}
-        onDidDismiss={() => setShowAlert(false)}
-        header={alertConfig.header}
-        message={alertConfig.message}
-        buttons={[
-          { text: 'Cancel', role: 'cancel' },
-          { text: 'Confirm', handler: () => { alertConfig.action(); } },
-        ]}
-      />
-
       <IonModal isOpen={showDeleteConfirm} onDidDismiss={() => { setShowDeleteConfirm(false); setDeleteTarget(null); }} className="delete-confirm-modal">
         <div className="modal-header danger-header">
           <IonIcon icon={warningOutline} className="danger-icon" />
@@ -452,11 +613,11 @@ const CustomersPage: React.FC = () => {
           <div className="danger-warning">
             <p><strong>This action is irreversible.</strong> The following will happen to <strong>{deleteTarget?.full_name || deleteTarget?.email}</strong>:</p>
             <ul>
-              <li>Personal information permanently scrubbed</li>
-              <li>Account banned from logging in</li>
-              <li>Role reset to User, wallet zeroed</li>
+              <li>Authentication account permanently deleted — the user can never log in again</li>
+              <li>Profile and all personal data permanently removed</li>
+              <li>Orders, wallet history and all linked records purged</li>
             </ul>
-            <p className="retain-note">Financial records retained for audit.</p>
+            <p className="retain-note">A pre-deletion audit snapshot is retained for compliance.</p>
           </div>
           <IonItem>
             <IonLabel position="stacked">Type <strong>{deleteTarget?.email}</strong> to confirm</IonLabel>
@@ -513,6 +674,16 @@ const CustomersPage: React.FC = () => {
         duration={3000}
         position="top"
         color="success"
+      />
+
+      <SecurityGate
+        open={!!gate}
+        reason={gate?.reason || ''}
+        onSuccess={() => {
+          gate?.run();
+          setGate(null);
+        }}
+        onCancel={() => setGate(null)}
       />
     </IonPage>
   );

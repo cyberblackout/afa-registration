@@ -55,8 +55,8 @@ Deno.serve(async (req) => {
       message.includes("Invalid role") ||
       message.includes("Target user not found") ||
       message.includes("Cannot change your own role") ||
-      message.includes("Admin role cannot be removed") ||
       message.includes("Cannot demote the last admin") ||
+      message.includes("caller mismatch") ||
       message.includes("already")
     ) {
       return errorResp(message, 400, origin);

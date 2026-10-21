@@ -1,0 +1,200 @@
+/* ============================================================
+   Material Design 3 (Material You) design tokens — MTN AFA
+   Seed color: MTN Yellow #FFCB05 (accent-only; never text)
+   Light theme on :root, dark theme on .dark (themeStore contract)
+   ============================================================ */
+
+:root {
+  /* --- Primary (tonal container of yellow seed) --- */
+  --m3-primary: #6a5a00;
+  --m3-on-primary: #ffffff;
+  --m3-primary-container: #ffe77a;
+  --m3-on-primary-container: #211a00;
+  --m3-primary-fixed-dim: #e8cd62;
+
+  /* --- Secondary --- */
+  --m3-secondary: #554500;
+  --m3-on-secondary: #ffffff;
+  --m3-secondary-container: #ffe77a;
+  --m3-on-secondary-container: #211a00;
+
+  /* --- Tertiary (success-leaning green) --- */
+  --m3-tertiary: #3d6351;
+  --m3-on-tertiary: #ffffff;
+  --m3-tertiary-container: #bfeace;
+  --m3-on-tertiary-container: #00210f;
+
+  /* --- Error / Critical --- */
+  --m3-error: #ba1a1a;
+  --m3-on-error: #ffffff;
+  --m3-error-container: #ffdad6;
+  --m3-on-error-container: #410002;
+
+  /* --- Surfaces --- */
+  --m3-surface: #fcfcff;
+  --m3-surface-dim: #dedfe0;
+  --m3-surface-bright: #fcfcff;
+  --m3-surface-container-lowest: #ffffff;
+  --m3-surface-container-low: #f6f2fa;
+  --m3-surface-container: #f0ecf4;
+  --m3-surface-container-high: #eae6ee;
+  --m3-surface-container-highest: #e4e1e9;
+  --m3-surface-variant: #e6e1d5;
+  --m3-on-surface: #1a1c1e;
+  --m3-on-surface-variant: #49454e;
+  --m3-inverse-surface: #2f3033;
+  --m3-inverse-on-surface: #f1f0f4;
+  --m3-inverse-primary: #ddc34f;
+  --m3-scrim: rgba(0, 0, 0, 0.4);
+
+  /* --- Outline --- */
+  --m3-outline: #79767d;
+  --m3-outline-variant: #cac4cf;
+
+  /* --- Semantic status (WCAG AA, M3 container pattern) --- */
+  --m3-success: #1b6e3c;
+  --m3-on-success: #ffffff;
+  --m3-success-container: #a7f5c0;
+  --m3-on-success-container: #005229;
+  --m3-warning: #7a5900;
+  --m3-on-warning: #ffffff;
+  --m3-warning-container: #ffdf9b;
+  --m3-on-warning-container: #564500;
+  --m3-info: #00639b;
+  --m3-on-info: #ffffff;
+  --m3-info-container: #cbe6ff;
+  --m3-on-info-container: #001e30;
+  --m3-critical: #ba1a1a;
+  --m3-critical-container: #ffdad6;
+  --m3-on-critical-container: #410002;
+
+  /* --- Brand (non-M3 convenience aliases) --- */
+  --m3-brand: #ffcb05;
+  --m3-brand-on: #000000;
+
+  /* --- Elevation --- */
+  --m3-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px 1px rgba(0, 0, 0, 0.15);
+  --m3-elevation-2: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 6px 2px rgba(0, 0, 0, 0.15);
+  --m3-elevation-3: 0 4px 8px 3px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.3);
+  --m3-elevation-4: 0 8px 12px 6px rgba(0, 0, 0, 0.15), 0 4px 4px rgba(0, 0, 0, 0.3);
+
+  /* --- Shape scale --- */
+  --m3-radius-xs: 8px;
+  --m3-radius-sm: 12px;
+  --m3-radius-md: 16px;
+  --m3-radius-lg: 24px;
+  --m3-radius-full: 999px;
+
+  /* --- Spacing scale (4dp grid) --- */
+  --m3-space-1: 4px;
+  --m3-space-2: 8px;
+  --m3-space-3: 12px;
+  --m3-space-4: 16px;
+  --m3-space-5: 20px;
+  --m3-space-6: 24px;
+  --m3-space-8: 32px;
+
+  /* --- Typography scale (M3 roles) --- */
+  --m3-font-display: 500 28px/36px 'Inter', Roboto, sans-serif;
+  --m3-font-headline: 500 24px/32px 'Inter', Roboto, sans-serif;
+  --m3-font-title-lg: 500 22px/28px 'Inter', Roboto, sans-serif;
+  --m3-font-title-md: 500 16px/24px 'Inter', Roboto, sans-serif;
+  --m3-font-title-sm: 600 14px/20px 'Inter', Roboto, sans-serif;
+  --m3-font-body-lg: 400 16px/24px 'Inter', Roboto, sans-serif;
+  --m3-font-body-md: 400 14px/20px 'Inter', Roboto, sans-serif;
+  --m3-font-body-sm: 400 12px/16px 'Inter', Roboto, sans-serif;
+  --m3-font-label-lg: 500 14px/20px 'Inter', Roboto, sans-serif;
+  --m3-font-label-md: 500 12px/16px 'Inter', Roboto, sans-serif;
+  --m3-font-label-sm: 600 11px/16px 'Inter', Roboto, sans-serif;
+
+  /* --- Motion --- */
+  --m3-motion-standard: cubic-bezier(0.2, 0, 0, 1);
+  --m3-motion-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --m3-motion-duration-short: 150ms;
+  --m3-motion-duration-medium: 300ms;
+  --m3-motion-duration-long: 500ms;
+
+  /* --- Layout constants (admin chrome) --- */
+  --m3-nav-height: 80px;
+  --m3-topbar-height: 64px;
+  --m3-touch-target: 48px;
+}
+
+/* ============================================================
+   Dark theme — swapped by themeStore toggling .dark on <html>
+   ============================================================ */
+.dark {
+  --m3-primary: #ffe07a;
+  --m3-on-primary: #3a3000;
+  --m3-primary-container: #514600;
+  --m3-on-primary-container: #ffe77a;
+  --m3-primary-fixed-dim: #e8cd62;
+
+  --m3-secondary: #e8cd62;
+  --m3-on-secondary: #3a3000;
+  --m3-secondary-container: #514600;
+  --m3-on-secondary-container: #ffe77a;
+
+  --m3-tertiary: #a4cfb3;
+  --m3-on-tertiary: #073823;
+  --m3-tertiary-container: #244b39;
+  --m3-on-tertiary-container: #bfeace;
+
+  --m3-error: #ffb4ab;
+  --m3-on-error: #690005;
+  --m3-error-container: #93000a;
+  --m3-on-error-container: #ffdad6;
+
+  --m3-surface: #121316;
+  --m3-surface-dim: #121316;
+  --m3-surface-bright: #38393c;
+  --m3-surface-container-lowest: #0d0e11;
+  --m3-surface-container-low: #1a1b1f;
+  --m3-surface-container: #1e1f23;
+  --m3-surface-container-high: #292a2d;
+  --m3-surface-container-highest: #343438;
+  --m3-surface-variant: #49454e;
+  --m3-on-surface: #e3e1e6;
+  --m3-on-surface-variant: #cac4cf;
+  --m3-inverse-surface: #e3e1e6;
+  --m3-inverse-on-surface: #2f3033;
+  --m3-inverse-primary: #6a5a00;
+  --m3-scrim: rgba(0, 0, 0, 0.6);
+
+  --m3-outline: #938f98;
+  --m3-outline-variant: #44474e;
+
+  --m3-success: #55db8c;
+  --m3-on-success: #00391d;
+  --m3-success-container: #005229;
+  --m3-on-success-container: #a7f5c0;
+  --m3-warning: #f5c242;
+  --m3-on-warning: #402d00;
+  --m3-warning-container: #564500;
+  --m3-on-warning-container: #ffdf9b;
+  --m3-info: #6fd6ff;
+  --m3-on-info: #00344f;
+  --m3-info-container: #004970;
+  --m3-on-info-container: #cbe6ff;
+  --m3-critical: #ffb4ab;
+  --m3-critical-container: #93000a;
+  --m3-on-critical-container: #ffdad6;
+
+  --m3-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.6), 0 1px 3px 1px rgba(0, 0, 0, 0.35);
+  --m3-elevation-2: 0 1px 2px rgba(0, 0, 0, 0.6), 0 2px 6px 2px rgba(0, 0, 0, 0.35);
+  --m3-elevation-3: 0 4px 8px 3px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.6);
+  --m3-elevation-4: 0 8px 12px 6px rgba(0, 0, 0, 0.35), 0 4px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* --- Shared utility: tabular numerals for money/counters --- */
+.m3-numeric {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --m3-motion-duration-short: 0ms;
+    --m3-motion-duration-medium: 0ms;
+    --m3-motion-duration-long: 0ms;
+  }
+}

@@ -1,21 +1,29 @@
 :root {
   --admin-sidebar-width: 260px;
   --admin-navbar-height: 64px;
+  --admin-banner-height: 32px;
   --mtn-yellow: #FFCB05;
   --mtn-yellow-light: #FFF3CD;
-  --admin-bg: #f0f2f5;
-  --admin-card-bg: #ffffff;
+
+  /* Admin chrome vars re-pointed at M3 tokens so every consumer
+     (incl. SettingsPage.css) inherits light/dark automatically. */
+  --admin-bg: var(--m3-surface-container);
+  --admin-card-bg: var(--m3-surface-container-lowest);
+  --admin-text: var(--m3-on-surface);
+  --admin-text-secondary: var(--m3-on-surface-variant);
+  --admin-border: var(--m3-outline-variant);
+  --admin-success: var(--m3-success);
+  --admin-warning: var(--m3-warning);
+  --admin-danger: var(--m3-error);
+  --admin-info: var(--m3-info);
+
   --admin-sidebar-bg: #1a1a2e;
   --admin-sidebar-hover: #2a2a4e;
-  --admin-text: #1a1a2e;
-  --admin-text-secondary: #6b7280;
-  --admin-border: #e5e7eb;
-  --admin-success: #10b981;
-  --admin-warning: #f59e0b;
-  --admin-danger: #ef4444;
-  --admin-info: #3b82f6;
 }
 
+/* ============================================================
+   Top app bar
+   ============================================================ */
 .admin-navbar {
   position: fixed;
   top: 0;
@@ -30,22 +38,14 @@
   padding: 0 1.5rem;
   z-index: 100;
   margin-left: var(--admin-sidebar-width);
+  padding-top: env(safe-area-inset-top, 0px);
+  height: calc(var(--admin-navbar-height) + env(safe-area-inset-top, 0px));
 }
 
 .admin-navbar-left {
   display: flex;
   align-items: center;
   gap: 1rem;
-}
-
-.admin-hamburger {
-  display: none;
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--admin-text);
-  padding: 0.25rem;
 }
 
 .admin-brand {
@@ -55,11 +55,6 @@
   font-weight: 700;
   font-size: 1.1rem;
   color: var(--admin-text);
-}
-
-.admin-brand-icon {
-  color: var(--mtn-yellow);
-  font-size: 1.5rem;
 }
 
 .admin-brand-logo {
@@ -72,20 +67,167 @@
 .admin-navbar-right {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .admin-navbar-right .theme-toggle-btn {
   color: var(--admin-text);
   font-size: 20px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
 }
 
 .admin-navbar-right .theme-toggle-btn:hover {
   background: rgba(0, 0, 0, 0.06);
 }
 
+.dark .admin-navbar-right .theme-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .admin-navbar-right .theme-toggle-btn:active {
   background: rgba(0, 0, 0, 0.1);
+}
+
+/* Connection status dot */
+.conn-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+}
+
+.conn-dot--online {
+  color: var(--m3-success);
+}
+
+.conn-dot--offline {
+  color: var(--m3-error);
+  animation: conn-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes conn-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* ============================================================
+   Offline / queued-actions banner
+   Fixed at viewport top (above the navbar); when visible an
+   `admin-banner-open` class on <html> shifts the navbar and the
+   main scroll padding down by --admin-banner-height.
+   ============================================================ */
+.admin-offline-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(var(--admin-banner-height) + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding-left: 12px;
+  padding-right: 12px;
+  background: var(--m3-error-container);
+  color: var(--m3-on-error-container);
+  font: var(--m3-font-label-md);
+  white-space: nowrap;
+  overflow: hidden;
+  z-index: 300;
+  animation: banner-drop var(--m3-motion-duration-short) var(--m3-motion-standard);
+}
+
+.admin-offline-banner ion-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.admin-banner-sync {
+  min-height: 22px;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--m3-radius-full);
+  background: var(--m3-on-error-container);
+  color: var(--m3-error-container);
+  font: var(--m3-font-label-sm);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.admin-banner-sync:disabled {
+  opacity: 0.6;
+}
+
+html.admin-banner-open .admin-navbar {
+  top: var(--admin-banner-height);
+}
+
+html.admin-banner-open .admin-main {
+  --padding-top: calc(var(--admin-navbar-height) + env(safe-area-inset-top, 0px) + var(--admin-banner-height) + 1.5rem);
+}
+
+@keyframes banner-drop {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+
+
+/* Notification bell + unread badge */
+.admin-bell {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--admin-text);
+  font-size: 22px;
+  text-decoration: none;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.admin-bell:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.dark .admin-bell:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.admin-bell-badge {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--m3-error);
+  color: var(--m3-on-error);
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid var(--admin-card-bg);
+  box-sizing: content-box;
 }
 
 .admin-user-name {
@@ -107,6 +249,9 @@
   font-size: 0.9rem;
 }
 
+/* ============================================================
+   Desktop sidebar (≥769px)
+   ============================================================ */
 .admin-sidebar {
   position: fixed;
   top: 0;
@@ -169,7 +314,7 @@
 }
 
 .admin-menu-item.logout {
-  color: var(--admin-danger);
+  color: #ff8f8f;
 }
 
 .admin-menu-item.logout:hover {
@@ -186,12 +331,15 @@
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+/* ============================================================
+   Main scroll container
+   ============================================================ */
 .admin-main {
   --background: var(--admin-bg);
   /* This IonContent is the single vertical scroll container for every admin
      page. Keep it scrollable; never set --overflow: hidden here. */
   --overflow: auto;
-  --padding-top: calc(var(--admin-navbar-height) + 1.5rem);
+  --padding-top: calc(var(--admin-navbar-height) + env(safe-area-inset-top, 0px) + 1.5rem);
   --padding-bottom: 1.5rem;
   --padding-start: calc(var(--admin-sidebar-width) + 1.5rem);
   --padding-end: 1.5rem;
@@ -201,70 +349,9 @@ ion-refresher {
   --color: var(--mtn-yellow);
 }
 
-.admin-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 200;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 180ms ease-out;
-  will-change: opacity;
-}
-
-.admin-overlay--open {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.admin-mobile-drawer {
-  position: fixed;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 280px;
-  background: var(--admin-sidebar-bg);
-  z-index: 210;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  transform: translate3d(-100%, 0, 0);
-  transition: transform 180ms ease-out;
-  will-change: transform;
-}
-
-.admin-mobile-drawer--open {
-  transform: translate3d(0, 0, 0);
-}
-
-@media (min-width: 769px) {
-  .admin-overlay,
-  .admin-mobile-drawer {
-    display: none !important;
-  }
-}
-
-@media (max-width: 768px) {
-  .admin-navbar {
-    margin-left: 0;
-  }
-
-  .admin-hamburger {
-    display: flex;
-  }
-
-  .admin-sidebar {
-    display: none;
-  }
-
-  .admin-main {
-    --padding-top: calc(var(--admin-navbar-height) + 1rem);
-    --padding-bottom: 1rem;
-    --padding-start: 0;
-    --padding-end: 0;
-  }
-}
-
+/* WhatsApp support float (positioned above the bottom nav via the
+   ≤768px media block below — keep base rule BEFORE that block so the
+   media override wins the cascade). */
 .whatsapp-float {
   position: fixed;
   bottom: 24px;
@@ -279,7 +366,7 @@ ion-refresher {
   justify-content: center;
   font-size: 28px;
   box-shadow: 0 4px 16px rgba(37, 211, 102, 0.4);
-  z-index: 999;
+  z-index: 190;
   transition: all 0.2s;
   text-decoration: none;
 }
@@ -288,4 +375,368 @@ ion-refresher {
   transform: scale(1.1);
   box-shadow: 0 6px 24px rgba(37, 211, 102, 0.5);
   color: #fff;
+}
+
+/* ============================================================
+   Mobile: M3 bottom navigation bar (≤768px)
+   ============================================================ */
+.m3-bottom-nav {
+  display: none;
+}
+
+.m3-fab,
+.m3-speed-dial,
+.m3-dial-scrim,
+.m3-more-sheet,
+.m3-sheet-scrim {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .admin-sidebar {
+    display: none;
+  }
+
+  /* Top app bar: bottom nav + More sheet own navigation on mobile —
+     any hamburger/drawer trigger is redundant and must stay hidden. */
+  .admin-navbar .hamburger-btn,
+  .admin-navbar .menu-toggle-btn {
+    display: none;
+  }
+
+  .admin-navbar {
+    margin-left: 0;
+    padding-left: var(--m3-space-4);
+    padding-right: var(--m3-space-4);
+  }
+
+  /* Username text is redundant on mobile — the yellow avatar button
+     is the profile affordance. */
+  .admin-user-name {
+    display: none;
+  }
+
+  .admin-avatar {
+    flex-shrink: 0;
+  }
+
+  .admin-main {
+    --padding-top: calc(var(--admin-navbar-height) + env(safe-area-inset-top, 0px) + 1rem);
+    --padding-start: 0;
+    --padding-end: 0;
+    --padding-bottom: calc(var(--m3-nav-height) + env(safe-area-inset-bottom, 0px) + 1rem);
+  }
+
+  html.admin-banner-open .admin-main {
+    --padding-top: calc(var(--admin-navbar-height) + env(safe-area-inset-top, 0px) + var(--admin-banner-height) + 1rem);
+  }
+
+  html.admin-banner-open .admin-navbar {
+    padding-left: var(--m3-space-4);
+  }
+
+  .m3-bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: stretch;
+    height: calc(var(--m3-nav-height) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: var(--m3-surface-container);
+    border-top: 1px solid var(--m3-outline-variant);
+    z-index: 150;
+  }
+
+  .m3-nav-item {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--m3-space-1);
+    min-height: var(--m3-touch-target);
+    padding-top: 14px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    color: var(--m3-on-surface-variant);
+    font: var(--m3-font-label-sm);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .m3-nav-indicator {
+    position: absolute;
+    top: 10px;
+    width: 56px;
+    height: 32px;
+    border-radius: 16px;
+    background: transparent;
+    transition: background var(--m3-motion-duration-short) var(--m3-motion-standard);
+  }
+
+  .m3-nav-item.active .m3-nav-indicator {
+    background: var(--m3-primary-container);
+  }
+
+  .m3-nav-item.active {
+    color: var(--m3-on-surface);
+  }
+
+  .m3-nav-icon-wrap {
+    position: relative;
+    z-index: 1;
+    font-size: 24px;
+  }
+
+  .m3-nav-label {
+    position: relative;
+    z-index: 1;
+  }
+
+  .m3-nav-badge {
+    position: absolute;
+    top: -6px;
+    right: -10px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    background: var(--m3-error);
+    color: var(--m3-on-error);
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Center speed-dial FAB */
+  .m3-fab-slot {
+    position: relative;
+    flex: 1;
+  }
+
+  .m3-fab {
+    display: flex;
+    position: absolute;
+    top: -20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    border: none;
+    background: var(--m3-primary);
+    color: var(--m3-on-primary);
+    font-size: 24px;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--m3-elevation-3);
+    cursor: pointer;
+    transition: transform var(--m3-motion-duration-short) var(--m3-motion-standard),
+      border-radius var(--m3-motion-duration-short) var(--m3-motion-standard);
+    z-index: 160;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .m3-fab:active {
+    transform: translateX(-50%) scale(0.94);
+  }
+
+  .m3-fab--open {
+    border-radius: 28px;
+  }
+
+  .m3-dial-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: var(--m3-scrim);
+    z-index: 140;
+    animation: m3-fade-in var(--m3-motion-duration-short) var(--m3-motion-standard);
+  }
+
+  .m3-speed-dial {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--m3-space-3);
+    position: fixed;
+    bottom: calc(var(--m3-nav-height) + env(safe-area-inset-bottom, 0px) + 16px);
+    left: 50%;
+    transform: translateX(-28px);
+    z-index: 160;
+    pointer-events: none;
+  }
+
+  .m3-speed-dial-item {
+    display: flex;
+    align-items: center;
+    gap: var(--m3-space-3);
+    text-decoration: none;
+    opacity: 0;
+    transform: translateY(12px) scale(0.92);
+    pointer-events: none;
+    transition: opacity var(--m3-motion-duration-short) var(--m3-motion-standard),
+      transform var(--m3-motion-duration-short) var(--m3-motion-standard);
+  }
+
+  .m3-speed-dial--open {
+    pointer-events: auto;
+  }
+
+  .m3-speed-dial--open .m3-speed-dial-item {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+  }
+
+  .m3-speed-dial-label {
+    font: var(--m3-font-label-lg);
+    color: var(--m3-on-surface);
+    background: var(--m3-surface-container-high);
+    padding: 6px 12px;
+    border-radius: var(--m3-radius-full);
+    box-shadow: var(--m3-elevation-2);
+    white-space: nowrap;
+  }
+
+  .m3-speed-dial-mini {
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    background: var(--m3-surface-container-high);
+    color: var(--m3-on-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    box-shadow: var(--m3-elevation-2);
+    flex-shrink: 0;
+  }
+
+  /* "More" bottom sheet */
+  .m3-sheet-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: var(--m3-scrim);
+    z-index: 200;
+    animation: m3-fade-in var(--m3-motion-duration-short) var(--m3-motion-standard);
+  }
+
+  .m3-more-sheet {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--m3-surface-container);
+    border-radius: 28px 28px 0 0;
+    padding: var(--m3-space-2) var(--m3-space-4) calc(var(--m3-space-4) + env(safe-area-inset-bottom, 0px));
+    z-index: 210;
+    box-shadow: var(--m3-elevation-3);
+    animation: m3-sheet-up var(--m3-motion-duration-medium) var(--m3-motion-emphasized);
+  }
+
+  .m3-sheet-handle {
+    width: 32px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--m3-outline-variant);
+    margin: var(--m3-space-2) auto var(--m3-space-4);
+  }
+
+  .m3-more-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--m3-space-2);
+  }
+
+  .m3-more-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--m3-space-2);
+    padding: var(--m3-space-3) var(--m3-space-1);
+    min-height: 72px;
+    border-radius: var(--m3-radius-md);
+    text-decoration: none;
+    color: var(--m3-on-surface);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .m3-more-tile:active {
+    background: var(--m3-surface-container-high);
+  }
+
+  .m3-more-tile-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--m3-radius-md);
+    background: var(--m3-surface-container-high);
+    color: var(--m3-on-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+  }
+
+  .m3-more-tile-label {
+    font: var(--m3-font-label-sm);
+    color: var(--m3-on-surface-variant);
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .m3-more-logout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--m3-space-2);
+    width: 100%;
+    min-height: var(--m3-touch-target);
+    margin-top: var(--m3-space-4);
+    border: none;
+    border-radius: var(--m3-radius-full);
+    background: var(--m3-error-container);
+    color: var(--m3-on-error-container);
+    font: var(--m3-font-label-lg);
+    cursor: pointer;
+  }
+
+  .m3-more-logout:disabled {
+    opacity: 0.6;
+  }
+
+  /* WhatsApp float clears the bottom nav on mobile */
+  .whatsapp-float {
+    bottom: calc(var(--m3-nav-height) + env(safe-area-inset-bottom, 0px) + 16px);
+    z-index: 190;
+  }
+}
+
+@keyframes m3-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes m3-sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m3-speed-dial-item,
+  .m3-dial-scrim,
+  .m3-more-sheet,
+  .m3-sheet-scrim,
+  .m3-fab {
+    transition: none;
+    animation: none;
+  }
 }

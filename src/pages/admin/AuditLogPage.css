@@ -1,0 +1,123 @@
+.admin-audit-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem;
+  --chip-row-gutter: 24px;
+}
+
+.audit-subtitle {
+  font: var(--m3-font-body-md);
+  color: var(--m3-on-surface-variant);
+  margin: 0.5rem 0 0;
+}
+
+.audit-refresh-btn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--m3-outline-variant);
+  border-radius: var(--m3-radius-full);
+  background: transparent;
+  color: var(--m3-primary);
+  font: var(--m3-font-label-lg);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.audit-list {
+  margin-top: 1rem;
+}
+
+.audit-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 0.65rem;
+}
+
+.audit-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--m3-radius-xs, 8px);
+  background: var(--m3-surface-container-high);
+  color: var(--m3-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.audit-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.audit-card-action {
+  font: var(--m3-font-title-sm);
+  color: var(--m3-on-surface);
+  margin: 0;
+}
+
+.audit-card-meta {
+  font: var(--m3-font-body-sm);
+  color: var(--m3-on-surface-variant);
+  margin: 2px 0 0;
+}
+
+.audit-card-time {
+  font: var(--m3-font-label-sm);
+  color: var(--m3-on-surface-variant);
+  opacity: 0.75;
+  margin: 4px 0 0;
+}
+
+.audit-status {
+  flex-shrink: 0;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font: var(--m3-font-label-sm);
+  display: inline-flex;
+  align-items: center;
+  text-transform: capitalize;
+}
+
+.audit-status--success {
+  background: var(--m3-tertiary-container);
+  color: var(--m3-on-tertiary-container);
+}
+
+.audit-status--synced {
+  background: var(--m3-secondary-container);
+  color: var(--m3-on-secondary-container);
+}
+
+.audit-status--queued {
+  background: var(--m3-surface-container-highest);
+  color: var(--m3-on-surface-variant);
+}
+
+.audit-status--reverted {
+  background: var(--m3-surface-container-high);
+  color: var(--m3-on-surface);
+}
+
+.audit-status--failed {
+  background: var(--m3-error-container);
+  color: var(--m3-on-error-container);
+}
+
+@media (max-width: 767px) {
+  .audit-card {
+    padding: 0.85rem 1rem;
+  }
+
+  .audit-status {
+    font-size: 10px;
+  }
+}

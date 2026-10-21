@@ -20,3 +20,4 @@ export {
   useAuditLogs,
 } from './useData';
 export { usePushNotifications } from './usePushNotifications';
+export { useIsMobile } from './useIsMobile';

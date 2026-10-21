@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   IonIcon,
   IonPage,
@@ -19,12 +19,17 @@ import {
   documentTextOutline,
   cameraOutline,
 } from 'ionicons/icons';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../services/supabase';
 import { registrationApi } from '../../services/api';
+import { offlineQueue } from '../../services/offlineQueue';
+import { recordAudit } from '../../services/auditLog';
+import { SecurityGate } from '../../components/SecurityGate';
 import type { AdminRegistrationRow } from '../../types';
 import { useAuthStore } from '../../store/authStore';
+import { useIsMobile } from '../../hooks/useIsMobile';
+import { M3SkeletonList } from '../../components/M3Skeleton';
 import AdminLayout from '../../layouts/AdminLayout';
 import {
   formatGhanaDate,
@@ -64,6 +69,146 @@ const networkBgColors: Record<string, string> = {
 
 const ITEMS_PER_PAGE = 8;
 
+/** Statuses that carry an actionable queue decision (approve/reject). */
+const SWIPEABLE_STATUSES = new Set(['pending', 'processing', 'document_verification']);
+const SWIPE_THRESHOLD = 90;
+const SWIPE_VELOCITY = 650;
+
+const haptic = (pattern: number | number[]) => {
+  try {
+    navigator.vibrate?.(pattern);
+  } catch {
+    /* vibration unsupported — non-critical */
+  }
+};
+
+interface SwipeableCardProps {
+  enabled: boolean;
+  onSwipe: (dir: 1 | -1) => void;
+  children: React.ReactNode;
+}
+
+/**
+ * Mobile-only swipe surface: drag right = approve, drag left = reject.
+ * M3 container fills are revealed behind the card as it moves; crossing
+ * the threshold commits with haptic feedback.
+ */
+const SwipeableCard: React.FC<SwipeableCardProps> = ({ enabled, onSwipe, children }) => {
+  const x = useMotionValue(0);
+  const approveOpacity = useTransform(x, [0, SWIPE_THRESHOLD], [0, 1]);
+  const rejectOpacity = useTransform(x, [-SWIPE_THRESHOLD, 0], [1, 0]);
+
+  return (
+    <div className="swipe-wrapper">
+      <motion.div className="swipe-bg swipe-bg--approve" style={{ opacity: enabled ? approveOpacity : 0 }}>
+        <IonIcon icon={checkmarkCircle} />
+        <span>Approve</span>
+      </motion.div>
+      <motion.div className="swipe-bg swipe-bg--reject" style={{ opacity: enabled ? rejectOpacity : 0 }}>
+        <span>Reject</span>
+        <IonIcon icon={closeCircle} />
+      </motion.div>
+      <motion.div
+        className="reg-card reg-card--swipe"
+        style={{ x }}
+        drag={enabled ? 'x' : false}
+        dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.55}
+        dragMomentum={false}
+        onDragEnd={(_, info) => {
+          if (info.offset.x > SWIPE_THRESHOLD || info.velocity.x > SWIPE_VELOCITY) onSwipe(1);
+          else if (info.offset.x < -SWIPE_THRESHOLD || info.velocity.x < -SWIPE_VELOCITY) onSwipe(-1);
+        }}
+      >
+        {children}
+      </motion.div>
+    </div>
+  );
+};
+
+interface RegCardContentsProps {
+  reg: AdminRegistrationRow;
+  bulkSelected: Set<string>;
+  toggleBulk: (id: string) => void;
+  openDetail: (reg: AdminRegistrationRow) => void;
+  formatDate: (dateStr: string) => string;
+}
+
+/** Shared card body used by both the swipeable and static card variants. */
+const RegCardContents: React.FC<RegCardContentsProps> = ({ reg, bulkSelected, toggleBulk, openDetail, formatDate }) => (
+  <>
+    <div className="reg-card-row">
+      <div className="reg-card-field check-field">
+        <input type="checkbox" checked={bulkSelected.has(reg.id)} onChange={() => toggleBulk(reg.id)} className="bulk-check" />
+      </div>
+      <div className="reg-card-field id-field">
+        <span className="field-label">Reg ID</span>
+        <span className="field-value id-value">{reg.reg_number || reg.id?.slice(0, 6)}</span>
+      </div>
+      <div className="reg-card-field status-field">
+        <span className="status-badge" style={{ background: statusBgColors[reg.status || ''], color: statusColors[reg.status || ''] }}>
+          {reg.status}
+        </span>
+      </div>
+    </div>
+    <div className="reg-card-row">
+      <div className="reg-card-field">
+        <span className="field-label">Customer</span>
+        <span className="field-value">{reg.full_name || 'Unknown'}</span>
+      </div>
+      <div className="reg-card-field">
+        <span className="field-label">Phone</span>
+        <span className="field-value">{reg.phone || ''}</span>
+      </div>
+    </div>
+    <div className="reg-card-row">
+      <div className="reg-card-field">
+        <span className="field-label">Network</span>
+        <span className="network-badge" style={{ background: networkBgColors[reg.network || ''] || '#f5f5f5', color: networkColors[reg.network || ''] || '#333' }}>
+          {reg.network || 'N/A'}
+        </span>
+      </div>
+      <div className="reg-card-field">
+        <span className="field-label">Date</span>
+        <span className="field-value">{formatDate(reg.created_at || '')}</span>
+      </div>
+    </div>
+    <div className="reg-card-row">
+      <div className="reg-card-field action-field">
+        <button className="view-btn" onClick={() => openDetail(reg)}>
+          <IonIcon icon={eyeOutline} />
+          <span>View</span>
+        </button>
+      </div>
+    </div>
+
+    <div className="reg-table-row" onClick={() => openDetail(reg)}>
+      <span className="td td-check" onClick={(e) => e.stopPropagation()}>
+        <input type="checkbox" checked={bulkSelected.has(reg.id)} onChange={() => toggleBulk(reg.id)} className="bulk-check" />
+      </span>
+      <span className="td td-id">{reg.reg_number || reg.id?.slice(0, 6)}</span>
+      <span className="td td-customer">{reg.full_name || 'Unknown'}</span>
+      <span className="td td-phone">{reg.phone || ''}</span>
+      <span className="td td-network">
+        <span className="network-badge" style={{ background: networkBgColors[reg.network || ''] || '#f5f5f5', color: networkColors[reg.network || ''] || '#333' }}>
+          {reg.network || 'N/A'}
+        </span>
+      </span>
+      <span className="td td-date">{formatDate(reg.created_at || '')}</span>
+      <span className="td td-status">
+        <span className="status-badge" style={{ background: statusBgColors[reg.status || ''], color: statusColors[reg.status || ''] }}>
+          {reg.status}
+        </span>
+      </span>
+      <span className="td td-action">
+        <button className="view-btn-icon" onClick={(e) => { e.stopPropagation(); openDetail(reg); }}>
+          <IonIcon icon={eyeOutline} />
+        </button>
+      </span>
+    </div>
+  </>
+);
+
 const RegistrationsPage: React.FC = () => {
   const queryClient = useQueryClient();
   const { user: _user } = useAuthStore();
@@ -79,7 +224,15 @@ const RegistrationsPage: React.FC = () => {
   const [statusLoading, setStatusLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [toastColor, setToastColor] = useState<'success' | 'danger'>('success');
+  const [toastColor, setToastColor] = useState<'success' | 'danger' | 'warning'>('success');
+  const [toastUndo, setToastUndo] = useState<{ id: string; prevStatus: string } | null>(null);
+  const [gate, setGate] = useState<{ reason: string; run: () => void } | null>(null);
+
+  const isMobile = useIsMobile();
+  /** Locally hidden cards mid/after swipe (cleared on refresh or undo). */
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  /** Exit direction per swiped card so AnimatePresence slides the right way. */
+  const exitDirsRef = useRef<Record<string, 1 | -1>>({});
 
   const { data: registrations = [], isLoading, isError, refetch } = useQuery({
     queryKey: ['admin_registrations'],
@@ -96,6 +249,7 @@ const RegistrationsPage: React.FC = () => {
   }, [queryClient]);
 
   const filteredRegs = registrations.filter((reg) => {
+    if (reg.id && hiddenIds.has(reg.id)) return false;
     const name = reg.full_name || '';
     const phone = reg.phone || '';
     const id = reg.id || '';
@@ -158,6 +312,134 @@ const RegistrationsPage: React.FC = () => {
     setSelectedReg(null);
   };
 
+  // ===== Swipe-to-approve/reject (mobile) =====
+
+  const swipeMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      registrationApi.adminUpdateStatus(id, status),
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: ['admin_registrations'] });
+      const prevData = queryClient.getQueryData<AdminRegistrationRow[]>(['admin_registrations']);
+      queryClient.setQueryData<AdminRegistrationRow[]>(['admin_registrations'], (old) =>
+        old?.map((r) => (r.id === id ? { ...r, status } : r))
+      );
+      return { prevData };
+    },
+    onError: (err, _vars, context) => {
+      if (context?.prevData) queryClient.setQueryData(['admin_registrations'], context.prevData);
+      setToastColor('danger');
+      setToastMessage(err instanceof Error ? err.message : 'Failed to update status');
+      setToastUndo(null);
+      setShowToast(true);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin_registrations'] });
+      queryClient.invalidateQueries({ queryKey: ['admin_orders'] });
+    },
+  });
+
+  const handleSwipe = (reg: AdminRegistrationRow, dir: 1 | -1) => {
+    if (!reg.id || swipeMutation.isPending) return;
+    if (!SWIPEABLE_STATUSES.has(reg.status || '')) return;
+    const prevStatus = reg.status || 'pending';
+    const newStatus = dir === 1 ? 'approved' : 'rejected';
+
+    haptic(dir === 1 ? 12 : [4, 30, 4]);
+    exitDirsRef.current[reg.id] = dir;
+    setHiddenIds((prev) => new Set(prev).add(reg.id));
+
+    // Offline: persist the action to the queue, apply the optimistic state
+    // locally, and sync automatically when connectivity returns.
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      offlineQueue.enqueue('registration_status', `Registration → ${newStatus}`, {
+        id: reg.id,
+        status: newStatus,
+      });
+      recordAudit({
+        action: 'registration_status',
+        entity: 'registration',
+        entity_id: reg.id,
+        status: 'queued',
+        details: { to_status: newStatus, from_status: prevStatus },
+      });
+      queryClient.setQueryData<AdminRegistrationRow[]>(['admin_registrations'], (old) =>
+        old?.map((r) => (r.id === reg.id ? { ...r, status: newStatus } : r))
+      );
+      setToastColor('warning');
+      setToastMessage(`Queued — will sync when back online`);
+      setToastUndo(null);
+      setShowToast(true);
+      return;
+    }
+
+    swipeMutation.mutate(
+      { id: reg.id, status: newStatus },
+      {
+        onSuccess: (result) => {
+          const warning = result?.referral_warning;
+          setToastColor(warning ? 'danger' : 'success');
+          setToastMessage(warning || `Registration ${newStatus}`);
+          setToastUndo({ id: reg.id, prevStatus });
+          setShowToast(true);
+          recordAudit({
+            action: 'registration_status',
+            entity: 'registration',
+            entity_id: reg.id,
+            status: 'success',
+            details: { to_status: newStatus, from_status: prevStatus, referral_warning: warning || undefined },
+          });
+        },
+        onError: (err) => {
+          recordAudit({
+            action: 'registration_status',
+            entity: 'registration',
+            entity_id: reg.id,
+            status: 'failed',
+            details: { to_status: newStatus, from_status: prevStatus, error: err instanceof Error ? err.message : 'unknown' },
+          });
+        },
+      }
+    );
+  };
+
+  const handleUndo = async () => {
+    if (!toastUndo) return;
+    const { id, prevStatus } = toastUndo;
+    setToastUndo(null);
+    try {
+      await registrationApi.adminUpdateStatus(id, prevStatus);
+      recordAudit({
+        action: 'registration_status',
+        entity: 'registration',
+        entity_id: id,
+        status: 'reverted',
+        details: { restored_status: prevStatus },
+      });
+      setHiddenIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      delete exitDirsRef.current[id];
+      await queryClient.invalidateQueries({ queryKey: ['admin_registrations'] });
+      setToastColor('success');
+      setToastMessage('Change reverted');
+      setShowToast(true);
+    } catch (err) {
+      console.error('Undo failed:', err);
+      recordAudit({
+        action: 'registration_status',
+        entity: 'registration',
+        entity_id: id,
+        status: 'failed',
+        details: { revert_failed: true, error: err instanceof Error ? err.message : 'unknown' },
+      });
+      setToastColor('danger');
+      setToastMessage('Could not undo change');
+      setShowToast(true);
+    }
+  };
+
   const toggleBulk = (id: string) => {
     setBulkSelected((prev) => {
       const next = new Set(prev);
@@ -187,22 +469,35 @@ const RegistrationsPage: React.FC = () => {
     mutationFn: async ({ ids, status }: { ids: string[]; status: string }) => {
       await registrationApi.adminBulkUpdate(ids, status);
     },
-    onSuccess: () => {
+    onSuccess: (_data, { ids, status }) => {
       queryClient.invalidateQueries({ queryKey: ['admin_registrations'] });
       queryClient.invalidateQueries({ queryKey: ['admin_orders'] });
       setBulkSelected(new Set());
       setToastColor('success');
       setToastMessage('Selected registrations updated');
       setShowToast(true);
+      recordAudit({
+        action: 'bulk_registration_update',
+        entity: 'registration',
+        status: 'success',
+        details: { count: ids.length, to_status: status },
+      });
     },
-    onError: (err) => {
+    onError: (err, { ids, status }) => {
       setToastColor('danger');
       setToastMessage(err instanceof Error ? err.message : 'Bulk update failed');
       setShowToast(true);
+      recordAudit({
+        action: 'bulk_registration_update',
+        entity: 'registration',
+        status: 'failed',
+        details: { count: ids.length, to_status: status, error: err instanceof Error ? err.message : 'unknown' },
+      });
     },
   });
 
   const handleRefresh = async () => {
+    setHiddenIds(new Set());
     await queryClient.invalidateQueries({ queryKey: ['admin_registrations'] });
   };
 
@@ -301,13 +596,12 @@ const RegistrationsPage: React.FC = () => {
         <AnimatePresence mode="wait">
           {isLoading ? (
             <motion.div
-              className="empty-state"
+              key="regs-skeleton"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <IonIcon icon={documentTextOutline} className="empty-icon" />
-              <h3>Loading registrations...</h3>
+              <M3SkeletonList count={6} lines={2} className="regs-skeleton" />
             </motion.div>
           ) : isError ? (
             <motion.div
@@ -339,85 +633,49 @@ const RegistrationsPage: React.FC = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              {paginatedRegs.map((reg, index) => (
+              <AnimatePresence mode="popLayout" initial={false}>
+              {paginatedRegs.map((reg, index) => {
+                const swipeEnabled = isMobile && !!reg.id && SWIPEABLE_STATUSES.has(reg.status || '');
+                const exitDir = (reg.id && exitDirsRef.current[reg.id]) || -1;
+                return (
                 <motion.div
                   key={reg.id}
-                  className="reg-card"
+                  layout="position"
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
+                  exit={{
+                    x: exitDir * 480,
+                    opacity: 0,
+                    height: 0,
+                    transition: { duration: 0.3 },
+                  }}
                   transition={{ delay: index * 0.04 }}
                 >
-                  <div className="reg-card-row">
-                    <div className="reg-card-field check-field">
-                      <input type="checkbox" checked={bulkSelected.has(reg.id)} onChange={() => toggleBulk(reg.id)} className="bulk-check" />
+                  {swipeEnabled ? (
+                    <SwipeableCard enabled onSwipe={(dir) => handleSwipe(reg, dir)}>
+                      <RegCardContents
+                        reg={reg}
+                        bulkSelected={bulkSelected}
+                        toggleBulk={toggleBulk}
+                        openDetail={openDetail}
+                        formatDate={formatDate}
+                      />
+                    </SwipeableCard>
+                  ) : (
+                    <div className="reg-card">
+                      <RegCardContents
+                        reg={reg}
+                        bulkSelected={bulkSelected}
+                        toggleBulk={toggleBulk}
+                        openDetail={openDetail}
+                        formatDate={formatDate}
+                      />
                     </div>
-                    <div className="reg-card-field id-field">
-                      <span className="field-label">Reg ID</span>
-                      <span className="field-value id-value">{reg.reg_number || reg.id?.slice(0, 6)}</span>
-                    </div>
-                    <div className="reg-card-field status-field">
-                      <span className="status-badge" style={{ background: statusBgColors[reg.status || ''], color: statusColors[reg.status || ''] }}>
-                        {reg.status}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="reg-card-row">
-                    <div className="reg-card-field">
-                      <span className="field-label">Customer</span>
-                      <span className="field-value">{reg.full_name || 'Unknown'}</span>
-                    </div>
-                    <div className="reg-card-field">
-                      <span className="field-label">Phone</span>
-                      <span className="field-value">{reg.phone || ''}</span>
-                    </div>
-                  </div>
-                  <div className="reg-card-row">
-                    <div className="reg-card-field">
-                      <span className="field-label">Network</span>
-                      <span className="network-badge" style={{ background: networkBgColors[reg.network || ''] || '#f5f5f5', color: networkColors[reg.network || ''] || '#333' }}>
-                        {reg.network || 'N/A'}
-                      </span>
-                    </div>
-                    <div className="reg-card-field">
-                      <span className="field-label">Date</span>
-                      <span className="field-value">{formatDate(reg.created_at || '')}</span>
-                    </div>
-                  </div>
-                  <div className="reg-card-row">
-                    <div className="reg-card-field action-field">
-                      <button className="view-btn" onClick={() => openDetail(reg)}>
-                        <IonIcon icon={eyeOutline} />
-                        <span>View</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="reg-table-row" onClick={() => openDetail(reg)}>
-                    <span className="td td-check" onClick={(e) => e.stopPropagation()}>
-                      <input type="checkbox" checked={bulkSelected.has(reg.id)} onChange={() => toggleBulk(reg.id)} className="bulk-check" />
-                    </span>
-                    <span className="td td-id">{reg.reg_number || reg.id?.slice(0, 6)}</span>
-                    <span className="td td-customer">{reg.full_name || 'Unknown'}</span>
-                    <span className="td td-phone">{reg.phone || ''}</span>
-                    <span className="td td-network">
-                      <span className="network-badge" style={{ background: networkBgColors[reg.network || ''] || '#f5f5f5', color: networkColors[reg.network || ''] || '#333' }}>
-                        {reg.network || 'N/A'}
-                      </span>
-                    </span>
-                      <span className="td td-date">{formatDate(reg.created_at || '')}</span>
-                    <span className="td td-status">
-                      <span className="status-badge" style={{ background: statusBgColors[reg.status || ''], color: statusColors[reg.status || ''] }}>
-                        {reg.status}
-                      </span>
-                    </span>
-                    <span className="td td-action">
-                      <button className="view-btn-icon" onClick={(e) => { e.stopPropagation(); openDetail(reg); }}>
-                        <IonIcon icon={eyeOutline} />
-                      </button>
-                    </span>
-                  </div>
+                  )}
                 </motion.div>
-              ))}
+                );
+              })}
+              </AnimatePresence>
             </motion.div>
           )}
         </AnimatePresence>
@@ -462,11 +720,29 @@ const RegistrationsPage: React.FC = () => {
         >
           <span className="bulk-count">{bulkSelected.size} selected</span>
           <div className="bulk-actions">
-            <button className="bulk-approve-btn" onClick={() => bulkUpdateMutation.mutate({ ids: Array.from(bulkSelected), status: 'approved' })} disabled={bulkUpdateMutation.isPending}>
+            <button
+              className="bulk-approve-btn"
+              onClick={() =>
+                setGate({
+                  reason: `Approve ${bulkSelected.size} registration${bulkSelected.size === 1 ? '' : 's'}`,
+                  run: () => bulkUpdateMutation.mutate({ ids: Array.from(bulkSelected), status: 'approved' }),
+                })
+              }
+              disabled={bulkUpdateMutation.isPending}
+            >
               <IonIcon icon={checkmarkCircle} />
               <span>Approve Selected</span>
             </button>
-            <button className="bulk-reject-btn" onClick={() => bulkUpdateMutation.mutate({ ids: Array.from(bulkSelected), status: 'rejected' })} disabled={bulkUpdateMutation.isPending}>
+            <button
+              className="bulk-reject-btn"
+              onClick={() =>
+                setGate({
+                  reason: `Reject ${bulkSelected.size} registration${bulkSelected.size === 1 ? '' : 's'}`,
+                  run: () => bulkUpdateMutation.mutate({ ids: Array.from(bulkSelected), status: 'rejected' }),
+                })
+              }
+              disabled={bulkUpdateMutation.isPending}
+            >
               <IonIcon icon={closeCircle} />
               <span>Reject Selected</span>
             </button>
@@ -738,7 +1014,25 @@ const RegistrationsPage: React.FC = () => {
       </AnimatePresence>
     </AdminLayout>
 
-      <IonToast isOpen={showToast} onDidDismiss={() => setShowToast(false)} message={toastMessage} duration={3000} position="top" color={toastColor} />
+      <IonToast
+        isOpen={showToast}
+        onDidDismiss={() => { setShowToast(false); setToastUndo(null); }}
+        message={toastMessage}
+        duration={toastUndo ? 6000 : 3000}
+        position="top"
+        color={toastColor}
+        buttons={toastUndo ? [{ text: 'UNDO', handler: () => { void handleUndo(); } }] : []}
+      />
+
+      <SecurityGate
+        open={!!gate}
+        reason={gate?.reason || ''}
+        onSuccess={() => {
+          gate?.run();
+          setGate(null);
+        }}
+        onCancel={() => setGate(null)}
+      />
     </IonPage>
   );
 };

@@ -21,6 +21,8 @@ import { motion } from 'framer-motion';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { adminSettingsApi } from '../../services/api';
+import { SecurityGate } from '../../components/SecurityGate';
+import { recordAudit } from '../../services/auditLog';
 import AdminLayout from '../../layouts/AdminLayout';
 import Card from '../../components/Card';
 import './SettingsPage.css';
@@ -74,7 +76,10 @@ const SettingsPage: React.FC = () => {
   const [toastColor, setToastColor] = useState<'success' | 'danger'>('success');
   const [saving, setSaving] = useState<string | null>(null);
   const [initialSnapshot, setInitialSnapshot] = useState<string>('');
+  const [gate, setGate] = useState<{ reason: string; run: () => void } | null>(null);
 
+  const guardedSave = (section: string, run: () => void) =>
+    setGate({ reason: `Save ${section} settings`, run });
   // AFA prices deliberately excluded: they have their own action below.
   const FEE_PRICING_KEYS = ['wallet_max_topup', 'wallet_min_topup'];
 
@@ -178,11 +183,13 @@ const SettingsPage: React.FC = () => {
       if (Object.keys(appKeys).length > 0) writes.push(adminSettingsApi.saveAppSettings(appKeys));
       await Promise.all(writes);
       queryClient.invalidateQueries({ queryKey: ['admin_settings'] });
+      recordAudit({ action: 'settings_save', entity: 'settings', status: 'success', details: { section, keys } });
       setToastColor('success');
       setToastMessage(`${section} settings saved successfully`);
       setShowToast(true);
       setInitialSnapshot(JSON.stringify({ settings, feeValues }));
     } catch (err) {
+      recordAudit({ action: 'settings_save', entity: 'settings', status: 'failed', details: { section, error: err instanceof Error ? err.message : 'unknown' } });
       setToastColor('danger');
       setToastMessage(err instanceof Error ? err.message : 'Save failed');
       setShowToast(true);
@@ -208,11 +215,18 @@ const SettingsPage: React.FC = () => {
       await queryClient.invalidateQueries({ queryKey: ['admin_settings_afa'] });
       await queryClient.invalidateQueries({ queryKey: ['admin_settings_fees'] });
       await queryClient.invalidateQueries({ queryKey: ['afa-pricing'] });
+      recordAudit({
+        action: 'settings_save',
+        entity: 'settings',
+        status: 'success',
+        details: { section: 'AFA Pricing', normal_price: parsed.data.normal_price, agent_price: parsed.data.agent_price },
+      });
       setToastColor('success');
       setToastMessage('AFA pricing saved successfully');
       setShowToast(true);
       setAfaInitialSnapshot(JSON.stringify(afaValues));
     } catch (err) {
+      recordAudit({ action: 'settings_save', entity: 'settings', status: 'failed', details: { section: 'AFA Pricing', error: err instanceof Error ? err.message : 'unknown' } });
       setToastColor('danger');
       setToastMessage(err instanceof Error ? err.message : 'Save failed');
       setShowToast(true);
@@ -257,11 +271,18 @@ const SettingsPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['admin_settings'] });
       queryClient.invalidateQueries({ queryKey: ['admin_settings_fees'] });
       queryClient.invalidateQueries({ queryKey: ['afa-pricing'] });
+      recordAudit({
+        action: 'settings_save',
+        entity: 'settings',
+        status: 'success',
+        details: { section: 'Fees', agent_fee: values['agent_fee'], wallet_max_topup: values['wallet_max_topup'], wallet_min_topup: values['wallet_min_topup'] },
+      });
       setToastColor('success');
       setToastMessage('Fees saved successfully');
       setShowToast(true);
       setInitialSnapshot(JSON.stringify({ settings, feeValues }));
     } catch (err) {
+      recordAudit({ action: 'settings_save', entity: 'settings', status: 'failed', details: { section: 'Fees', error: err instanceof Error ? err.message : 'unknown' } });
       setToastColor('danger');
       setToastMessage(err instanceof Error ? err.message : 'Save failed');
       setShowToast(true);
@@ -312,11 +333,13 @@ const SettingsPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['admin_settings'] });
       queryClient.invalidateQueries({ queryKey: ['admin_settings_fees'] });
       queryClient.invalidateQueries({ queryKey: ['afa-pricing'] });
+      recordAudit({ action: 'settings_save', entity: 'settings', status: 'success', details: { section: 'Wallet & Referral', ...sectionSettings } });
       setToastColor('success');
       setToastMessage('Wallet & Referral settings saved successfully');
       setShowToast(true);
       setInitialSnapshot(JSON.stringify({ settings, feeValues }));
     } catch (err) {
+      recordAudit({ action: 'settings_save', entity: 'settings', status: 'failed', details: { section: 'Wallet & Referral', error: err instanceof Error ? err.message : 'unknown' } });
       setToastColor('danger');
       setToastMessage(err instanceof Error ? err.message : 'Save failed');
       setShowToast(true);
@@ -412,7 +435,7 @@ const SettingsPage: React.FC = () => {
                   {renderField('Address', get('address', 'MTN Tower, Ridge Accra, Ghana'), (v) => set('address', v), { rows: 2 })}
                 </div>
                 <div className="section-save-row">
-                  <IonButton className="section-save-btn" onClick={() => saveSection('General', ['site_name', 'support_email', 'support_phone', 'address'])} disabled={saving === 'General'}>
+                  <IonButton className="section-save-btn" onClick={() => guardedSave('General', () => void saveSection('General', ['site_name', 'support_email', 'support_phone', 'address']))} disabled={saving === 'General'}>
                     <IonIcon icon={saveOutline} slot="start" />
                     {saving === 'General' ? 'Saving...' : 'Save General'}
                   </IonButton>
@@ -437,7 +460,7 @@ const SettingsPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="section-save-row">
-                  <IonButton className="section-save-btn" onClick={saveFees} disabled={saving === 'Fees'}>
+                  <IonButton className="section-save-btn" onClick={() => guardedSave('Fees', () => void saveFees())} disabled={saving === 'Fees'}>
                     <IonIcon icon={saveOutline} slot="start" />
                     {saving === 'Fees' ? 'Saving...' : 'Save Fees'}
                   </IonButton>
@@ -478,7 +501,7 @@ const SettingsPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="section-save-row">
-                  <IonButton className="section-save-btn" onClick={saveAfaPricing} disabled={saving === 'AFA Pricing' || !afaDirty}>
+                  <IonButton className="section-save-btn" onClick={() => guardedSave('AFA Pricing', () => void saveAfaPricing())} disabled={saving === 'AFA Pricing' || !afaDirty}>
                     <IonIcon icon={saveOutline} slot="start" />
                     {saving === 'AFA Pricing' ? 'Saving...' : 'Save AFA Pricing'}
                   </IonButton>
@@ -533,7 +556,7 @@ const SettingsPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="section-save-row">
-                  <IonButton className="section-save-btn" onClick={saveWalletReferral} disabled={saving === 'Wallet & Referral'}>
+                  <IonButton className="section-save-btn" onClick={() => guardedSave('Wallet & Referral', () => void saveWalletReferral())} disabled={saving === 'Wallet & Referral'}>
                     <IonIcon icon={saveOutline} slot="start" />
                     {saving === 'Wallet & Referral' ? 'Saving...' : 'Save Wallet & Referral'}
                   </IonButton>
@@ -592,11 +615,11 @@ const SettingsPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="section-save-row">
-                  <IonButton className="section-save-btn" onClick={() => saveSection('Notifications', [
+                  <IonButton className="section-save-btn" onClick={() => guardedSave('Notifications', () => void saveSection('Notifications', [
                     'whatsapp_enabled', 'whatsapp_user_number', 'whatsapp_agent_number',
                     'whatsapp_user_message', 'whatsapp_agent_message',
                     'sms_api_url', 'sms_api_key', 'sms_sender_id'
-                  ])} disabled={saving === 'Notifications'}>
+                  ]))} disabled={saving === 'Notifications'}>
                     <IonIcon icon={saveOutline} slot="start" />
                     {saving === 'Notifications' ? 'Saving...' : 'Save Notifications'}
                   </IonButton>
@@ -649,10 +672,10 @@ const SettingsPage: React.FC = () => {
                   </div>
                 </div>
                 <div className="section-save-row">
-                  <IonButton className="section-save-btn" onClick={() => saveSection('Agent', [
+                  <IonButton className="section-save-btn" onClick={() => guardedSave('Agent', () => void saveSection('Agent', [
                     'agent_system_enabled', 'agent_auto_approve', 'agent_min_commission',
                     'vapid_public_key', 'vapid_private_key'
-                  ])} disabled={saving === 'Agent'}>
+                  ]))} disabled={saving === 'Agent'}>
                     <IonIcon icon={saveOutline} slot="start" />
                     {saving === 'Agent' ? 'Saving...' : 'Save Agent Settings'}
                   </IonButton>
@@ -672,6 +695,16 @@ const SettingsPage: React.FC = () => {
         duration={3000}
         position="top"
         color={toastColor}
+      />
+
+      <SecurityGate
+        open={!!gate}
+        reason={gate?.reason || ''}
+        onSuccess={() => {
+          gate?.run();
+          setGate(null);
+        }}
+        onCancel={() => setGate(null)}
       />
     </IonPage>
   );

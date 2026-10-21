@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     const admin = getSupabaseAdmin();
     const { data, error } = await admin
       .from("profiles")
-      .select("id, full_name, email, phone, role, created_at, agent_status")
+      .select("id, full_name, email, phone, role, created_at, agent_status, wallet_balance, deleted_at")
       .order("created_at", { ascending: false })
       .limit(200);
     if (error) return errorResp("Failed to fetch users", 500, origin);
@@ -51,7 +51,7 @@ Deno.serve(async (req) => {
     case "list": {
       const { data: users, error } = await admin
         .from("profiles")
-        .select("id, full_name, email, phone, role, created_at, agent_status")
+        .select("id, full_name, email, phone, role, created_at, agent_status, wallet_balance, deleted_at")
         .order("created_at", { ascending: false })
         .limit(200);
       if (error) return errorResp("Failed to fetch users", 500, origin);

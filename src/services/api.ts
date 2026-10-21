@@ -568,9 +568,20 @@ export const settingsApi = {
 // AUDIT LOGS (write via Edge Function)
 // ============================================================
 export const auditApi = {
-  create: async (data: { entity: string; entity_id?: string; details?: Record<string, unknown> }): Promise<ActionResult> => {
-    return invoke<ActionResult>('admin-audit', { action: 'create', ...data });
-  },
+  create: async (data: {
+    entity: string;
+    entity_id?: string;
+    /** Semantic action stored in audit_logs.action (e.g. 'wallet_credit'). */
+    action?: string;
+    details?: Record<string, unknown>;
+  }): Promise<ActionResult> =>
+    invoke<ActionResult>('admin-audit', {
+      action: 'create',
+      log_action: data.action,
+      entity: data.entity,
+      entity_id: data.entity_id,
+      details: data.details,
+    }),
 };
 
 // ============================================================
