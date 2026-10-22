@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation, useHistory } from 'react-router-dom';
 import { IonIcon, IonContent, IonRefresher, IonRefresherContent } from '@ionic/react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -33,7 +34,6 @@ import { adminDashboardApi, notificationApi } from '../services/api';
 import { supabase } from '../services/supabase';
 import { useOfflineQueue } from '../hooks/useOfflineQueue';
 import { NotificationHub } from '../components/NotificationHub';
-import { AuditLogSheet } from '../components/AuditLogSheet';
 import './AdminLayout.css';
 
 interface AdminLayoutProps {
@@ -109,7 +109,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
   const [dialOpen, setDialOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [hubOpen, setHubOpen] = useState(false);
-  const [auditOpen, setAuditOpen] = useState(false);
   const {
     pendingCount: queuedCount,
     isOnline,
@@ -125,7 +124,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
     setDialOpen(false);
     setMoreOpen(false);
     setHubOpen(false);
-    setAuditOpen(false);
   }, [location.pathname]);
 
   // Shift the fixed navbar/content when the offline banner is showing.
@@ -206,23 +204,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
           </div>
         </div>
         <div className="admin-navbar-right">
-          <span
-            className={`conn-dot ${isOnline ? 'conn-dot--online' : 'conn-dot--offline'}`}
-            title={isOnline ? 'Live — connected' : 'Offline — showing cached data'}
-            aria-label={isOnline ? 'Connected' : 'Offline'}
-          >
-            <IonIcon icon={isOnline ? wifiOutline : cloudOfflineOutline} />
-          </span>
-          <button
-            type="button"
-            className="admin-bell"
-            aria-label="Admin activity"
-            aria-haspopup="dialog"
-            aria-expanded={auditOpen}
-            onClick={() => { haptic(8); setAuditOpen(true); }}
-          >
-            <IonIcon icon={timeOutline} />
-          </button>
           <button
             type="button"
             className="admin-bell"
@@ -294,120 +275,130 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onRefresh }) => {
         {children}
       </IonContent>
 
-      {/* ===== Mobile: M3 bottom navigation + speed-dial FAB ===== */}
-      <nav className="m3-bottom-nav" aria-label="Primary">
-        <Link
-          to="/cyberin/dashboard"
-          className={`m3-nav-item ${isHome ? 'active' : ''}`}
-          aria-current={isHome ? 'page' : undefined}
-        >
-          <span className="m3-nav-indicator" aria-hidden="true" />
-          <span className="m3-nav-icon-wrap">
-            <IonIcon icon={gridOutline} />
-          </span>
-          <span className="m3-nav-label">Home</span>
-        </Link>
-
-        <Link
-          to="/cyberin/registrations"
-          className={`m3-nav-item ${isRegs ? 'active' : ''}`}
-          aria-current={isRegs ? 'page' : undefined}
-        >
-          <span className="m3-nav-indicator" aria-hidden="true" />
-          <span className="m3-nav-icon-wrap">
-            <IonIcon icon={documentTextOutline} />
-            {pendingCount > 0 && (
-              <span className="m3-nav-badge m3-numeric">{pendingCount > 99 ? '99+' : pendingCount}</span>
-            )}
-          </span>
-          <span className="m3-nav-label">Regs</span>
-        </Link>
-
-        <div className="m3-fab-slot">
-          <button
-            className={`m3-fab ${dialOpen ? 'm3-fab--open' : ''}`}
-            onClick={toggleDial}
-            aria-expanded={dialOpen}
-            aria-label={dialOpen ? 'Close quick actions' : 'Open quick actions'}
-          >
-            <IonIcon icon={dialOpen ? closeOutline : addOutline} />
-          </button>
-        </div>
-
-        <Link
-          to="/cyberin/payments"
-          className={`m3-nav-item ${isFinance ? 'active' : ''}`}
-          aria-current={isFinance ? 'page' : undefined}
-        >
-          <span className="m3-nav-indicator" aria-hidden="true" />
-          <span className="m3-nav-icon-wrap">
-            <IonIcon icon={cardOutline} />
-          </span>
-          <span className="m3-nav-label">Finance</span>
-        </Link>
-
-        <button
-          className={`m3-nav-item ${isMore ? 'active' : ''}`}
-          onClick={() => { haptic(8); setMoreOpen(true); }}
-          aria-haspopup="dialog"
-          aria-expanded={moreOpen}
-        >
-          <span className="m3-nav-indicator" aria-hidden="true" />
-          <span className="m3-nav-icon-wrap">
-            <IonIcon icon={ellipsisHorizontal} />
-          </span>
-          <span className="m3-nav-label">More</span>
-        </button>
-      </nav>
-
-      {dialOpen && (
-        <div className="m3-dial-scrim" onClick={() => setDialOpen(false)} aria-hidden="true" />
-      )}
-      <div className={`m3-speed-dial ${dialOpen ? 'm3-speed-dial--open' : ''}`} role="menu" aria-hidden={!dialOpen}>
-        {speedDialActions.map((action, i) => (
-          <Link
-            key={action.path}
-            to={action.path}
-            role="menuitem"
-            tabIndex={dialOpen ? 0 : -1}
-            className="m3-speed-dial-item"
-            style={{ transitionDelay: dialOpen ? `${i * 40}ms` : '0ms' }}
-            onClick={() => { haptic(6); setDialOpen(false); }}
-          >
-            <span className="m3-speed-dial-label">{action.label}</span>
-            <span className="m3-speed-dial-mini">
-              <IonIcon icon={action.icon} />
-            </span>
-          </Link>
-        ))}
-      </div>
-
-      {/* ===== Mobile: "More" bottom sheet ===== */}
-      {moreOpen && (
+      {/* ===== Mobile: M3 bottom nav + speed-dial FAB + More sheet =====
+           Portaled straight to <body>. .ion-page carries
+           `contain: layout size style` (Ionic core), which hijacks
+           position:fixed for everything inside it — the bar drifts with
+           the page while scrolling. <body> is a static top-level box
+           (Ionic pins it with position:fixed + translateZ(0)), so this
+           cluster is mathematically locked to the viewport bottom. */}
+      {createPortal(
         <>
-          <div className="m3-sheet-scrim" onClick={() => setMoreOpen(false)} aria-hidden="true" />
-          <div className="m3-more-sheet" role="dialog" aria-label="More destinations" aria-modal="true">
-            <div className="m3-sheet-handle" aria-hidden="true" />
-            <div className="m3-more-grid">
-              {moreSheetItems.map((item) => (
-                <Link key={item.path} to={item.path} className="m3-more-tile" onClick={() => setMoreOpen(false)}>
-                  <span className="m3-more-tile-icon">
-                    <IonIcon icon={item.icon} />
-                  </span>
-                  <span className="m3-more-tile-label">{item.label}</span>
-                </Link>
-              ))}
+          <nav className="m3-bottom-nav" aria-label="Primary">
+            <Link
+              to="/cyberin/dashboard"
+              className={`m3-nav-item ${isHome ? 'active' : ''}`}
+              aria-current={isHome ? 'page' : undefined}
+            >
+              <span className="m3-nav-indicator" aria-hidden="true" />
+              <span className="m3-nav-icon-wrap">
+                <IonIcon icon={gridOutline} />
+              </span>
+              <span className="m3-nav-label">Home</span>
+            </Link>
+
+            <Link
+              to="/cyberin/registrations"
+              className={`m3-nav-item ${isRegs ? 'active' : ''}`}
+              aria-current={isRegs ? 'page' : undefined}
+            >
+              <span className="m3-nav-indicator" aria-hidden="true" />
+              <span className="m3-nav-icon-wrap">
+                <IonIcon icon={documentTextOutline} />
+                {pendingCount > 0 && (
+                  <span className="m3-nav-badge m3-numeric">{pendingCount > 99 ? '99+' : pendingCount}</span>
+                )}
+              </span>
+              <span className="m3-nav-label">Regs</span>
+            </Link>
+
+            <div className="m3-fab-slot">
+              <button
+                className={`m3-fab ${dialOpen ? 'm3-fab--open' : ''}`}
+                onClick={toggleDial}
+                aria-expanded={dialOpen}
+                aria-label={dialOpen ? 'Close quick actions' : 'Open quick actions'}
+              >
+                <IonIcon icon={dialOpen ? closeOutline : addOutline} />
+              </button>
             </div>
-            <button className="m3-more-logout" onClick={handleLogout} disabled={loggingOut}>
-              <IonIcon icon={logOutOutline} />
-              <span>{loggingOut ? 'Signing out…' : 'Logout'}</span>
+
+            <Link
+              to="/cyberin/payments"
+              className={`m3-nav-item ${isFinance ? 'active' : ''}`}
+              aria-current={isFinance ? 'page' : undefined}
+            >
+              <span className="m3-nav-indicator" aria-hidden="true" />
+              <span className="m3-nav-icon-wrap">
+                <IonIcon icon={cardOutline} />
+              </span>
+              <span className="m3-nav-label">Finance</span>
+            </Link>
+
+            <button
+              className={`m3-nav-item ${isMore ? 'active' : ''}`}
+              onClick={() => { haptic(8); setMoreOpen(true); }}
+              aria-haspopup="dialog"
+              aria-expanded={moreOpen}
+            >
+              <span className="m3-nav-indicator" aria-hidden="true" />
+              <span className="m3-nav-icon-wrap">
+                <IonIcon icon={ellipsisHorizontal} />
+              </span>
+              <span className="m3-nav-label">More</span>
             </button>
+          </nav>
+
+          {dialOpen && (
+            <div className="m3-dial-scrim" onClick={() => setDialOpen(false)} aria-hidden="true" />
+          )}
+          <div className={`m3-speed-dial ${dialOpen ? 'm3-speed-dial--open' : ''}`} role="menu" aria-hidden={!dialOpen}>
+            {speedDialActions.map((action, i) => (
+              <Link
+                key={action.path}
+                to={action.path}
+                role="menuitem"
+                tabIndex={dialOpen ? 0 : -1}
+                className="m3-speed-dial-item"
+                style={{ transitionDelay: dialOpen ? `${i * 40}ms` : '0ms' }}
+                onClick={() => { haptic(6); setDialOpen(false); }}
+              >
+                <span className="m3-speed-dial-label">{action.label}</span>
+                <span className="m3-speed-dial-mini">
+                  <IonIcon icon={action.icon} />
+                </span>
+              </Link>
+            ))}
           </div>
-        </>
+
+          {/* ===== Mobile: "More" bottom sheet ===== */}
+          {moreOpen && (
+            <>
+              <div className="m3-sheet-scrim" onClick={() => setMoreOpen(false)} aria-hidden="true" />
+              <div className="m3-more-sheet" role="dialog" aria-label="More destinations" aria-modal="true">
+                <div className="m3-sheet-handle" aria-hidden="true" />
+                <div className="m3-more-grid">
+                  {moreSheetItems.map((item) => (
+                    <Link key={item.path} to={item.path} className="m3-more-tile" onClick={() => setMoreOpen(false)}>
+                      <span className="m3-more-tile-icon">
+                        <IonIcon icon={item.icon} />
+                      </span>
+                      <span className="m3-more-tile-label">{item.label}</span>
+                    </Link>
+                  ))}
+                </div>
+                <button className="m3-more-logout" onClick={handleLogout} disabled={loggingOut}>
+                  <IonIcon icon={logOutOutline} />
+                  <span>{loggingOut ? 'Signing out…' : 'Logout'}</span>
+                </button>
+              </div>
+            </>
+          )}
+        </>,
+        document.body
       )}
 
       <NotificationHub open={hubOpen} onClose={() => setHubOpen(false)} />
-      <AuditLogSheet open={auditOpen} onClose={() => setAuditOpen(false)} />
     </>
   );
 };
