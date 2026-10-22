@@ -31,7 +31,6 @@ import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate, formatGhanaDateTime } from '../../utils/date';
 import { safeNumber } from '../../utils/number';
 import { M3SkeletonList } from '../../components/M3Skeleton';
-import { M3ChipRow } from '../../components/M3ChipRow';
 import { BatchActionSheet, BatchBar, type BatchAction } from '../../components/BatchActionSheet';
 import { SecurityGate } from '../../components/SecurityGate';
 import { recordAudit } from '../../services/auditLog';
@@ -223,14 +222,6 @@ const OrdersPage: React.FC = () => {
     },
   ];
 
-  const statusChips = [
-    { value: 'All', label: 'All' },
-    { value: 'Pending', label: 'Pending' },
-    { value: 'Approved', label: 'Approved' },
-    { value: 'Rejected', label: 'Rejected' },
-    { value: 'Cancelled', label: 'Cancelled' },
-  ];
-
   const handleRefresh = async () => {
     await queryClient.invalidateQueries({ queryKey: ['admin_orders'] });
   };
@@ -241,9 +232,11 @@ const OrdersPage: React.FC = () => {
         <div className="admin-orders-page">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
           <div className="page-title-row">
-            <IonIcon icon={cartOutline} className="page-icon" />
-            <h1>Orders</h1>
-            <span className="page-count">{orders.length} total</span>
+            <div className="page-title-left">
+              <IonIcon icon={cartOutline} className="page-icon" />
+              <h1>Orders</h1>
+              <span className="page-count">{orders.length} Total</span>
+            </div>
             <button type="button" className={`select-mode-btn ${selectMode ? 'select-mode-btn--on' : ''}`} onClick={toggleSelectMode}>
               {selectMode ? 'Done' : 'Select'}
             </button>
@@ -268,8 +261,6 @@ const OrdersPage: React.FC = () => {
               </div>
             </div>
           </Card>
-
-          <M3ChipRow options={statusChips} value={statusFilter} onChange={setStatusFilter} ariaLabel="Filter by status" />
 
           <div className="orders-table-header">
             <span className="oth oth-id">Order ID</span>

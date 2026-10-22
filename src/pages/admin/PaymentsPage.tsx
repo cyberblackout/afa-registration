@@ -27,7 +27,6 @@ import AdminLayout from '../../layouts/AdminLayout';
 import { formatGhanaDate, formatGhanaDateTime } from '../../utils/date';
 import { safeNumber } from '../../utils/number';
 import { M3SkeletonList } from '../../components/M3Skeleton';
-import { M3ChipRow } from '../../components/M3ChipRow';
 import { BatchActionSheet, BatchBar, type BatchAction } from '../../components/BatchActionSheet';
 import { SecurityGate } from '../../components/SecurityGate';
 import { recordAudit } from '../../services/auditLog';
@@ -194,14 +193,6 @@ const PaymentsPage: React.FC = () => {
     },
   ];
 
-  const statusChips = [
-    { value: 'All', label: 'All' },
-    { value: 'Completed', label: 'Completed' },
-    { value: 'Pending', label: 'Pending' },
-    { value: 'Failed', label: 'Failed' },
-    { value: 'Refunded', label: 'Refunded' },
-  ];
-
   const statCards = [
     { label: 'Total Collected', value: formatAmount(totalCollected), icon: cashOutline, color: '#2e7d32' },
     { label: 'Completed', value: formatAmount(completedTotal), icon: checkmarkCircle, color: '#1565c0' },
@@ -224,9 +215,11 @@ const PaymentsPage: React.FC = () => {
         <div className="admin-payments-page">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
           <div className="page-title-row">
-            <IonIcon icon={cardOutline} className="page-icon" />
-            <h1>Payments</h1>
-            <span className="page-count">{payments.length} total</span>
+            <div className="page-title-left">
+              <IonIcon icon={cardOutline} className="page-icon" />
+              <h1>Payments</h1>
+              <span className="page-count">{payments.length} Total</span>
+            </div>
             <button type="button" className={`select-mode-btn ${selectMode ? 'select-mode-btn--on' : ''}`} onClick={toggleSelectMode}>
               {selectMode ? 'Done' : 'Select'}
             </button>
@@ -273,8 +266,6 @@ const PaymentsPage: React.FC = () => {
               </div>
             </div>
           </div>
-
-          <M3ChipRow options={statusChips} value={statusFilter} onChange={setStatusFilter} ariaLabel="Filter by status" />
 
           <div className="payments-table-header">
             <span className="pth pth-ref">Reference</span>

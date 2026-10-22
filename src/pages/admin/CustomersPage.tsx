@@ -359,9 +359,11 @@ const CustomersPage: React.FC = () => {
         <div className="admin-customers-page">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="page-header">
           <div className="page-title-row">
-            <IonIcon icon={peopleOutline} className="page-icon" />
-            <h1>Customers</h1>
-            <span className="customer-count">{activeCount} active{deletedCount > 0 ? ` / ${deletedCount} deleted` : ''}</span>
+            <div className="page-title-left">
+              <IonIcon icon={peopleOutline} className="page-icon" />
+              <h1>Customers</h1>
+              <span className="customer-count">{activeCount} active{deletedCount > 0 ? ` / ${deletedCount} deleted` : ''}</span>
+            </div>
             <button type="button" className={`select-mode-btn ${selectMode ? 'select-mode-btn--on' : ''}`} onClick={toggleSelectMode}>
               {selectMode ? 'Done' : 'Select'}
             </button>
