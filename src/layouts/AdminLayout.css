@@ -412,17 +412,24 @@ ion-refresher {
   }
 
   .m3-bottom-nav {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
     display: flex;
     align-items: stretch;
     height: calc(var(--m3-nav-height) + env(safe-area-inset-bottom, 0px));
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    background: var(--m3-surface-container);
-    border-top: 1px solid var(--m3-outline-variant);
-    z-index: 1050;
+    background-color: var(--m3-surface-container, #1e1e24);
+    border-top: 1px solid var(--m3-outline-variant, rgba(255, 255, 255, 0.1));
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 1050 !important;
+    /* Guard against any ancestor (ion-app, .ion-page, transformed hosts)
+       turning this into a scroll-relative containing block. */
+    transform: none;
+    will-change: auto;
   }
 
   .m3-nav-item {
